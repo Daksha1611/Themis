@@ -156,3 +156,50 @@ Two more services (Prometheus, Grafana) to run and host. OWASP Top 10 is revised
 - **Precision Filter**: training labels also come from finding outcomes.
 - **Storage**: stores finding outcomes alongside review runs.
 - **Job Queue / Webhook Service**: become subjects of operational monitoring (metrics exposure not yet designed).
+
+---
+
+## Record resolutions to Open Questions 1–43
+**Date**: 2026-09-29
+**File(s) affected**:
+- Created: `README.md`; `docs/vault/02 Architecture/GitHub Integration.md`; `docs/vault/06 Risks/Benchmark Leakage.md`; `docs/vault/04 Decisions/` ADR-012 to ADR-019; `docs/vault/05 Stack/` Alembic, SQLAlchemy, sentence-transformers, ruff, mypy, pytest, pytest-cov, Caddy
+- Edited: `docs/vault/00 Index.md`; `docs/vault/Themis Map.canvas`; `docs/vault/01 Project/` Glossary, Success Metrics; `docs/vault/02 Architecture/` Architecture Overview, Webhook Service, Job Queue, Context Builder, Review Graph, Finding Schema, Precision Filter, Guardrails, Storage; `docs/vault/03 Reliability/` Tracing, Benchmark, Eval Harness, Metrics, CI Quality Gate, Drift Monitoring, Ablation Table, Operational Monitoring; `docs/vault/04 Decisions/` ADR-001 to ADR-011 (status frontmatter), ADR-007, ADR-009, ADR-010, ADR-011 (content); `docs/vault/05 Stack/` Docker, Qdrant, PostgreSQL, Langfuse, GitHub Actions, HuggingFace Transformers, Pydantic; `docs/vault/06 Risks/` Eval Cost, Hosting; `docs/vault/07 Progress/` Open Questions, Current Status, Session Log; `docs/vault/08 Results/README.md`; `docs/flow.md`
+- Not changed: the local project rules file (Q1: it never said "repo root", so no wording fix was needed)
+
+### What I am changing
+Recording the approved answers to Open Questions 1–43 in the vault: eight new ADRs (012–019), a GitHub Integration component, a Benchmark Leakage risk, eight stack notes, a root README stating the dev-split-only training rule, and updates to every affected note. `docs/flow.md` gets design references under its `[NOT YET BUILT]` sections. Documentation only; no application code.
+
+### Why I am making this change
+All open questions were answered and approved. Four conflicts or gaps were settled before editing: the results page deploys to GitHub Pages via an Actions build artifact (not by serving `docs/`, which holds the vault); the training rule goes in a new root README; SQLAlchemy is covered by ADR-012 with its own stack note; CI and drift runs use a separate eval database.
+
+### Alternatives I considered
+1. Serve GitHub Pages from `docs/` exactly as Q31 was worded.
+2. Put the training rule only in ADR-017.
+3. Leave SQLAlchemy as an unrecorded dependency of Alembic.
+4. Have CI read and write the production database.
+
+### Reasons I rejected each alternative
+1. `docs/` already holds the vault and logs, which would all be published as the site.
+2. The rule is the main safeguard of the holdout numbers and belongs where every reader sees it first.
+3. Project rules forbid adding a technology without an ADR.
+4. Chosen by the project owner: a separate eval database keeps CI and drift runs away from production data.
+
+### Trade-offs I am accepting
+The vault grows to 80+ notes, so keeping it in sync costs more. `docs/flow.md` gains design references before code exists; they are marked as not built so they cannot be mistaken for real behaviour.
+
+### What could go wrong
+- The flow.md design references drift from the vault if one is edited without the other.
+- Order of steps after the graph is interpreted as: guardrail validation, then precision filter. Q7 says "post-graph" but does not order it against the filter.
+- Q37 (security taxonomy) and Q41 (ADR-010) remain undecided; notes depending on them carry pending markers.
+
+### How this affects other components
+- **GitHub Integration** (new): owns App auth (JWT → installation token), diff fetching, review comment posting, and reading finding-outcome signals.
+- **Webhook Service**: GitHub App auth moves to GitHub Integration; signature verification stays.
+- **Job Queue**: orchestration order becomes context → guardrail sanitize → graph → guardrail validate → precision filter → comment posting.
+- **Context Builder**: outputs a `ReviewContext`; indexes on install, incrementally per PR, and on manual command; local sentence-transformers embeddings; Qdrant native sparse vectors with RRF.
+- **Guardrails**: runs twice (sanitize before the graph, validate after); never skips a review.
+- **Review Graph**: receives sanitized `ReviewContext`; emits findings without confidence, using the logic-bug and security taxonomies.
+- **Finding Schema**: adds severity enum, confidence 0.0–1.0 set by the filter, `security-other` with subcategory, `ReviewContext`, and `ReviewResult` fields.
+- **Precision Filter**: sets confidence; threshold tuned by sweep; trained on dev-split findings only.
+- **Storage**: `app/storage/` with SQLAlchemy and Alembic; raw outcome signals stored separately from derived labels.
+- **LLM Client**: no change.

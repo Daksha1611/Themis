@@ -1,6 +1,6 @@
 ---
 type: decision
-status: done
+status: accepted
 tags: [decision]
 related:
   - "[[Scope]]"
@@ -11,8 +11,6 @@ related:
 ---
 
 # ADR-002 Bugs and security only
-
-**Status:** accepted
 
 ## Context
 The core promise is high precision and low noise ([[Vision]]).

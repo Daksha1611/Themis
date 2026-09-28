@@ -5,8 +5,10 @@ tags: [component]
 related:
   - "[[Webhook Service]]"
   - "[[Context Builder]]"
+  - "[[Guardrails]]"
   - "[[Review Graph]]"
   - "[[Precision Filter]]"
+  - "[[GitHub Integration]]"
   - "[[Storage]]"
   - "[[arq]]"
   - "[[Redis]]"
@@ -20,10 +22,10 @@ related:
 **Responsibilities**
 - Hold review jobs enqueued by the [[Webhook Service]]
 - Run a worker that consumes review jobs
-- Orchestrate the job: [[Context Builder]] → [[Review Graph]] → [[Precision Filter]] → comment posting
+- Orchestrate the job: [[Context Builder]] → [[Guardrails]] (sanitize) → [[Review Graph]] → [[Guardrails]] (validate) → [[Precision Filter]] → comment posting by [[GitHub Integration]]
 
 **Inputs:** review jobs from the [[Webhook Service]].
-**Outputs:** a completed review run (findings posted to the PR; run recorded in [[Storage]]).
+**Outputs:** a completed review run (findings posted to the PR; `ReviewResult` recorded in [[Storage]]).
 
 **Planned code location:** `app/worker/` (queue consumer, job orchestration).
 

@@ -4,74 +4,77 @@ status: in-progress
 tags: [progress]
 related:
   - "[[Current Status]]"
-  - "[[Guardrails]]"
-  - "[[Precision Filter]]"
-  - "[[Storage]]"
-  - "[[CI Quality Gate]]"
   - "[[Benchmark]]"
+  - "[[Success Metrics]]"
+  - "[[ADR-009 OWASP Top 10 security taxonomy]]"
+  - "[[ADR-010 Prometheus and Grafana operational metrics]]"
 ---
 
 # Open Questions
 
-Items the spec leaves unspecified or contradictory. Resolve before building the affected part.
+## Still open
+- **Q20. Specific benchmark repos.** Selection criteria are recorded in [[Benchmark]]; the repo list is not chosen.
+- **Q25. Numeric targets.** Deferred until baseline numbers exist ([[Success Metrics]]).
+- **Q37. Security taxonomy: OWASP Top 10 (2021) or CWE Top 25?** Awaiting decision ([[ADR-009 OWASP Top 10 security taxonomy]]).
+- **Q41. Fate of ADR-010.** Recommended: supersede for v1. Awaiting decision ([[ADR-010 Prometheus and Grafana operational metrics]]).
 
-## Spec / document conventions
-1. **decision.md location.** The spec says "create `docs/decision.md` at the repo root (not inside the vault)". `docs/decision.md` is not the repo root. Used `docs/decision.md` (matches the session rules). Same for `docs/flow.md`.
-2. **Frontmatter `tags: [#component]`.** In YAML `#` starts a comment, so this would parse as an empty list. Used `tags: [component]` (Obsidian adds the `#`).
-3. **Frontmatter `related: [[a]], [[b]]`.** Unquoted, YAML reads this as nested lists, not links. Used a list of quoted wikilinks so Obsidian recognises them.
-4. **Decision status.** Frontmatter `status` allows planned / in-progress / done, but ADRs need "accepted". Used `status: done` in frontmatter and **Status: accepted** in the body.
-5. **Type for hub and results notes.** `00 Index` and `Results README` have no matching type. Used `project` and `reliability`.
-6. **Meaning of `status` for risk and stack notes.** Used `planned` for all.
+## Resolved (2026-09-29)
 
-## Architecture gaps
-7. **Guardrails placement.** Before the [[Review Graph]], after it, or both? What happens on detection (skip review, strip content, flag the PR)?
-8. **Comment posting has no component note.** `app/github/` owns GitHub App auth, diff fetch, and comment posting, but none of the nine components owns posting. Add a "GitHub Integration" component?
-9. **[[Storage]] code location.** Not in the planned repo structure.
-10. **[[Tracing]] and [[Drift Monitoring]] code locations.** Not in the planned repo structure.
-11. **Langfuse deployment.** Self-hosted or cloud? It is not in the docker-compose service list.
-12. **Repo index lifecycle.** When is a repo indexed into Qdrant (on install, per PR, incrementally)?
-13. **Embedding model** for hybrid search, and how BM25 is implemented, are not specified.
-14. **Context Builder output format** is not specified.
-15. **ReviewResult fields** are not specified.
-16. **Finding severity and confidence scales** are not specified.
+### Document conventions
+1. decision.md and flow.md live in `docs/`. Kept.
+2. `tags: [type]` without `#`. Kept.
+3. `related:` as a list of quoted wikilinks. Kept.
+4. Decision notes use `status: accepted | superseded`; status values per type are in the [[Glossary]].
+5. `00 Index` is `project`; Results README is `reliability`. Kept.
+6. Risk and stack notes use `planned`. Kept.
 
-## Precision filter
-17. **Score threshold** is not specified.
-18. **Base encoder model** is not specified.
-19. **Training labels.** Where do the labels for `training/label_findings.py` come from, and does training data overlap the benchmark (leakage into holdout)?
+### Architecture
+7. Guardrails run twice: sanitize before the graph, validate after; never skip a review → [[Guardrails]]
+8. New component owns App auth, diff fetch, comment posting → [[GitHub Integration]]
+9. `app/storage/` with SQLAlchemy models and Alembic migrations → [[ADR-012 Alembic for schema migrations]]
+10. Tracing in `app/observability/`; drift in `evals/drift/` plus a scheduled workflow → [[Tracing]], [[Drift Monitoring]]
+11. Langfuse cloud, free tier → [[ADR-013 Langfuse cloud over self-hosting]]
+12. Index on install, incrementally per PR, manually on demand → [[ADR-014 Incremental repo indexing]]
+13. Local sentence-transformers embeddings; Qdrant native sparse vectors with RRF → [[ADR-015 Local embeddings and Qdrant native hybrid search]]
+14. Context Builder outputs a Pydantic `ReviewContext` → [[Context Builder]], [[Finding Schema]]
+15. `ReviewResult` fields defined → [[Finding Schema]]
+16. Severity enum; confidence 0.0–1.0 from the precision filter, never the LLM → [[ADR-016 Confidence comes from the precision filter, not the LLM]]
 
-## Benchmark and metrics
-20. **Which ~5 repos.** Not chosen.
-21. **Split ratio** between dev and holdout.
-22. **Clean PR source.** How clean PRs are selected.
-23. **"Correct location" tolerance** for bug recall (exact line, or within the labeled range?).
-24. **Injection resistance definition** and how `evals/injection/` cases are scored.
-25. **Numeric targets** for [[Success Metrics]].
-26. **Leakage** is described in the benchmark but not listed under Risks. Should it get its own risk note?
+### Precision filter
+17. Threshold tuned by a precision-recall sweep, configurable; default ADR once real data exists → [[Precision Filter]]
+18. Compare `microsoft/codebert-base` and `deberta-v3-small` as an ablation row → [[Precision Filter]], [[Ablation Table]]
+19. Labels from dev-split runs only, enforced in code → [[ADR-017 Dev-split-only training data for the precision filter]]
 
-## Reliability layer
-27. **CI gate thresholds** for precision and recall, and whether "drops" means versus the main branch or versus a fixed number.
-28. **CI secrets and cost.** The eval gate needs an OpenRouter key in GitHub Actions; PRs from forks cannot access secrets.
-29. **Drift monitoring schedule** and which providers/models to compare.
-30. **Ablation Table split.** Dev or holdout?
-31. **Public results page.** Where is it hosted?
-32. **Lint and test tools** for `ci.yml` are not in the tech stack.
+### Benchmark and metrics
+20. Selection criteria recorded; **repo list still open** → [[Benchmark]]
+21. 60% dev / 40% holdout, stratified by repo and category → [[Benchmark]], [[ADR-007 dev-holdout benchmark split]]
+22. Clean PRs: files with no bug fix for 6–12 months (heuristic), size-matched → [[Benchmark]]
+23. Hit = within labeled range ±3 lines and correct category; exact-line accuracy secondary → [[Metrics]]
+24. Injection resistance via matched pairs → [[Metrics]]
+25. Shape of success recorded; **numbers still open** → [[Success Metrics]]
+26. Own risk note → [[Benchmark Leakage]]
 
-## Operations
-33. **Hosting provider** is not chosen ([[Hosting]]).
+### Reliability layer
+27. Gate compares against main's last run in a separate eval database; −3 pp precision / −5 pp recall → [[CI Quality Gate]]
+28. Eval gate on in-repo branches only (50-case dev subset); forks run unit tests; full dev nightly → [[CI Quality Gate]]
+29. Weekly drift on the fixed subset: models in use plus one cheaper, one stronger → [[Drift Monitoring]]
+30. Ablation on holdout once at the end, with dev numbers alongside → [[Ablation Table]]
+31. Results page deployed to GitHub Pages by an Actions build artifact from `evals/report.py` → [[Ablation Table]]
+32. ruff, mypy, pytest (+ pytest-asyncio), pytest-cov → [[CI Quality Gate]]
 
-## Proposals from prior art (resolved 2026-09-28)
-From [[Prior Art]]. All three approved.
+### Operations
+33. Small paid VPS with Docker Compose and Caddy → [[ADR-018 Paid VPS over free tier hosting]]
 
-34. ~~OWASP Top 10 as the security-pass taxonomy~~ → accepted as [[ADR-009 OWASP Top 10 security taxonomy]].
-35. ~~Operational metrics (Prometheus + Grafana)~~ → accepted as [[ADR-010 Prometheus and Grafana operational metrics]].
-36. ~~Learning from repo history, scoped to precision~~ → accepted as [[ADR-011 Finding outcomes as precision-filter labels]].
+### Prior art (resolved 2026-09-28)
+34. OWASP Top 10 taxonomy → [[ADR-009 OWASP Top 10 security taxonomy]]
+35. Prometheus + Grafana → [[ADR-010 Prometheus and Grafana operational metrics]] (now pending Q41)
+36. Outcome labels → [[ADR-011 Finding outcomes as precision-filter labels]]
 
-## Raised by ADR-009 to ADR-011
-37. **OWASP Top 10 edition** to pin.
-38. **Logic-bug categories.** Security findings now have a taxonomy; do logic bugs need one too, or does `category` stay "logic bug"?
-39. **Security findings outside the OWASP Top 10.** What category does a real security issue get if it fits none of the ten?
-40. **How the app exposes metrics** to Prometheus, especially from the arq worker process.
-41. **Which Grafana dashboards and alerts** are in scope.
-42. **Outcome signal definition.** What counts as "resolved" (thread resolved, code changed at the line, both?) and "dismissed"?
-43. **Outcome label volume.** Which repos will Themis be installed on to produce enough outcome labels?
+### Raised by ADR-009 to ADR-011
+37. OWASP Top 10 (2021) pinned; **CWE Top 25 reconsideration still open** → [[ADR-009 OWASP Top 10 security taxonomy]]
+38. Logic bugs get a seven-category taxonomy → [[ADR-019 Logic bug taxonomy]]
+39. `security-other` with a required subcategory; frequency tracked → [[Finding Schema]], [[Metrics]]
+40. Worker metrics via side HTTP server or Pushgateway; only if ADR-010 survives → [[Operational Monitoring]]
+41. **Still open** (see above)
+42. Validated / dismissed signal definitions; raw signals kept separate from labels → [[ADR-011 Finding outcomes as precision-filter labels]]
+43. Outcome labels reframed as a pilot, not a data engine → [[ADR-011 Finding outcomes as precision-filter labels]]

@@ -1,6 +1,6 @@
 ---
 type: decision
-status: done
+status: accepted
 tags: [decision]
 related:
   - "[[Precision Filter]]"
@@ -10,8 +10,6 @@ related:
 ---
 
 # ADR-008 Encoder classifier as precision filter
-
-**Status:** accepted
 
 ## Context
 Comment precision is the headline metric; noisy findings erode trust.

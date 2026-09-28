@@ -10,11 +10,12 @@ related:
   - "[[Finding Schema]]"
   - "[[Precision Filter]]"
   - "[[Guardrails]]"
+  - "[[GitHub Integration]]"
   - "[[LLM Client]]"
   - "[[Storage]]"
   - "[[Tracing]]"
-  - "[[Eval Harness]]"
   - "[[Operational Monitoring]]"
+  - "[[Eval Harness]]"
 ---
 
 # Architecture Overview
@@ -27,39 +28,40 @@ flowchart LR
     WH -->|enqueue job| Q[Job Queue<br/>arq + Redis]
     Q --> W[Worker]
     W --> CB[Context Builder<br/>tree-sitter + Qdrant]
-    CB --> RG
+    GI[GitHub Integration<br/>app/github] -->|diff| CB
+    CB -->|ReviewContext| GS[Guardrails<br/>sanitize]
+    GS --> RG
     subgraph RG[Review Graph - LangGraph]
         BP[Bug pass] --> M[Merge / de-duplicate]
         SP[Security pass] --> M
     end
-    RG -->|Findings| PF[Precision Filter<br/>encoder classifier]
-    PF -->|filtered Findings| POST[Comment posting<br/>app/github]
-    POST --> GH2[GitHub PR comments]
+    RG -->|Findings, no confidence| GV[Guardrails<br/>validate]
+    GV --> PF[Precision Filter<br/>sets confidence]
+    PF -->|filtered Findings| GI
+    GI -->|review comments| GH2[GitHub PR]
     RG --> LLM[LLM Client<br/>LiteLLM]
     LLM --> OR[OpenRouter]
-    GR[Guardrails<br/>prompt-injection detection] -.placement TBD.- RG
     W --> DB[(Storage<br/>PostgreSQL)]
-    GH2 -.finding outcomes.-> DB
-    DB -.outcome labels.-> PF
+    GH2 -.outcome signals.-> GI
+    GI -.raw signals.-> DB
+    DB -.pilot outcome labels.-> PF
 
     subgraph REL[Reliability layer]
-        T[Tracing<br/>Langfuse]
-        OM[Operational Monitoring<br/>Prometheus + Grafana]
+        T[Tracing<br/>Langfuse cloud]
+        OM[Operational Monitoring<br/>Prometheus + Grafana<br/>pending Q41]
         B[Benchmark<br/>dev / holdout] --> EH[Eval Harness]
         EH --> MET[Metrics]
         MET --> CI[CI Quality Gate]
         MET --> DM[Drift Monitoring]
         MET --> AB[Ablation Table]
+        EH --> EDB[(Eval database)]
     end
     RG -.traced.-> T
     WH -.metrics.-> OM
     W -.metrics.-> OM
     EH -.runs full review path.-> W
-    EH --> DB
 ```
 
-**Review path components:** [[Webhook Service]] → [[Job Queue]] → [[Context Builder]] → [[Review Graph]] → [[Precision Filter]] → comment posting. [[Finding Schema]] is the data contract between them. [[Guardrails]], [[LLM Client]], and [[Storage]] support the path.
+**Review path:** [[Webhook Service]] → [[Job Queue]] → [[Context Builder]] → [[Guardrails]] (sanitize) → [[Review Graph]] → [[Guardrails]] (validate) → [[Precision Filter]] → [[GitHub Integration]] (post comments). [[Finding Schema]] is the data contract between them. [[LLM Client]] and [[Storage]] support the path.
 
-**Reliability layer:** [[Tracing]], [[Operational Monitoring]], [[Benchmark]], [[Eval Harness]], [[Metrics]], [[CI Quality Gate]], [[Drift Monitoring]], [[Ablation Table]].
-
-Where Guardrails runs and which component owns comment posting are not specified. See [[Open Questions]].
+**Reliability layer:** [[Tracing]], [[Operational Monitoring]] (pending Q41), [[Benchmark]], [[Eval Harness]], [[Metrics]], [[CI Quality Gate]], [[Drift Monitoring]], [[Ablation Table]].

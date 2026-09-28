@@ -5,9 +5,9 @@
       "type": "group",
       "label": "Review path",
       "x": -40,
-      "y": -80,
+      "y": -300,
       "width": 2860,
-      "height": 440,
+      "height": 660,
       "color": "5"
     },
     {
@@ -86,13 +86,12 @@
     },
     {
       "id": "posting",
-      "type": "text",
-      "text": "**Comment posting**\n`app/github/`\n_owner component TBD (OQ 8)_",
+      "type": "file",
+      "file": "02 Architecture/GitHub Integration.md",
       "x": 2160,
       "y": 0,
       "width": 260,
-      "height": 100,
-      "color": "3"
+      "height": 100
     },
     {
       "id": "comments",
@@ -111,16 +110,6 @@
       "y": 220,
       "width": 260,
       "height": 100
-    },
-    {
-      "id": "guard",
-      "type": "file",
-      "file": "02 Architecture/Guardrails.md",
-      "x": 1080,
-      "y": 220,
-      "width": 260,
-      "height": 100,
-      "color": "3"
     },
     {
       "id": "llm",
@@ -255,7 +244,7 @@
     {
       "id": "legend",
       "type": "text",
-      "text": "### Themis Map\nData flows left \u2192 right.\n\n- Cyan: review path\n- Green: reliability layer\n- Red: risks\n- Yellow: unresolved placement or ownership\n- Orange: outcome-label feedback loop\n\nClick any box to open its note.\nStart at [[00 Index]] \u00b7 [[Architecture Overview]] \u00b7 [[Open Questions]]",
+      "text": "### Themis Map\nData flows left \u2192 right.\n\n- Cyan: review path\n- Green: reliability layer\n- Red: risks\n- Yellow: pending decision (Q41)\n- Orange: outcome-label feedback loop\n\nClick any box to open its note.\nStart at [[00 Index]] \u00b7 [[Architecture Overview]] \u00b7 [[Open Questions]]",
       "x": 1800,
       "y": 480,
       "width": 480,
@@ -267,6 +256,25 @@
       "file": "03 Reliability/Operational Monitoring.md",
       "x": 1440,
       "y": 660,
+      "width": 260,
+      "height": 100,
+      "color": "3"
+    },
+    {
+      "id": "guard_s",
+      "type": "file",
+      "file": "02 Architecture/Guardrails.md",
+      "x": 1260,
+      "y": -220,
+      "width": 260,
+      "height": 100
+    },
+    {
+      "id": "guard_v",
+      "type": "file",
+      "file": "02 Architecture/Guardrails.md",
+      "x": 1620,
+      "y": -220,
       "width": 260,
       "height": 100
     }
@@ -297,28 +305,12 @@
       "label": "worker runs job"
     },
     {
-      "id": "context-graph",
-      "fromNode": "context",
-      "fromSide": "right",
-      "toNode": "graph",
-      "toSide": "left",
-      "label": "diff + related code"
-    },
-    {
-      "id": "graph-filter",
-      "fromNode": "graph",
-      "fromSide": "right",
-      "toNode": "filter",
-      "toSide": "left",
-      "label": "Findings"
-    },
-    {
       "id": "filter-posting",
       "fromNode": "filter",
       "fromSide": "right",
       "toNode": "posting",
       "toSide": "left",
-      "label": "filtered Findings"
+      "label": "filtered findings + confidence"
     },
     {
       "id": "posting-comments",
@@ -342,23 +334,6 @@
       "toNode": "schema",
       "toSide": "top",
       "label": "typed as"
-    },
-    {
-      "id": "guard-graph",
-      "fromNode": "guard",
-      "fromSide": "right",
-      "toNode": "graph",
-      "toSide": "bottom",
-      "label": "placement TBD",
-      "color": "3"
-    },
-    {
-      "id": "context-guard",
-      "fromNode": "context",
-      "fromSide": "bottom",
-      "toNode": "guard",
-      "toSide": "top",
-      "label": "comments, docstrings, PR text"
     },
     {
       "id": "queue-storage",
@@ -490,21 +465,70 @@
       "label": "request errors"
     },
     {
-      "id": "comments-storage",
-      "fromNode": "comments",
-      "fromSide": "bottom",
-      "toNode": "storage",
-      "toSide": "bottom",
-      "label": "finding outcomes (resolved / dismissed)",
-      "color": "2"
-    },
-    {
       "id": "storage-filter",
       "fromNode": "storage",
       "fromSide": "right",
       "toNode": "filter",
       "toSide": "bottom",
-      "label": "outcome labels (training)",
+      "label": "pilot outcome labels (training)",
+      "color": "2"
+    },
+    {
+      "id": "context-guard_s",
+      "fromNode": "context",
+      "fromSide": "top",
+      "toNode": "guard_s",
+      "toSide": "left",
+      "label": "ReviewContext: sanitize"
+    },
+    {
+      "id": "guard_s-graph",
+      "fromNode": "guard_s",
+      "fromSide": "right",
+      "toNode": "graph",
+      "toSide": "top",
+      "label": "sanitized, delimited input"
+    },
+    {
+      "id": "graph-guard_v",
+      "fromNode": "graph",
+      "fromSide": "top",
+      "toNode": "guard_v",
+      "toSide": "left",
+      "label": "findings (no confidence): validate"
+    },
+    {
+      "id": "guard_v-filter",
+      "fromNode": "guard_v",
+      "fromSide": "right",
+      "toNode": "filter",
+      "toSide": "top",
+      "label": "validated findings"
+    },
+    {
+      "id": "posting-context",
+      "fromNode": "posting",
+      "fromSide": "bottom",
+      "toNode": "context",
+      "toSide": "bottom",
+      "label": "PR diff"
+    },
+    {
+      "id": "comments-posting",
+      "fromNode": "comments",
+      "fromSide": "bottom",
+      "toNode": "posting",
+      "toSide": "bottom",
+      "label": "outcome signals",
+      "color": "2"
+    },
+    {
+      "id": "posting-storage",
+      "fromNode": "posting",
+      "fromSide": "bottom",
+      "toNode": "storage",
+      "toSide": "bottom",
+      "label": "raw outcome signals",
       "color": "2"
     }
   ]

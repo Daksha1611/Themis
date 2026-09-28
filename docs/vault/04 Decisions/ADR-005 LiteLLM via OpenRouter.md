@@ -1,6 +1,6 @@
 ---
 type: decision
-status: done
+status: accepted
 tags: [decision]
 related:
   - "[[LLM Client]]"
@@ -11,8 +11,6 @@ related:
 ---
 
 # ADR-005 LiteLLM via OpenRouter
-
-**Status:** accepted
 
 ## Context
 Themis needs to compare models and use a cheap model during development.

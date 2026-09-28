@@ -11,7 +11,7 @@ version:
 
 **What it is:** Python data validation library.
 
-**What it does in Themis:** Defines the Finding and ReviewResult schemas.
+**What it does in Themis:** Defines the `Finding`, `ReviewContext`, and `ReviewResult` schemas.
 
 **Used by:** [[Finding Schema]]
 

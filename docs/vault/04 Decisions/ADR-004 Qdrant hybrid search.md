@@ -1,6 +1,6 @@
 ---
 type: decision
-status: done
+status: accepted
 tags: [decision]
 related:
   - "[[Context Builder]]"
@@ -9,8 +9,6 @@ related:
 ---
 
 # ADR-004 Qdrant hybrid search
-
-**Status:** accepted
 
 ## Context
 Reviewing a diff well requires related code from the rest of the repo.

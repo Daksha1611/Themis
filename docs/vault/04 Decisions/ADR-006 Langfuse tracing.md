@@ -1,6 +1,6 @@
 ---
 type: decision
-status: done
+status: accepted
 tags: [decision]
 related:
   - "[[Tracing]]"
@@ -9,8 +9,6 @@ related:
 ---
 
 # ADR-006 Langfuse tracing
-
-**Status:** accepted
 
 ## Context
 Every design decision must be backed by numbers, including cost and latency.

@@ -1,6 +1,6 @@
 ---
 type: decision
-status: done
+status: accepted
 tags: [decision]
 related:
   - "[[Webhook Service]]"
@@ -10,8 +10,6 @@ related:
 ---
 
 # ADR-003 arq + Redis queue
-
-**Status:** accepted
 
 ## Context
 GitHub times out slow webhook responses, so the review cannot run inside the webhook request.

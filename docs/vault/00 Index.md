@@ -15,7 +15,7 @@ related:
 
 Start here: [[Current Status]] · [[Open Questions]] · [[Architecture Overview]] · [[Themis Map.canvas|Themis Map]] (visual map)
 
-Outside the vault: `docs/flow.md` (what the code does), `docs/decision.md` (why each change was made).
+Outside the vault: `README.md` (repo overview), `docs/flow.md` (what the code does), `docs/decision.md` (why each change was made).
 
 ## 01 Project
 - [[Prior Art]]
@@ -36,6 +36,7 @@ Outside the vault: `docs/flow.md` (what the code does), `docs/decision.md` (why 
 - [[Guardrails]]
 - [[LLM Client]]
 - [[Storage]]
+- [[GitHub Integration]]
 
 ## 03 Reliability
 - [[Tracing]]
@@ -59,6 +60,14 @@ Outside the vault: `docs/flow.md` (what the code does), `docs/decision.md` (why 
 - [[ADR-009 OWASP Top 10 security taxonomy]]
 - [[ADR-010 Prometheus and Grafana operational metrics]]
 - [[ADR-011 Finding outcomes as precision-filter labels]]
+- [[ADR-012 Alembic for schema migrations]]
+- [[ADR-013 Langfuse cloud over self-hosting]]
+- [[ADR-014 Incremental repo indexing]]
+- [[ADR-015 Local embeddings and Qdrant native hybrid search]]
+- [[ADR-016 Confidence comes from the precision filter, not the LLM]]
+- [[ADR-017 Dev-split-only training data for the precision filter]]
+- [[ADR-018 Paid VPS over free tier hosting]]
+- [[ADR-019 Logic bug taxonomy]]
 
 ## 05 Stack
 - [[Python]]
@@ -78,8 +87,17 @@ Outside the vault: `docs/flow.md` (what the code does), `docs/decision.md` (why 
 - [[GitHub Actions]]
 - [[Prometheus]]
 - [[Grafana]]
+- [[SQLAlchemy]]
+- [[Alembic]]
+- [[sentence-transformers]]
+- [[ruff]]
+- [[mypy]]
+- [[pytest]]
+- [[pytest-cov]]
+- [[Caddy]]
 
 ## 06 Risks
+- [[Benchmark Leakage]]
 - [[Eval Cost]]
 - [[Hosting]]
 - [[Label Noise]]

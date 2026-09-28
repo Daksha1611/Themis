@@ -1,17 +1,16 @@
 ---
 type: decision
-status: done
+status: accepted
 tags: [decision]
 related:
   - "[[Benchmark]]"
   - "[[Eval Harness]]"
   - "[[CI Quality Gate]]"
   - "[[Eval Cost]]"
+  - "[[ADR-017 Dev-split-only training data for the precision filter]]"
 ---
 
 # ADR-007 dev-holdout benchmark split
-
-**Status:** accepted
 
 ## Context
 Tuning against the same cases used to report results would overstate quality. Eval runs cost money ([[Eval Cost]]).
@@ -25,3 +24,5 @@ The [[Benchmark]] has two splits: **dev** (for tuning) and **holdout** (run only
 ## Consequences
 - The [[CI Quality Gate]] runs only the dev split.
 - Holdout is run only at milestones / completion.
+- Split ratio: 60% dev / 40% holdout, stratified by repo and bug category (see [[Benchmark]]).
+- The precision filter trains on dev-split findings only ([[ADR-017 Dev-split-only training data for the precision filter]]).

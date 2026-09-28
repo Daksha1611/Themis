@@ -16,7 +16,8 @@ related:
 
 **Mitigation**
 - Cache LLM responses ([[Eval Harness]])
-- Run only the dev split in the [[CI Quality Gate]]
+- Run a fixed 50-case dev subset per PR and the full dev split nightly ([[CI Quality Gate]])
+- Drift runs weekly on the same fixed subset ([[Drift Monitoring]])
 - Use a cheap model during development ([[LLM Client]])
 - Run holdout only at completion ([[Benchmark]])
 

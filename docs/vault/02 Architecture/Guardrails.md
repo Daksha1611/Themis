@@ -3,8 +3,10 @@ type: component
 status: planned
 tags: [component]
 related:
-  - "[[Review Graph]]"
   - "[[Context Builder]]"
+  - "[[Review Graph]]"
+  - "[[Precision Filter]]"
+  - "[[GitHub Integration]]"
   - "[[Metrics]]"
   - "[[Python]]"
 ---
@@ -13,12 +15,28 @@ related:
 
 **Purpose:** stop hidden instructions in the reviewed code from steering the reviewer.
 
-**Responsibilities**
-- Detect prompt injection hidden in code comments, docstrings, and PR descriptions
+Runs at **two points**, with different jobs.
 
-**Inputs:** code comments, docstrings, and PR descriptions from the PR under review.
-**Outputs:** a detection result. What happens on detection is not yet specified.
+## Pre-graph: sanitize
+- Strip or neutralise instruction-like text found in code comments, docstrings, and the PR description
+- Wrap all untrusted content in explicit delimiters
+- State in the prompt that delimited content is data to be reviewed, never instructions to follow
+
+## Post-graph: validate
+Drop any finding showing signs the model followed injected instructions:
+- findings that reference the PR description
+- findings that praise the code
+- findings that request approval
+
+## On detection
+- **Never skip the review.** Review anyway using the sanitized input.
+- Add one comment (posted by [[GitHub Integration]]) noting that suspicious instruction-like content was detected.
+- Silently skipping is the worst outcome: it gives the attacker exactly what they wanted.
+- The run records `guardrail_triggered` in its `ReviewResult`.
+
+**Inputs:** the `ReviewContext` from the [[Context Builder]] (sanitize); findings from the [[Review Graph]] (validate).
+**Outputs:** a sanitized `ReviewContext` to the [[Review Graph]]; validated findings to the [[Precision Filter]].
 
 **Planned code location:** `app/guardrails/`. Adversarial test PRs in `evals/injection/`.
 
-**Dependencies:** receives content from the [[Context Builder]]; relationship to the [[Review Graph]] (before, after, or both) is not yet specified. Measured by injection resistance in [[Metrics]].
+Measured by injection resistance in [[Metrics]].

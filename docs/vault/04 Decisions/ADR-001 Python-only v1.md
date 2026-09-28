@@ -1,6 +1,6 @@
 ---
 type: decision
-status: done
+status: accepted
 tags: [decision]
 related:
   - "[[Scope]]"
@@ -11,8 +11,6 @@ related:
 ---
 
 # ADR-001 Python-only v1
-
-**Status:** accepted
 
 ## Context
 Themis must ship a trustworthy v1. Scope creep is the biggest project risk ([[Scope Creep]]).

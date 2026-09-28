@@ -18,4 +18,10 @@ Themis succeeds when its review quality is measured and defended by numbers ([[V
 - Regressions are blocked by the [[CI Quality Gate]].
 - The final deliverable showing each design decision's effect is the [[Ablation Table]].
 
-Numeric targets are not set in the spec (see [[Open Questions]]).
+## Shape of success
+Numeric targets are deferred until baseline numbers exist. Success means:
+- Precision improves meaningfully over the baseline
+- Recall does not fall more than a small margin
+- Cost per PR stays under a stated ceiling
+
+Real numbers are filled in after the baseline eval run ([[Open Questions]], Q25).

@@ -6,24 +6,32 @@ related:
   - "[[Job Queue]]"
   - "[[Eval Harness]]"
   - "[[Finding Schema]]"
-  - "[[PostgreSQL]]"
-  - "[[Docker]]"
   - "[[Precision Filter]]"
+  - "[[GitHub Integration]]"
+  - "[[CI Quality Gate]]"
+  - "[[PostgreSQL]]"
+  - "[[SQLAlchemy]]"
+  - "[[Alembic]]"
+  - "[[Docker]]"
   - "[[ADR-011 Finding outcomes as precision-filter labels]]"
+  - "[[ADR-012 Alembic for schema migrations]]"
 ---
 
 # Storage
 
-**Purpose:** persist review runs and eval results.
+**Purpose:** persist review runs, finding outcomes, and eval results.
 
 **Responsibilities**
-- Store review runs
-- Store eval results
-- Store the outcomes of posted findings (resolved or dismissed), used as [[Precision Filter]] labels ([[ADR-011 Finding outcomes as precision-filter labels]])
+- Store review runs (`ReviewResult`)
+- Store finding-outcome signals from [[GitHub Integration]]. Raw signals are stored separately from the derived label ([[ADR-011 Finding outcomes as precision-filter labels]]).
+- Store eval results. CI and drift runs use a **separate eval database**, not production. It holds each main-branch eval run's metrics for the [[CI Quality Gate]].
 
-**Inputs:** review runs from the [[Job Queue]] worker; eval results from the [[Eval Harness]].
-**Outputs:** stored records for later analysis.
+**Inputs:** review runs from the [[Job Queue]] worker; outcome signals from [[GitHub Integration]]; eval results from the [[Eval Harness]].
+**Outputs:** stored records; outcome labels for the [[Precision Filter]].
 
-**Planned code location:** not specified in the planned repo structure. `postgres` runs in `infra/` docker-compose.
+**Planned code location:** `app/storage/` ([[ADR-012 Alembic for schema migrations]]):
+- `models.py` ([[SQLAlchemy]])
+- `repository.py`
+- `migrations/` ([[Alembic]])
 
-**Dependencies:** [[PostgreSQL]], [[Docker]].
+**Dependencies:** [[PostgreSQL]], [[Docker]]. Neon free tier is an option ([[ADR-018 Paid VPS over free tier hosting]]).
