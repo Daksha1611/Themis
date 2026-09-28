@@ -13,11 +13,12 @@ related:
 
 > An AI code reviewer that weighs the evidence before it speaks.
 
-Start here: [[Current Status]] · [[Open Questions]] · [[Architecture Overview]]
+Start here: [[Current Status]] · [[Open Questions]] · [[Architecture Overview]] · [[Themis Map.canvas|Themis Map]] (visual map)
 
 Outside the vault: `docs/flow.md` (what the code does), `docs/decision.md` (why each change was made).
 
 ## 01 Project
+- [[Prior Art]]
 - [[Glossary]]
 - [[Non-Goals]]
 - [[Scope]]

@@ -13,3 +13,8 @@ related:
 **Done:** created the git repo, the knowledge vault (`docs/vault/`), `docs/decision.md`, and `docs/flow.md` from the approved spec. No application code.
 **Next:** approval of the planning docs; resolve [[Open Questions]].
 **Blockers / questions:** see [[Open Questions]].
+
+## 2026-09-28 (2)
+**Done:** planning docs approved. Added the [[Themis Map.canvas|Themis Map]] canvas (data-flow map of every component and reliability note), graph view colour groups by folder (local setting), and the [[Prior Art]] note comparing Themis with a course PR-reviewer project.
+**Next:** resolve [[Open Questions]], including proposals 34–36.
+**Blockers / questions:** none new beyond Open Questions.

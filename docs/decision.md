@@ -67,3 +67,42 @@ Fifty-four small notes must be kept in sync by hand; renaming a note can break w
 
 ### How this affects other components
 No component behavior changes. Every component note (Webhook Service, Job Queue, Context Builder, Review Graph, Finding Schema, Precision Filter, Guardrails, LLM Client, Storage) is created with `status: planned`.
+
+---
+
+## Add architecture canvas, graph view colors, and prior-art note
+**Date**: 2026-09-28
+**File(s) affected**:
+- `docs/vault/Themis Map.canvas` (created)
+- `docs/vault/01 Project/Prior Art.md` (created)
+- `docs/vault/00 Index.md` (edited: links to the canvas and Prior Art)
+- `docs/vault/07 Progress/Open Questions.md` (edited: proposals from prior art)
+- `docs/vault/07 Progress/Current Status.md` (edited)
+- `docs/vault/07 Progress/Session Log.md` (edited)
+- `docs/vault/.obsidian/graph.json` (edited, local only, gitignored)
+
+### What I am changing
+Adding a visual reference map of the system as an Obsidian Canvas, colour groups for the graph view (by folder), and a note comparing Themis to a published course project (an AI GitHub PR reviewer). Ideas taken from that project are recorded as proposals in Open Questions, not added to the spec.
+
+### Why I am making this change
+Requested: "make graph in obsidian vault for reference" and permission to take inspiration from the course project. Project rules forbid adding features or technologies without a proposal, so inspiration is captured as proposals.
+
+### Alternatives I considered
+1. Only configure the built-in graph view.
+2. Draw a second Mermaid diagram inside a note.
+3. Adopt the course project's ideas directly into the spec.
+
+### Reasons I rejected each alternative
+1. The graph view shows every link equally and has no data-flow direction; kept only as a complement.
+2. Architecture Overview already has a Mermaid diagram; the canvas adds clickable nodes that open the real notes.
+3. Project rules require proposing new features/technologies before adopting them.
+
+### Trade-offs I am accepting
+The canvas is a hand-placed layout that must be updated when components change. Graph colours live in `.obsidian/`, which is gitignored, so they are local to this machine.
+
+### What could go wrong
+- The canvas drifts from the component notes if one is updated without the other.
+- Renaming a note breaks its canvas file node.
+
+### How this affects other components
+No component behaviour changes. No component note is edited.

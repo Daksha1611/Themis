@@ -59,3 +59,10 @@ Items the spec leaves unspecified or contradictory. Resolve before building the 
 
 ## Operations
 33. **Hosting provider** is not chosen ([[Hosting]]).
+
+## Proposals from prior art
+From [[Prior Art]]. Not adopted; each needs approval and an ADR.
+
+34. **OWASP Top 10 as the security-pass taxonomy.** Use OWASP Top 10 (or CWE IDs) as the `category` values for security findings in the [[Finding Schema]]. Makes security findings comparable and gives the benchmark a labeling vocabulary.
+35. **Operational metrics (Prometheus + Grafana).** Queue depth, job latency, and error rates for the running app. Would be a new technology; overlaps partly with [[Tracing]].
+36. **Learning from repo history, scoped to precision.** The course's Learner mines merged PRs for style. A Themis version could instead use which posted findings were resolved or dismissed as labels for the [[Precision Filter]] (ties to Q19). Must not become style learning.

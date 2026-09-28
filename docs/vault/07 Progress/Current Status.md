@@ -17,9 +17,10 @@ related:
 - Knowledge vault created at `docs/vault/`
 - `docs/decision.md` (code decision log) created
 - `docs/flow.md` (execution flow) created, every section `[NOT YET BUILT]`
+- Planning docs approved
+- Visual map [[Themis Map.canvas|Themis Map]] and [[Prior Art]] note added
 
 **Next**
-- Review and approve the vault
-- Resolve [[Open Questions]]
+- Resolve [[Open Questions]] (including proposals 34–36 from prior art)
 
-**Blockers:** awaiting approval of the planning docs.
+**Blockers:** open questions must be resolved before building the affected components.

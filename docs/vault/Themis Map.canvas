@@ -1,0 +1,468 @@
+{
+  "nodes": [
+    {
+      "id": "g_review",
+      "type": "group",
+      "label": "Review path",
+      "x": -40,
+      "y": -80,
+      "width": 2860,
+      "height": 440,
+      "color": "5"
+    },
+    {
+      "id": "g_rel",
+      "type": "group",
+      "label": "Reliability layer",
+      "x": -40,
+      "y": 440,
+      "width": 1780,
+      "height": 500,
+      "color": "4"
+    },
+    {
+      "id": "g_risk",
+      "type": "group",
+      "label": "Risks",
+      "x": -40,
+      "y": 1000,
+      "width": 1420,
+      "height": 200,
+      "color": "1"
+    },
+    {
+      "id": "github",
+      "type": "text",
+      "text": "**GitHub**\nPR opened / updated",
+      "x": 0,
+      "y": 0,
+      "width": 260,
+      "height": 100
+    },
+    {
+      "id": "webhook",
+      "type": "file",
+      "file": "02 Architecture/Webhook Service.md",
+      "x": 360,
+      "y": 0,
+      "width": 260,
+      "height": 100
+    },
+    {
+      "id": "queue",
+      "type": "file",
+      "file": "02 Architecture/Job Queue.md",
+      "x": 720,
+      "y": 0,
+      "width": 260,
+      "height": 100
+    },
+    {
+      "id": "context",
+      "type": "file",
+      "file": "02 Architecture/Context Builder.md",
+      "x": 1080,
+      "y": 0,
+      "width": 260,
+      "height": 100
+    },
+    {
+      "id": "graph",
+      "type": "file",
+      "file": "02 Architecture/Review Graph.md",
+      "x": 1440,
+      "y": 0,
+      "width": 260,
+      "height": 100
+    },
+    {
+      "id": "filter",
+      "type": "file",
+      "file": "02 Architecture/Precision Filter.md",
+      "x": 1800,
+      "y": 0,
+      "width": 260,
+      "height": 100
+    },
+    {
+      "id": "posting",
+      "type": "text",
+      "text": "**Comment posting**\n`app/github/`\n_owner component TBD (OQ 8)_",
+      "x": 2160,
+      "y": 0,
+      "width": 260,
+      "height": 100,
+      "color": "3"
+    },
+    {
+      "id": "comments",
+      "type": "text",
+      "text": "**GitHub**\nPR review comments",
+      "x": 2520,
+      "y": 0,
+      "width": 260,
+      "height": 100
+    },
+    {
+      "id": "storage",
+      "type": "file",
+      "file": "02 Architecture/Storage.md",
+      "x": 720,
+      "y": 220,
+      "width": 260,
+      "height": 100
+    },
+    {
+      "id": "guard",
+      "type": "file",
+      "file": "02 Architecture/Guardrails.md",
+      "x": 1080,
+      "y": 220,
+      "width": 260,
+      "height": 100,
+      "color": "3"
+    },
+    {
+      "id": "llm",
+      "type": "file",
+      "file": "02 Architecture/LLM Client.md",
+      "x": 1440,
+      "y": 220,
+      "width": 260,
+      "height": 100
+    },
+    {
+      "id": "schema",
+      "type": "file",
+      "file": "02 Architecture/Finding Schema.md",
+      "x": 1800,
+      "y": 220,
+      "width": 260,
+      "height": 100
+    },
+    {
+      "id": "bench",
+      "type": "file",
+      "file": "03 Reliability/Benchmark.md",
+      "x": 0,
+      "y": 520,
+      "width": 260,
+      "height": 100
+    },
+    {
+      "id": "harness",
+      "type": "file",
+      "file": "03 Reliability/Eval Harness.md",
+      "x": 360,
+      "y": 520,
+      "width": 260,
+      "height": 100
+    },
+    {
+      "id": "metrics",
+      "type": "file",
+      "file": "03 Reliability/Metrics.md",
+      "x": 720,
+      "y": 520,
+      "width": 260,
+      "height": 100
+    },
+    {
+      "id": "gate",
+      "type": "file",
+      "file": "03 Reliability/CI Quality Gate.md",
+      "x": 1080,
+      "y": 520,
+      "width": 260,
+      "height": 100
+    },
+    {
+      "id": "drift",
+      "type": "file",
+      "file": "03 Reliability/Drift Monitoring.md",
+      "x": 1080,
+      "y": 660,
+      "width": 260,
+      "height": 100
+    },
+    {
+      "id": "ablation",
+      "type": "file",
+      "file": "03 Reliability/Ablation Table.md",
+      "x": 1080,
+      "y": 800,
+      "width": 260,
+      "height": 100
+    },
+    {
+      "id": "tracing",
+      "type": "file",
+      "file": "03 Reliability/Tracing.md",
+      "x": 1440,
+      "y": 520,
+      "width": 260,
+      "height": 100
+    },
+    {
+      "id": "results",
+      "type": "file",
+      "file": "08 Results/README.md",
+      "x": 1440,
+      "y": 800,
+      "width": 260,
+      "height": 100
+    },
+    {
+      "id": "r_cost",
+      "type": "file",
+      "file": "06 Risks/Eval Cost.md",
+      "x": 0,
+      "y": 1060,
+      "width": 260,
+      "height": 100,
+      "color": "1"
+    },
+    {
+      "id": "r_label",
+      "type": "file",
+      "file": "06 Risks/Label Noise.md",
+      "x": 360,
+      "y": 1060,
+      "width": 260,
+      "height": 100,
+      "color": "1"
+    },
+    {
+      "id": "r_host",
+      "type": "file",
+      "file": "06 Risks/Hosting.md",
+      "x": 720,
+      "y": 1060,
+      "width": 260,
+      "height": 100,
+      "color": "1"
+    },
+    {
+      "id": "r_scope",
+      "type": "file",
+      "file": "06 Risks/Scope Creep.md",
+      "x": 1080,
+      "y": 1060,
+      "width": 260,
+      "height": 100,
+      "color": "1"
+    },
+    {
+      "id": "legend",
+      "type": "text",
+      "text": "### Themis Map\nData flows left \u2192 right.\n\n- Cyan: review path\n- Green: reliability layer\n- Red: risks\n- Yellow: unresolved placement or ownership\n\nClick any box to open its note.\nStart at [[00 Index]] \u00b7 [[Architecture Overview]] \u00b7 [[Open Questions]]",
+      "x": 1800,
+      "y": 480,
+      "width": 480,
+      "height": 400
+    }
+  ],
+  "edges": [
+    {
+      "id": "github-webhook",
+      "fromNode": "github",
+      "fromSide": "right",
+      "toNode": "webhook",
+      "toSide": "left",
+      "label": "PR event"
+    },
+    {
+      "id": "webhook-queue",
+      "fromNode": "webhook",
+      "fromSide": "right",
+      "toNode": "queue",
+      "toSide": "left",
+      "label": "enqueue job"
+    },
+    {
+      "id": "queue-context",
+      "fromNode": "queue",
+      "fromSide": "right",
+      "toNode": "context",
+      "toSide": "left",
+      "label": "worker runs job"
+    },
+    {
+      "id": "context-graph",
+      "fromNode": "context",
+      "fromSide": "right",
+      "toNode": "graph",
+      "toSide": "left",
+      "label": "diff + related code"
+    },
+    {
+      "id": "graph-filter",
+      "fromNode": "graph",
+      "fromSide": "right",
+      "toNode": "filter",
+      "toSide": "left",
+      "label": "Findings"
+    },
+    {
+      "id": "filter-posting",
+      "fromNode": "filter",
+      "fromSide": "right",
+      "toNode": "posting",
+      "toSide": "left",
+      "label": "filtered Findings"
+    },
+    {
+      "id": "posting-comments",
+      "fromNode": "posting",
+      "fromSide": "right",
+      "toNode": "comments",
+      "toSide": "left"
+    },
+    {
+      "id": "graph-llm",
+      "fromNode": "graph",
+      "fromSide": "bottom",
+      "toNode": "llm",
+      "toSide": "top",
+      "label": "prompts"
+    },
+    {
+      "id": "graph-schema",
+      "fromNode": "graph",
+      "fromSide": "bottom",
+      "toNode": "schema",
+      "toSide": "top",
+      "label": "typed as"
+    },
+    {
+      "id": "guard-graph",
+      "fromNode": "guard",
+      "fromSide": "right",
+      "toNode": "graph",
+      "toSide": "bottom",
+      "label": "placement TBD",
+      "color": "3"
+    },
+    {
+      "id": "context-guard",
+      "fromNode": "context",
+      "fromSide": "bottom",
+      "toNode": "guard",
+      "toSide": "top",
+      "label": "comments, docstrings, PR text"
+    },
+    {
+      "id": "queue-storage",
+      "fromNode": "queue",
+      "fromSide": "bottom",
+      "toNode": "storage",
+      "toSide": "top",
+      "label": "review run"
+    },
+    {
+      "id": "bench-harness",
+      "fromNode": "bench",
+      "fromSide": "right",
+      "toNode": "harness",
+      "toSide": "left",
+      "label": "dev / holdout cases"
+    },
+    {
+      "id": "harness-metrics",
+      "fromNode": "harness",
+      "fromSide": "right",
+      "toNode": "metrics",
+      "toSide": "left",
+      "label": "results"
+    },
+    {
+      "id": "metrics-gate",
+      "fromNode": "metrics",
+      "fromSide": "right",
+      "toNode": "gate",
+      "toSide": "left",
+      "label": "dev split, every PR"
+    },
+    {
+      "id": "metrics-drift",
+      "fromNode": "metrics",
+      "fromSide": "right",
+      "toNode": "drift",
+      "toSide": "left",
+      "label": "scheduled"
+    },
+    {
+      "id": "metrics-ablation",
+      "fromNode": "metrics",
+      "fromSide": "right",
+      "toNode": "ablation",
+      "toSide": "left",
+      "label": "per row"
+    },
+    {
+      "id": "ablation-results",
+      "fromNode": "ablation",
+      "fromSide": "right",
+      "toNode": "results",
+      "toSide": "left",
+      "label": "real outputs only"
+    },
+    {
+      "id": "harness-queue",
+      "fromNode": "harness",
+      "fromSide": "top",
+      "toNode": "queue",
+      "toSide": "bottom",
+      "label": "replays full review path (cached LLM)"
+    },
+    {
+      "id": "harness-storage",
+      "fromNode": "harness",
+      "fromSide": "top",
+      "toNode": "storage",
+      "toSide": "left",
+      "label": "eval results"
+    },
+    {
+      "id": "graph-tracing",
+      "fromNode": "graph",
+      "fromSide": "bottom",
+      "toNode": "tracing",
+      "toSide": "top",
+      "label": "every node traced"
+    },
+    {
+      "id": "drift-llm",
+      "fromNode": "drift",
+      "fromSide": "right",
+      "toNode": "llm",
+      "toSide": "bottom",
+      "label": "compares providers / models"
+    },
+    {
+      "id": "r_cost-harness",
+      "fromNode": "r_cost",
+      "fromSide": "top",
+      "toNode": "harness",
+      "toSide": "bottom",
+      "color": "1"
+    },
+    {
+      "id": "r_label-bench",
+      "fromNode": "r_label",
+      "fromSide": "top",
+      "toNode": "bench",
+      "toSide": "bottom",
+      "color": "1"
+    },
+    {
+      "id": "r_host-webhook",
+      "fromNode": "r_host",
+      "fromSide": "top",
+      "toNode": "webhook",
+      "toSide": "bottom",
+      "label": "always-on server",
+      "color": "1"
+    }
+  ]
+}
