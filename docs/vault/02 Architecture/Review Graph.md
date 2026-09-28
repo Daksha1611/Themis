@@ -11,6 +11,7 @@ related:
   - "[[Tracing]]"
   - "[[LangGraph]]"
   - "[[ADR-002 Bugs and security only]]"
+  - "[[ADR-009 OWASP Top 10 security taxonomy]]"
 ---
 
 # Review Graph
@@ -19,7 +20,7 @@ related:
 
 **Responsibilities**
 - Run a logic-bug pass
-- Run a security pass
+- Run a security pass, classifying each security finding by OWASP Top 10 ([[ADR-009 OWASP Top 10 security taxonomy]])
 - Merge and de-duplicate the findings from both passes
 
 **Inputs:** diff and related code from the [[Context Builder]].

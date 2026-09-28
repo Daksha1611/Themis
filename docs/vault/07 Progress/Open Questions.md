@@ -60,9 +60,18 @@ Items the spec leaves unspecified or contradictory. Resolve before building the 
 ## Operations
 33. **Hosting provider** is not chosen ([[Hosting]]).
 
-## Proposals from prior art
-From [[Prior Art]]. Not adopted; each needs approval and an ADR.
+## Proposals from prior art (resolved 2026-09-28)
+From [[Prior Art]]. All three approved.
 
-34. **OWASP Top 10 as the security-pass taxonomy.** Use OWASP Top 10 (or CWE IDs) as the `category` values for security findings in the [[Finding Schema]]. Makes security findings comparable and gives the benchmark a labeling vocabulary.
-35. **Operational metrics (Prometheus + Grafana).** Queue depth, job latency, and error rates for the running app. Would be a new technology; overlaps partly with [[Tracing]].
-36. **Learning from repo history, scoped to precision.** The course's Learner mines merged PRs for style. A Themis version could instead use which posted findings were resolved or dismissed as labels for the [[Precision Filter]] (ties to Q19). Must not become style learning.
+34. ~~OWASP Top 10 as the security-pass taxonomy~~ → accepted as [[ADR-009 OWASP Top 10 security taxonomy]].
+35. ~~Operational metrics (Prometheus + Grafana)~~ → accepted as [[ADR-010 Prometheus and Grafana operational metrics]].
+36. ~~Learning from repo history, scoped to precision~~ → accepted as [[ADR-011 Finding outcomes as precision-filter labels]].
+
+## Raised by ADR-009 to ADR-011
+37. **OWASP Top 10 edition** to pin.
+38. **Logic-bug categories.** Security findings now have a taxonomy; do logic bugs need one too, or does `category` stay "logic bug"?
+39. **Security findings outside the OWASP Top 10.** What category does a real security issue get if it fits none of the ten?
+40. **How the app exposes metrics** to Prometheus, especially from the arq worker process.
+41. **Which Grafana dashboards and alerts** are in scope.
+42. **Outcome signal definition.** What counts as "resolved" (thread resolved, code changed at the line, both?) and "dismissed"?
+43. **Outcome label volume.** Which repos will Themis be installed on to produce enough outcome labels?

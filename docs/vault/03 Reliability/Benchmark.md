@@ -8,6 +8,8 @@ related:
   - "[[ADR-007 dev-holdout benchmark split]]"
   - "[[Label Noise]]"
   - "[[Eval Cost]]"
+  - "[[ADR-009 OWASP Top 10 security taxonomy]]"
+  - "[[ADR-011 Finding outcomes as precision-filter labels]]"
 ---
 
 # Benchmark
@@ -18,6 +20,8 @@ related:
 - Mine bug-fix commits from ~5 mid-sized, well-tested Python repos
 - Revert the fix to create a "buggy PR", labeled with the file and line range of the bug
 - Include clean PRs with no known bug to measure false positives
+- Label security cases with their OWASP Top 10 category ([[ADR-009 OWASP Top 10 security taxonomy]])
+- Outcome labels from benchmark repos must not leak into holdout ([[ADR-011 Finding outcomes as precision-filter labels]])
 - Target: 150–300 cases
 
 **Splits** ([[ADR-007 dev-holdout benchmark split]])

@@ -14,7 +14,7 @@ version:
 
 **What it is:** Container platform.
 
-**What it does in Themis:** Dockerfile and docker-compose (api, worker, redis, qdrant, postgres) in `infra/`.
+**What it does in Themis:** Dockerfile and docker-compose (api, worker, redis, qdrant, postgres, prometheus, grafana) in `infra/`.
 
 **Used by:** [[Webhook Service]], [[Job Queue]], [[Storage]], [[Hosting]]
 

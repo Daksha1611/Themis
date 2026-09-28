@@ -106,3 +106,53 @@ The canvas is a hand-placed layout that must be updated when components change. 
 
 ### How this affects other components
 No component behaviour changes. No component note is edited.
+
+---
+
+## Adopt prior-art proposals 34–36 into the spec
+**Date**: 2026-09-28
+**File(s) affected**:
+- `docs/vault/04 Decisions/ADR-009 OWASP Top 10 security taxonomy.md` (created)
+- `docs/vault/04 Decisions/ADR-010 Prometheus and Grafana operational metrics.md` (created)
+- `docs/vault/04 Decisions/ADR-011 Finding outcomes as precision-filter labels.md` (created)
+- `docs/vault/03 Reliability/Operational Monitoring.md` (created)
+- `docs/vault/05 Stack/Prometheus.md`, `docs/vault/05 Stack/Grafana.md` (created)
+- `docs/vault/02 Architecture/`: Architecture Overview, Finding Schema, Review Graph, Precision Filter, Storage (edited)
+- `docs/vault/03 Reliability/`: Benchmark, Tracing (edited)
+- `docs/vault/05 Stack/Docker.md` (edited)
+- `docs/vault/06 Risks/Hosting.md` (edited)
+- `docs/vault/01 Project/`: Glossary, Prior Art (edited)
+- `docs/vault/00 Index.md`, `docs/vault/Themis Map.canvas` (edited)
+- `docs/vault/07 Progress/`: Open Questions, Current Status, Session Log (edited)
+
+### What I am changing
+Adding three approved decisions to the spec: (1) security findings are categorised by OWASP Top 10; (2) Prometheus + Grafana monitor the running service (queue depth, job latency, error rates); (3) the outcomes of posted findings (resolved or dismissed on the PR) become training labels for the precision filter. Each gets an ADR, and every affected note is updated. Documentation only; no application code.
+
+### Why I am making this change
+Proposals 34–36 in Open Questions were approved. Project rules require an ADR before a new technology or pattern is used.
+
+### Alternatives I considered
+1. CWE IDs instead of OWASP Top 10 for the security taxonomy.
+2. Leave operational metrics to Langfuse only.
+3. Keep precision-filter labels coming only from offline labeling (`training/label_findings.py`).
+
+### Reasons I rejected each alternative
+1. CWE has hundreds of entries, far too fine-grained to label or measure on a 150–300-case benchmark.
+2. Langfuse traces LLM calls, not service health (queue depth, worker errors, webhook failures).
+3. Offline labels alone never improve from real usage; outcome labels add real-world signal. Offline labeling stays for the cold start.
+
+### Trade-offs I am accepting
+Two more services (Prometheus, Grafana) to run and host. OWASP Top 10 is revised every few years, so the version must be pinned. Outcome labels only exist after Themis is deployed and posting, and they are noisy (a dismissed finding is not always wrong).
+
+### What could go wrong
+- Monitoring work pulls time from the milestones (scope creep).
+- Outcome signals are misread (e.g. a thread resolved without a fix counted as a true positive).
+- Outcome labels from benchmark repos leak into the holdout split.
+- Outcome learning drifts toward style preferences, which is a non-goal.
+
+### How this affects other components
+- **Finding Schema**: security findings gain an OWASP Top 10 category.
+- **Review Graph**: the security pass classifies findings by OWASP Top 10.
+- **Precision Filter**: training labels also come from finding outcomes.
+- **Storage**: stores finding outcomes alongside review runs.
+- **Job Queue / Webhook Service**: become subjects of operational monitoring (metrics exposure not yet designed).

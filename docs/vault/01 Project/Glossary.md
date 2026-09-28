@@ -22,6 +22,8 @@ related:
 - **Comment precision**: share of posted comments that are correct. Headline metric.
 - **Hybrid search**: retrieval combining BM25 (keyword) and embeddings (semantic). See [[Context Builder]].
 - **Prompt injection**: instructions hidden in code comments, docstrings, or PR descriptions that try to steer the reviewer. See [[Guardrails]].
+- **OWASP Top 10**: a standard list of the ten most critical web application security risk categories. Used as the category for security findings. See [[ADR-009 OWASP Top 10 security taxonomy]].
+- **Finding outcome**: whether a posted finding was resolved or dismissed on the PR. Used as a precision-filter label. See [[ADR-011 Finding outcomes as precision-filter labels]].
 - **Ablation**: measuring metrics while adding one component at a time. See [[Ablation Table]].
 - **Drift**: change in review quality across LLM providers or model versions over time. See [[Drift Monitoring]].
 - **p95 latency**: the latency that 95% of reviews finish within.

@@ -255,11 +255,20 @@
     {
       "id": "legend",
       "type": "text",
-      "text": "### Themis Map\nData flows left \u2192 right.\n\n- Cyan: review path\n- Green: reliability layer\n- Red: risks\n- Yellow: unresolved placement or ownership\n\nClick any box to open its note.\nStart at [[00 Index]] \u00b7 [[Architecture Overview]] \u00b7 [[Open Questions]]",
+      "text": "### Themis Map\nData flows left \u2192 right.\n\n- Cyan: review path\n- Green: reliability layer\n- Red: risks\n- Yellow: unresolved placement or ownership\n- Orange: outcome-label feedback loop\n\nClick any box to open its note.\nStart at [[00 Index]] \u00b7 [[Architecture Overview]] \u00b7 [[Open Questions]]",
       "x": 1800,
       "y": 480,
       "width": 480,
       "height": 400
+    },
+    {
+      "id": "opmon",
+      "type": "file",
+      "file": "03 Reliability/Operational Monitoring.md",
+      "x": 1440,
+      "y": 660,
+      "width": 260,
+      "height": 100
     }
   ],
   "edges": [
@@ -463,6 +472,40 @@
       "toSide": "bottom",
       "label": "always-on server",
       "color": "1"
+    },
+    {
+      "id": "queue-opmon",
+      "fromNode": "queue",
+      "fromSide": "bottom",
+      "toNode": "opmon",
+      "toSide": "left",
+      "label": "queue depth, job latency, errors"
+    },
+    {
+      "id": "webhook-opmon",
+      "fromNode": "webhook",
+      "fromSide": "bottom",
+      "toNode": "opmon",
+      "toSide": "left",
+      "label": "request errors"
+    },
+    {
+      "id": "comments-storage",
+      "fromNode": "comments",
+      "fromSide": "bottom",
+      "toNode": "storage",
+      "toSide": "bottom",
+      "label": "finding outcomes (resolved / dismissed)",
+      "color": "2"
+    },
+    {
+      "id": "storage-filter",
+      "fromNode": "storage",
+      "fromSide": "right",
+      "toNode": "filter",
+      "toSide": "bottom",
+      "label": "outcome labels (training)",
+      "color": "2"
     }
   ]
 }

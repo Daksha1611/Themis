@@ -14,6 +14,7 @@ related:
   - "[[Storage]]"
   - "[[Tracing]]"
   - "[[Eval Harness]]"
+  - "[[Operational Monitoring]]"
 ---
 
 # Architecture Overview
@@ -38,9 +39,12 @@ flowchart LR
     LLM --> OR[OpenRouter]
     GR[Guardrails<br/>prompt-injection detection] -.placement TBD.- RG
     W --> DB[(Storage<br/>PostgreSQL)]
+    GH2 -.finding outcomes.-> DB
+    DB -.outcome labels.-> PF
 
     subgraph REL[Reliability layer]
         T[Tracing<br/>Langfuse]
+        OM[Operational Monitoring<br/>Prometheus + Grafana]
         B[Benchmark<br/>dev / holdout] --> EH[Eval Harness]
         EH --> MET[Metrics]
         MET --> CI[CI Quality Gate]
@@ -48,12 +52,14 @@ flowchart LR
         MET --> AB[Ablation Table]
     end
     RG -.traced.-> T
+    WH -.metrics.-> OM
+    W -.metrics.-> OM
     EH -.runs full review path.-> W
     EH --> DB
 ```
 
 **Review path components:** [[Webhook Service]] → [[Job Queue]] → [[Context Builder]] → [[Review Graph]] → [[Precision Filter]] → comment posting. [[Finding Schema]] is the data contract between them. [[Guardrails]], [[LLM Client]], and [[Storage]] support the path.
 
-**Reliability layer:** [[Tracing]], [[Benchmark]], [[Eval Harness]], [[Metrics]], [[CI Quality Gate]], [[Drift Monitoring]], [[Ablation Table]].
+**Reliability layer:** [[Tracing]], [[Operational Monitoring]], [[Benchmark]], [[Eval Harness]], [[Metrics]], [[CI Quality Gate]], [[Drift Monitoring]], [[Ablation Table]].
 
 Where Guardrails runs and which component owns comment posting are not specified. See [[Open Questions]].

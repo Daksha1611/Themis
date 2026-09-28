@@ -45,6 +45,7 @@ Outside the vault: `docs/flow.md` (what the code does), `docs/decision.md` (why 
 - [[CI Quality Gate]]
 - [[Drift Monitoring]]
 - [[Ablation Table]]
+- [[Operational Monitoring]]
 
 ## 04 Decisions
 - [[ADR-001 Python-only v1]]
@@ -55,6 +56,9 @@ Outside the vault: `docs/flow.md` (what the code does), `docs/decision.md` (why 
 - [[ADR-006 Langfuse tracing]]
 - [[ADR-007 dev-holdout benchmark split]]
 - [[ADR-008 Encoder classifier as precision filter]]
+- [[ADR-009 OWASP Top 10 security taxonomy]]
+- [[ADR-010 Prometheus and Grafana operational metrics]]
+- [[ADR-011 Finding outcomes as precision-filter labels]]
 
 ## 05 Stack
 - [[Python]]
@@ -72,6 +76,8 @@ Outside the vault: `docs/flow.md` (what the code does), `docs/decision.md` (why 
 - [[Pydantic]]
 - [[Docker]]
 - [[GitHub Actions]]
+- [[Prometheus]]
+- [[Grafana]]
 
 ## 06 Risks
 - [[Eval Cost]]

@@ -8,6 +8,7 @@ related:
   - "[[Eval Harness]]"
   - "[[Storage]]"
   - "[[Pydantic]]"
+  - "[[ADR-009 OWASP Top 10 security taxonomy]]"
 ---
 
 # Finding Schema
@@ -16,6 +17,7 @@ related:
 
 **Responsibilities**
 - Define `Finding` with fields: file, line, category, severity, message, confidence
+- Security findings also carry an OWASP Top 10 category ([[ADR-009 OWASP Top 10 security taxonomy]])
 - Define `ReviewResult` (fields not yet specified)
 
 **Inputs:** produced by the [[Review Graph]].

@@ -30,7 +30,10 @@ Source: https://www.krishnaik.in/project/lfnm (public listing only; course conte
 | Services | 5 microservices | Webhook + worker |
 
 ## What Themis takes from it
-Only as proposals (see [[Open Questions]], section "Proposals from prior art"). Nothing here changes the spec until approved and recorded as an ADR.
+Approved and recorded as ADRs:
+- OWASP Top 10 security taxonomy: [[ADR-009 OWASP Top 10 security taxonomy]]
+- Operational metrics with Prometheus + Grafana: [[ADR-010 Prometheus and Grafana operational metrics]]
+- Learning from real usage, scoped to precision (not style): [[ADR-011 Finding outcomes as precision-filter labels]]
 
 ## What Themis deliberately does not take
 - Style checker and the style-learning Learner service: style is a [[Non-Goals|non-goal]].

@@ -9,6 +9,8 @@ related:
   - "[[HuggingFace Transformers]]"
   - "[[ADR-008 Encoder classifier as precision filter]]"
   - "[[Ablation Table]]"
+  - "[[ADR-011 Finding outcomes as precision-filter labels]]"
+  - "[[Storage]]"
 ---
 
 # Precision Filter
@@ -18,10 +20,11 @@ related:
 **Responsibilities**
 - Score each finding with a small fine-tuned encoder classifier
 - Drop findings that are likely noise
+- Train on offline labels (cold start) and on the outcomes of posted findings, resolved or dismissed on the PR ([[ADR-011 Finding outcomes as precision-filter labels]])
 
 **Inputs:** findings ([[Finding Schema]]) from the [[Review Graph]].
 **Outputs:** the filtered findings to be posted.
 
 **Planned code location:** `app/filter/` (inference); `training/label_findings.py`, `training/train_filter.py` (training).
 
-**Dependencies:** [[HuggingFace Transformers]], [[Finding Schema]]. Decision: [[ADR-008 Encoder classifier as precision filter]]. Measured as its own row in the [[Ablation Table]]. Score threshold is not yet specified.
+**Dependencies:** [[HuggingFace Transformers]], [[Finding Schema]]. Decisions: [[ADR-008 Encoder classifier as precision filter]], [[ADR-011 Finding outcomes as precision-filter labels]]. Finding outcomes are read from [[Storage]]. Measured as its own row in the [[Ablation Table]]. Score threshold is not yet specified.

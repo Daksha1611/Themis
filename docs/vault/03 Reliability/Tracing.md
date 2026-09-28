@@ -7,6 +7,7 @@ related:
   - "[[LLM Client]]"
   - "[[Langfuse]]"
   - "[[ADR-006 Langfuse tracing]]"
+  - "[[Operational Monitoring]]"
 ---
 
 # Tracing
@@ -19,4 +20,4 @@ related:
 
 **Planned code location:** not specified in the planned repo structure.
 
-Decision: [[ADR-006 Langfuse tracing]].
+Decision: [[ADR-006 Langfuse tracing]]. Service health (queue depth, errors) is covered separately by [[Operational Monitoring]].

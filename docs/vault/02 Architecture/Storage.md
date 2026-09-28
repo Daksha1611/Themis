@@ -8,6 +8,8 @@ related:
   - "[[Finding Schema]]"
   - "[[PostgreSQL]]"
   - "[[Docker]]"
+  - "[[Precision Filter]]"
+  - "[[ADR-011 Finding outcomes as precision-filter labels]]"
 ---
 
 # Storage
@@ -17,6 +19,7 @@ related:
 **Responsibilities**
 - Store review runs
 - Store eval results
+- Store the outcomes of posted findings (resolved or dismissed), used as [[Precision Filter]] labels ([[ADR-011 Finding outcomes as precision-filter labels]])
 
 **Inputs:** review runs from the [[Job Queue]] worker; eval results from the [[Eval Harness]].
 **Outputs:** stored records for later analysis.
