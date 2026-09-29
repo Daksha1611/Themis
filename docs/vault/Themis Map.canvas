@@ -244,7 +244,7 @@
     {
       "id": "legend",
       "type": "text",
-      "text": "### Themis Map\nData flows left \u2192 right.\n\n- Cyan: review path\n- Green: reliability layer\n- Red: risks\n- Yellow: pending decision (Q41)\n- Orange: outcome-label feedback loop\n\nClick any box to open its note.\nStart at [[00 Index]] \u00b7 [[Architecture Overview]] \u00b7 [[Open Questions]]",
+      "text": "### Themis Map\nData flows left \u2192 right.\n\n- Cyan: review path\n- Green: reliability layer\n- Red: risks\n- Yellow: deferred to post-v1\n- Orange: outcome-label feedback loop\n\nClick any box to open its note.\nStart at [[00 Index]] \u00b7 [[Architecture Overview]] \u00b7 [[Open Questions]]",
       "x": 1800,
       "y": 480,
       "width": 480,
@@ -447,22 +447,6 @@
       "toSide": "bottom",
       "label": "always-on server",
       "color": "1"
-    },
-    {
-      "id": "queue-opmon",
-      "fromNode": "queue",
-      "fromSide": "bottom",
-      "toNode": "opmon",
-      "toSide": "left",
-      "label": "queue depth, job latency, errors"
-    },
-    {
-      "id": "webhook-opmon",
-      "fromNode": "webhook",
-      "fromSide": "bottom",
-      "toNode": "opmon",
-      "toSide": "left",
-      "label": "request errors"
     },
     {
       "id": "storage-filter",

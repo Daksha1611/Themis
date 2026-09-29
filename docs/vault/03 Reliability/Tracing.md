@@ -21,4 +21,4 @@ related:
 
 **Planned code location:** `app/observability/` (setup and decorators).
 
-Decision: [[ADR-006 Langfuse tracing]]. Service health is covered separately by [[Operational Monitoring]] (pending Q41).
+Decision: [[ADR-006 Langfuse tracing]]. Langfuse is the only v1 source of latency, cost, and token metrics; a separate metrics stack ([[Operational Monitoring]]) is deferred to post-v1.

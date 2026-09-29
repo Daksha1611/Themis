@@ -13,12 +13,11 @@ related:
 # Open Questions
 
 ## Still open
-- **Q20. Specific benchmark repos.** Selection criteria are recorded in [[Benchmark]]; the repo list is not chosen.
+- **Q20. Benchmark repos.** Candidates recorded, verification pending ([[Benchmark]], Candidate Repos).
 - **Q25. Numeric targets.** Deferred until baseline numbers exist ([[Success Metrics]]).
-- **Q37. Security taxonomy: OWASP Top 10 (2021) or CWE Top 25?** Awaiting decision ([[ADR-009 OWASP Top 10 security taxonomy]]).
-- **Q41. Fate of ADR-010.** Recommended: supersede for v1. Awaiting decision ([[ADR-010 Prometheus and Grafana operational metrics]]).
+- **Q37b. CWE Top 25 vs OWASP Top 10 (2021).** Decision needed before building the security pass node ([[ADR-009 OWASP Top 10 security taxonomy]], Open Reconsideration).
 
-## Resolved (2026-09-29)
+## Resolved
 
 ### Document conventions
 1. decision.md and flow.md live in `docs/`. Kept.
@@ -46,7 +45,7 @@ related:
 19. Labels from dev-split runs only, enforced in code → [[ADR-017 Dev-split-only training data for the precision filter]]
 
 ### Benchmark and metrics
-20. Selection criteria recorded; **repo list still open** → [[Benchmark]]
+20. Selection criteria recorded; candidates recorded, final selection pending manual verification → [[Benchmark]]
 21. 60% dev / 40% holdout, stratified by repo and category → [[Benchmark]], [[ADR-007 dev-holdout benchmark split]]
 22. Clean PRs: files with no bug fix for 6–12 months (heuristic), size-matched → [[Benchmark]]
 23. Hit = within labeled range ±3 lines and correct category; exact-line accuracy secondary → [[Metrics]]
@@ -67,14 +66,14 @@ related:
 
 ### Prior art (resolved 2026-09-28)
 34. OWASP Top 10 taxonomy → [[ADR-009 OWASP Top 10 security taxonomy]]
-35. Prometheus + Grafana → [[ADR-010 Prometheus and Grafana operational metrics]] (now pending Q41)
+35. Prometheus + Grafana → [[ADR-010 Prometheus and Grafana operational metrics]] (superseded for v1, see Q41)
 36. Outcome labels → [[ADR-011 Finding outcomes as precision-filter labels]]
 
 ### Raised by ADR-009 to ADR-011
-37. OWASP Top 10 (2021) pinned; **CWE Top 25 reconsideration still open** → [[ADR-009 OWASP Top 10 security taxonomy]]
+37. OWASP Top 10 (2021) pinned; reconsideration noted in ADR-009, Q37b raised → [[ADR-009 OWASP Top 10 security taxonomy]]
 38. Logic bugs get a seven-category taxonomy → [[ADR-019 Logic bug taxonomy]]
 39. `security-other` with a required subcategory; frequency tracked → [[Finding Schema]], [[Metrics]]
-40. Worker metrics via side HTTP server or Pushgateway; only if ADR-010 survives → [[Operational Monitoring]]
-41. **Still open** (see above)
+40. Resolved: no longer applies in v1 (Prometheus deferred) → [[ADR-010 Prometheus and Grafana operational metrics]]
+41. Resolved: ADR-010 superseded for v1, deferred to post-v1 stretch goals → [[ADR-010 Prometheus and Grafana operational metrics]]
 42. Validated / dismissed signal definitions; raw signals kept separate from labels → [[ADR-011 Finding outcomes as precision-filter labels]]
 43. Outcome labels reframed as a pilot, not a data engine → [[ADR-011 Finding outcomes as precision-filter labels]]

@@ -12,6 +12,8 @@ version:
 
 # Grafana
 
+> **Deferred to post-v1** ([[ADR-010 Prometheus and Grafana operational metrics]] superseded). Not installed in v1.
+
 **What it is:** Dashboard and visualisation tool.
 
 **What it does in Themis:** Dashboards for the operational metrics collected by Prometheus.

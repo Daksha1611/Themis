@@ -32,7 +32,7 @@ Source: https://www.krishnaik.in/project/lfnm (public listing only; course conte
 ## What Themis takes from it
 Approved and recorded as ADRs:
 - OWASP Top 10 security taxonomy: [[ADR-009 OWASP Top 10 security taxonomy]]
-- Operational metrics with Prometheus + Grafana: [[ADR-010 Prometheus and Grafana operational metrics]]
+- Operational metrics with Prometheus + Grafana: [[ADR-010 Prometheus and Grafana operational metrics]] (later superseded for v1; post-v1 stretch goal)
 - Learning from real usage, scoped to precision (not style): [[ADR-011 Finding outcomes as precision-filter labels]]
 
 ## What Themis deliberately does not take

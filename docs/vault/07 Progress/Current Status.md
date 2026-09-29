@@ -16,11 +16,12 @@ related:
 **Done**
 - Knowledge vault, `docs/decision.md`, `docs/flow.md`, [[Themis Map.canvas|Themis Map]], [[Prior Art]]
 - ADR-001 to ADR-019 recorded
-- Open Questions 1–43 resolved except Q20, Q25, Q37, Q41
+- Open Questions resolved except Q20 (candidates recorded, verification pending), Q25, Q37b
+- ADR-010 (Prometheus + Grafana) superseded for v1
 
 **Next**
-- Decide Q37 (security taxonomy) and Q41 (fate of ADR-010)
-- Choose the benchmark repos (Q20)
+- Decide Q37b (CWE Top 25 vs OWASP Top 10) before building the security pass node
+- Verify the benchmark repo candidates and make the final selection (Q20)
 - Set numeric targets after the baseline eval run (Q25)
 
-**Blockers:** Q37 and Q41 await the project owner's decision.
+**Blockers:** Q37b blocks the security pass node only.

@@ -48,7 +48,6 @@ flowchart LR
 
     subgraph REL[Reliability layer]
         T[Tracing<br/>Langfuse cloud]
-        OM[Operational Monitoring<br/>Prometheus + Grafana<br/>pending Q41]
         B[Benchmark<br/>dev / holdout] --> EH[Eval Harness]
         EH --> MET[Metrics]
         MET --> CI[CI Quality Gate]
@@ -57,11 +56,11 @@ flowchart LR
         EH --> EDB[(Eval database)]
     end
     RG -.traced.-> T
-    WH -.metrics.-> OM
-    W -.metrics.-> OM
     EH -.runs full review path.-> W
 ```
 
 **Review path:** [[Webhook Service]] → [[Job Queue]] → [[Context Builder]] → [[Guardrails]] (sanitize) → [[Review Graph]] → [[Guardrails]] (validate) → [[Precision Filter]] → [[GitHub Integration]] (post comments). [[Finding Schema]] is the data contract between them. [[LLM Client]] and [[Storage]] support the path.
 
-**Reliability layer:** [[Tracing]], [[Operational Monitoring]] (pending Q41), [[Benchmark]], [[Eval Harness]], [[Metrics]], [[CI Quality Gate]], [[Drift Monitoring]], [[Ablation Table]].
+**Reliability layer:** [[Tracing]], [[Benchmark]], [[Eval Harness]], [[Metrics]], [[CI Quality Gate]], [[Drift Monitoring]], [[Ablation Table]].
+
+**Deferred to post-v1:** [[Operational Monitoring]] (Prometheus + Grafana).

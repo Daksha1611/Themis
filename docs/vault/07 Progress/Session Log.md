@@ -28,3 +28,8 @@ related:
 **Done:** recorded the answers to Open Questions 1–43. Added ADR-012 to ADR-019, [[GitHub Integration]], [[Benchmark Leakage]], and stack notes for SQLAlchemy, Alembic, sentence-transformers, ruff, mypy, pytest, pytest-cov, and Caddy. Rewrote ADR-011 as a pilot. Switched ADR frontmatter to `status: accepted`. Added a root README with the dev-split-only training rule. Settled four conflicts first: results page deploys via GitHub Actions (not served from `docs/`); rule goes in a new root README; SQLAlchemy covered by ADR-012; CI and drift use a separate eval database.
 **Next:** decide Q37 and Q41; choose benchmark repos (Q20).
 **Blockers / questions:** Q20, Q25, Q37, Q41 open.
+
+## 2026-09-29 (2)
+**Done:** recorded five benchmark repo candidates, two fallbacks, and the verification rule in [[Benchmark]] (corrected `python-trio/anyio` to `agronholm/anyio`). Added the Open Reconsideration section to ADR-009 and raised Q37b. Superseded ADR-010 for v1; Prometheus and Grafana moved to post-v1 stretch goals; closed Q40 and Q41. Confirmed ADR-012 already covers SQLAlchemy. `docs/flow.md` unchanged (never described Prometheus).
+**Next:** verify the repo candidates (Q20); decide Q37b.
+**Blockers / questions:** Q20, Q25, Q37b open.

@@ -203,3 +203,48 @@ The vault grows to 80+ notes, so keeping it in sync costs more. `docs/flow.md` g
 - **Precision Filter**: sets confidence; threshold tuned by sweep; trained on dev-split findings only.
 - **Storage**: `app/storage/` with SQLAlchemy and Alembic; raw outcome signals stored separately from derived labels.
 - **LLM Client**: no change.
+
+---
+
+## Record benchmark repo candidates, supersede ADR-010, raise Q37b
+**Date**: 2026-09-29
+**File(s) affected**:
+- `docs/vault/03 Reliability/Benchmark.md` (candidate repos section)
+- `docs/vault/04 Decisions/ADR-009 OWASP Top 10 security taxonomy.md` (Open Reconsideration section)
+- `docs/vault/04 Decisions/ADR-010 Prometheus and Grafana operational metrics.md` (status → superseded, rewritten)
+- `docs/vault/03 Reliability/Operational Monitoring.md`, `docs/vault/03 Reliability/Tracing.md`
+- `docs/vault/05 Stack/Prometheus.md`, `docs/vault/05 Stack/Grafana.md`, `docs/vault/05 Stack/Docker.md`
+- `docs/vault/06 Risks/Hosting.md`
+- `docs/vault/01 Project/Non-Goals.md`, `docs/vault/01 Project/Prior Art.md`
+- `docs/vault/02 Architecture/Architecture Overview.md`, `docs/vault/Themis Map.canvas`
+- `docs/vault/07 Progress/`: Open Questions, Current Status, Session Log
+- Not changed: ADR-012 (already names SQLAlchemy explicitly; `05 Stack/SQLAlchemy.md` already exists); `docs/flow.md` (never described Prometheus or Grafana)
+
+### What I am changing
+Recording five benchmark repo candidates plus two fallbacks and the verification rule (Q20); adding the CWE Top 25 vs OWASP Top 10 reconsideration to ADR-009 and raising Q37b; superseding ADR-010 for v1 and moving Prometheus + Grafana to post-v1 stretch goals (closes Q40, Q41). Documentation only.
+
+### Why I am making this change
+Approved by the project owner this session.
+
+### Alternatives I considered
+1. Record `python-trio/anyio` exactly as given.
+2. Delete the Operational Monitoring, Prometheus, and Grafana notes now that ADR-010 is superseded.
+3. Rename ADR-012 to include SQLAlchemy.
+
+### Reasons I rejected each alternative
+1. That repository does not exist on GitHub; AnyIO lives at `agronholm/anyio`.
+2. The ADR says "if reinstated", so the notes stay as the post-v1 record, marked deferred.
+3. The rename was conditional on SQLAlchemy not being covered; ADR-012 already covers it.
+
+### Trade-offs I am accepting
+Deferred notes remain in the vault and graph, marked deferred, so they must not be mistaken for v1 scope. The status vocabulary has no "deferred" value, so those notes keep `planned` with a deferral banner.
+
+### What could go wrong
+- A candidate repo fails verification (low recent fix activity) and the fallbacks are also weak.
+- Q37b stays unresolved and blocks the security pass node.
+
+### How this affects other components
+- **Webhook Service / Job Queue**: no longer expose operational metrics in v1.
+- **Tracing**: Langfuse is the only v1 source of latency, cost, and token metrics.
+- **Review Graph / Finding Schema**: unchanged; the security taxonomy stays OWASP Top 10 (2021) until Q37b is decided.
+- **Benchmark**: gains a candidate list; no selection yet.

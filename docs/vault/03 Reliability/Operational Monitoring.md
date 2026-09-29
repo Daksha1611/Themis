@@ -15,7 +15,7 @@ related:
 
 # Operational Monitoring
 
-> **Pending decision (Q41):** recommended to be descoped from v1. See [[ADR-010 Prometheus and Grafana operational metrics]].
+> **Deferred to post-v1.** Not built in v1: [[ADR-010 Prometheus and Grafana operational metrics]] is superseded. This note is kept as the record for a possible post-v1 reinstatement.
 
 **Purpose:** show whether the running service is healthy.
 
@@ -24,9 +24,7 @@ related:
 - Covers the [[Webhook Service]] and the [[Job Queue]] worker
 - Complements [[Tracing]], which covers LLM calls
 
-**If kept:** four panels (review throughput, error rate, p95 latency, cost per PR) and one alert (webhook failure rate).
-
-**Worker metrics (Q40, only if kept):** the arq worker has no HTTP server. Options: a side HTTP server inside the worker process, or a Pushgateway. `prometheus_client` needs multiprocess mode when metrics come from more than one process.
+**If reinstated:** four panels (review throughput, error rate, p95 latency, cost per PR) and one alert (webhook failure rate).
 
 **Planned code location:** Prometheus and Grafana run in `infra/` docker-compose.
 

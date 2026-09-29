@@ -31,7 +31,7 @@ related:
 - Mid-popularity preferred over famous repos, to reduce memorisation risk
 - Target shapes: a web framework/library, a data tool, a CLI tool, a parsing/serialisation library, a smaller async library
 - Commit range pinned to dates after the primary model's training cutoff
-- The reasoning is recorded when repos are chosen. **Specific repos: still open.**
+- The reasoning is recorded when repos are chosen. **Candidates recorded below; final selection pending manual verification.**
 
 ## Clean PRs
 Merged PRs from the same repos whose touched files had no bug-fix commit for the following 6–12 months. **This is a heuristic, not proof** that a PR is bug-free. The size distribution of clean PRs matches the buggy ones, so the reviewer cannot learn "big diff means bug".
@@ -46,3 +46,49 @@ Merged PRs from the same repos whose touched files had no bug-fix commit for the
 **Planned code location:** `evals/benchmark/` (`mine_commits.py`, `build_cases.py`, `data/dev` and `data/holdout` as JSONL).
 
 Consumed by the [[Eval Harness]]. Risks: [[Benchmark Leakage]], [[Label Noise]], [[Eval Cost]].
+
+## Candidate Repos
+Shortlist for Q20. **Not final:** each repo must pass the verification rule below.
+
+### 1. encode/httpx (shape: web/HTTP library)
+- Clear `CHANGELOG.md` with a `Fixed:` section on every release
+- Bug types: async edge cases, URL parsing, header handling, streaming
+- Memorisation risk: low-medium (less famous than requests)
+- Verify: filter commits containing "fix" in 2025–2026; check that 10 messages are specific enough to classify as bug-fix vs refactor
+
+### 2. pallets/click (shape: CLI tool)
+- Clean commit history, well-labeled issues, excellent test suite
+- Bug types: argument parsing edge cases, help text, type coercion, context handling
+- Memorisation risk: low
+- Verify: same as above
+
+### 3. marshmallow-code/marshmallow (shape: parsing/serialisation)
+- CHANGELOG clearly separates bug fixes from features; consistently high test coverage
+- Bug types: type coercion, nested schema edge cases, error handling, validation
+- Memorisation risk: low
+- Verify: same as above
+
+### 4. Textualize/rich (shape: data/rendering tool)
+- Very well tested, clear issue-linked commits
+- Bug types: rendering logic, string handling, async output, markup edge cases
+- Memorisation risk: low-medium
+- Verify: same as above
+
+### 5. agronholm/anyio (shape: async library)
+- Small codebase, extremely well tested, precise and well-described fix commits
+- Bug types: structured concurrency edge cases, cancellation, task group behaviour
+- Memorisation risk: low
+- Verify: same as above
+- Note: originally listed as `python-trio/anyio`, which does not exist on GitHub. AnyIO lives at `agronholm/anyio`.
+
+### Fallbacks (if a candidate fails verification)
+- `encode/httpcore`: httpx's transport layer, less famous
+- `fastapi/fastapi` (formerly `tiangolo/fastapi`): very active, clear fix labels, more famous
+
+### Verification rule
+Before finalising any repo, manually check that:
+1. It has identifiable bug-fix commits in the 2025–2026 date range.
+2. Commit messages are specific enough for `mine_commits.py` to classify reliably.
+3. The repo's test suite covers the areas where bugs were fixed, so a revert produces a failing test.
+
+Record the result of this check per repo here when the final selection is made.
