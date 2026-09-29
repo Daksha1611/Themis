@@ -1,11 +1,11 @@
 ---
 type: tech
-status: planned
+status: in-progress
 tags: [tech]
 related:
   - "[[Context Builder]]"
   - "[[ADR-004 Qdrant hybrid search]]"
-version:
+version: image qdrant/qdrant:latest (unpinned)
 ---
 
 # Qdrant
@@ -16,4 +16,4 @@ version:
 
 **Used by:** [[Context Builder]], [[ADR-004 Qdrant hybrid search]], [[ADR-014 Incremental repo indexing]], [[ADR-015 Local embeddings and Qdrant native hybrid search]], [[ADR-018 Paid VPS over free tier hosting]]
 
-**Version:** not installed yet.
+**Version:** image qdrant/qdrant:latest (unpinned) (recorded 2026-09-29).

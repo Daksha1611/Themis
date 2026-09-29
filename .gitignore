@@ -1,1 +1,9 @@
 .obsidian/
+.env
+.venv/
+__pycache__/
+*.egg-info/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage

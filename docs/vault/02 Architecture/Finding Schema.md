@@ -1,6 +1,6 @@
 ---
 type: component
-status: planned
+status: in-progress
 tags: [component]
 related:
   - "[[Review Graph]]"
@@ -41,7 +41,7 @@ Output of the [[Context Builder]]:
 - `pr_ref`: repo, number, head SHA
 - `findings: list[Finding]`
 - `raw_finding_count`, `filtered_finding_count` (required to report precision-filter impact)
-- `model_config`
+- `llm_config` (the model configuration; `model_config` is reserved by Pydantic v2)
 - `token_usage`, `cost_usd`, `latency_ms`
 - `guardrail_triggered: bool`
 - `status`: `success` \| `partial` \| `failed`

@@ -1,12 +1,12 @@
 ---
 type: tech
-status: planned
+status: in-progress
 tags: [tech]
 related:
   - "[[CI Quality Gate]]"
   - "[[GitHub Actions]]"
   - "[[pytest-cov]]"
-version:
+version: 9.1.1 (pytest-asyncio 1.4.0)
 ---
 
 # pytest
@@ -17,4 +17,4 @@ version:
 
 **Used by:** [[CI Quality Gate]], [[GitHub Actions]], [[pytest-cov]]
 
-**Version:** not installed yet.
+**Version:** 9.1.1 (pytest-asyncio 1.4.0) (recorded 2026-09-29).

@@ -1,10 +1,10 @@
 ---
 type: tech
-status: planned
+status: in-progress
 tags: [tech]
 related:
   - "[[Webhook Service]]"
-version:
+version: 0.141.1
 ---
 
 # FastAPI
@@ -15,4 +15,4 @@ version:
 
 **Used by:** [[Webhook Service]]
 
-**Version:** not installed yet.
+**Version:** 0.141.1 (recorded 2026-09-29).

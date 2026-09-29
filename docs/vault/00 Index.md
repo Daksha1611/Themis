@@ -68,6 +68,7 @@ Outside the vault: `README.md` (repo overview), `docs/flow.md` (what the code do
 - [[ADR-017 Dev-split-only training data for the precision filter]]
 - [[ADR-018 Paid VPS over free tier hosting]]
 - [[ADR-019 Logic bug taxonomy]]
+- [[ADR-020 M1 runtime dependencies]]
 
 ## 05 Stack
 - [[Python]]
@@ -95,6 +96,11 @@ Outside the vault: `README.md` (repo overview), `docs/flow.md` (what the code do
 - [[pytest]]
 - [[pytest-cov]]
 - [[Caddy]]
+- [[httpx]]
+- [[PyJWT]]
+- [[pydantic-settings]]
+- [[uvicorn]]
+- [[psycopg]]
 
 ## 06 Risks
 - [[Benchmark Leakage]]

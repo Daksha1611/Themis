@@ -1,12 +1,12 @@
 ---
 type: tech
-status: planned
+status: in-progress
 tags: [tech]
 related:
   - "[[Job Queue]]"
   - "[[arq]]"
   - "[[ADR-003 arq + Redis queue]]"
-version:
+version: server image redis:7-alpine; client redis-py 5.3.1
 ---
 
 # Redis
@@ -17,4 +17,4 @@ version:
 
 **Used by:** [[Job Queue]], [[arq]], [[ADR-003 arq + Redis queue]]
 
-**Version:** not installed yet.
+**Version:** server image redis:7-alpine; client redis-py 5.3.1 (recorded 2026-09-29).

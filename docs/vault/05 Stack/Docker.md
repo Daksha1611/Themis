@@ -1,13 +1,13 @@
 ---
 type: tech
-status: planned
+status: in-progress
 tags: [tech]
 related:
   - "[[Webhook Service]]"
   - "[[Job Queue]]"
   - "[[Storage]]"
   - "[[Hosting]]"
-version:
+version: Docker 29.7.1, Compose v5.3.1 (local dev machine)
   - "[[ADR-010 Prometheus and Grafana operational metrics]]"
 ---
 
@@ -19,4 +19,4 @@ version:
 
 **Used by:** [[Webhook Service]], [[Job Queue]], [[Storage]], [[Hosting]]
 
-**Version:** not installed yet.
+**Version:** Docker 29.7.1, Compose v5.3.1 (local dev machine) (recorded 2026-09-29).

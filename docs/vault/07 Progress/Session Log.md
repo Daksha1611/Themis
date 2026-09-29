@@ -33,3 +33,8 @@ related:
 **Done:** recorded five benchmark repo candidates, two fallbacks, and the verification rule in [[Benchmark]] (corrected `python-trio/anyio` to `agronholm/anyio`). Added the Open Reconsideration section to ADR-009 and raised Q37b. Superseded ADR-010 for v1; Prometheus and Grafana moved to post-v1 stretch goals; closed Q40 and Q41. Confirmed ADR-012 already covers SQLAlchemy. `docs/flow.md` unchanged (never described Prometheus).
 **Next:** verify the repo candidates (Q20); decide Q37b.
 **Blockers / questions:** Q20, Q25, Q37b open.
+
+## 2026-09-29 (3): Milestone 1
+**Done:** built the M1 skeleton: webhook with HMAC verification and event filtering, arq enqueue, worker that gets an installation token, posts "⚖️ Themis is reviewing this PR." and writes a `review_runs` row, Langfuse traces and spans, Docker Compose (five services, root `compose.yaml` includes `infra/`), CI workflow. Added [[ADR-020 M1 runtime dependencies]] (httpx, PyJWT, pydantic-settings, uvicorn, psycopg). Recorded installed versions in the stack notes. Renamed `ReviewResult.model_config` to `llm_config`. Local checks: 13 tests pass, ruff and mypy clean; compose smoke test returned 202 / 403 / 200-ignored as specified, the worker picked up the job and failed at GitHub with 401 as expected without a real App.
+**Next:** register the GitHub App and Langfuse keys and re-run the live checks; M2 (baseline LLM reviewer, Alembic init).
+**Blockers / questions:** Q44 (Alembic deferred), Q45 (GitHub App credentials), Q46 (Langfuse credentials).

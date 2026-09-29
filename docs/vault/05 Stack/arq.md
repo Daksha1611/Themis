@@ -1,12 +1,12 @@
 ---
 type: tech
-status: planned
+status: in-progress
 tags: [tech]
 related:
   - "[[Job Queue]]"
   - "[[Redis]]"
   - "[[ADR-003 arq + Redis queue]]"
-version:
+version: 0.28.0
 ---
 
 # arq
@@ -17,4 +17,4 @@ version:
 
 **Used by:** [[Job Queue]], [[Redis]], [[ADR-003 arq + Redis queue]]
 
-**Version:** not installed yet.
+**Version:** 0.28.0 (recorded 2026-09-29).

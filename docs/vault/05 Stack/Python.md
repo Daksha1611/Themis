@@ -1,6 +1,6 @@
 ---
 type: tech
-status: planned
+status: in-progress
 tags: [tech]
 related:
   - "[[Webhook Service]]"
@@ -10,7 +10,7 @@ related:
   - "[[Precision Filter]]"
   - "[[Guardrails]]"
   - "[[ADR-001 Python-only v1]]"
-version:
+version: 3.12.12
 ---
 
 # Python
@@ -21,4 +21,4 @@ version:
 
 **Used by:** [[Webhook Service]], [[Job Queue]], [[Context Builder]], [[Review Graph]], [[Precision Filter]], [[Guardrails]], [[ADR-001 Python-only v1]]
 
-**Version:** not installed yet.
+**Version:** 3.12.12 (recorded 2026-09-29).

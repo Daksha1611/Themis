@@ -248,3 +248,111 @@ Deferred notes remain in the vault and graph, marked deferred, so they must not 
 - **Tracing**: Langfuse is the only v1 source of latency, cost, and token metrics.
 - **Review Graph / Finding Schema**: unchanged; the security taxonomy stays OWASP Top 10 (2021) until Q37b is decided.
 - **Benchmark**: gains a candidate list; no selection yet.
+
+---
+
+## M1 skeleton: webhook → queue → worker → dummy comment
+**Date**: 2026-09-29
+**File(s) affected**:
+- Created (code): `app/__init__.py`, `app/main.py`, `app/config.py`, `app/schemas.py`, `app/llm.py`; `app/api/{__init__,webhook,health}.py`; `app/github/{__init__,auth,comments}.py`; `app/worker/{__init__,job,queue}.py`; `app/observability/{__init__,tracing}.py`; `app/storage/{__init__,models,repository}.py`, `app/storage/migrations/` (empty); `tests/{__init__,conftest,test_webhook,test_comments,test_queue}.py`
+- Created (build/infra): `pyproject.toml`, `Dockerfile`, `compose.yaml`, `infra/docker-compose.yml`, `.env.example`, `.github/workflows/ci.yml`
+- Edited: `.gitignore`, `docs/flow.md`
+- Vault: `04 Decisions/ADR-020 M1 runtime dependencies.md` (created); `05 Stack/` httpx, PyJWT, pydantic-settings, uvicorn, psycopg (created); version fields in FastAPI, arq, Redis, Langfuse, Pydantic, Python, SQLAlchemy, ruff, mypy, pytest, pytest-cov, Docker, PostgreSQL, Qdrant; `02 Architecture/Finding Schema.md` (`model_config` → `llm_config`); `07 Progress/` Open Questions, Current Status, Session Log
+
+### What I am changing
+Building Milestone 1, the first application code:
+- `POST /webhook` verifies the `X-Hub-Signature-256` HMAC with `hmac.compare_digest`, filters to `pull_request` `opened`/`synchronize`, builds a `ReviewJob`, enqueues it with arq, and returns 202.
+- `GET /health` returns `{"status": "ok"}`.
+- The arq worker's `handle_review_job` gets a GitHub App installation token, posts one issue comment ("⚖️ Themis is reviewing this PR."), and writes a `review_runs` row.
+- Langfuse traces `webhook.received` and `review.job`, with spans for sub-steps.
+- Docker Compose runs api, worker, redis, postgres, qdrant; CI runs ruff, mypy, pytest.
+
+No diff fetching, LLM calls, Qdrant use, context building, or LangGraph.
+
+### Why I am making this change
+Milestone 1 brief from the project owner. It proves the end-to-end skeleton (GitHub → webhook → queue → worker → GitHub) before any review logic, and wires tracing from day one (ADR-006).
+
+### Alternatives I considered
+1. **Schema:** initialise Alembic now instead of a startup `CREATE TABLE IF NOT EXISTS`.
+2. **HTTP client:** `requests` instead of httpx.
+3. **Ignored events:** return 400 for non-PR events and unhandled actions instead of 200.
+4. **Tracing:** trace at FastAPI middleware level instead of inside the webhook handler.
+5. **Retryable GitHub errors:** raise arq's `Retry` directly from `app/github/comments.py`.
+6. **Postgres driver:** asyncpg instead of psycopg 3.
+7. **Compose location:** compose at the repo root only.
+
+### Reasons I rejected each alternative
+1. Alembic setup is non-trivial and not needed for a single dummy table; deferred to M2 pre-work. **Tech debt:** this temporarily departs from ADR-012 ("schema changes are made through Alembic migrations").
+2. httpx supports async natively (FastAPI and arq are async); `requests` would block the event loop. Note: httpx was not in the vault stack before this session; ADR-020 adds it.
+3. Per the project owner, GitHub treats non-2xx as failed deliveries; an event Themis deliberately ignores is not a failure.
+4. Handler-level tracing can attach event metadata (event, action, repo, PR number) that middleware does not have without re-parsing the body, and keeps the trace scoped to webhook work only.
+5. That would couple GitHub Integration to the queue library; comments.py raises its own `GitHubRetryableError` and the worker translates it into `arq.Retry`.
+6. Chosen by the project owner.
+7. The vault plans compose in `infra/`; a 3-line root `compose.yaml` includes it so plain `docker compose up` works.
+
+### Trade-offs I am accepting
+- Schema lives in a startup SQL statement until Alembic arrives in M2; a schema change before then means editing that SQL by hand.
+- Exact version pins mean manual upgrades.
+- Qdrant runs in Compose but is unused in M1.
+- The installation-token cache is in-process memory, so each api/worker process fetches its own token.
+
+### What could go wrong
+- Signature verification bug lets forged webhooks through: covered by tests for valid, wrong, and missing signatures.
+- Langfuse v4 and arq 0.28 APIs were read from the installed source; a future upgrade may break them (hence exact pins).
+- Multi-line PEM keys in `.env` files are fragile; config accepts `\n`-escaped keys.
+- The worker can start before the API creates the table; the worker also runs the `CREATE TABLE IF NOT EXISTS` on startup.
+- No real GitHub App or Langfuse credentials exist yet, so the live path can only be verified up to the GitHub API call.
+
+### How this affects other components
+- **Webhook Service**: built (signature check, event filter, enqueue, 202, health).
+- **Job Queue**: built (arq worker settings, `handle_review_job`), posting a dummy comment instead of running the review pipeline.
+- **GitHub Integration**: App auth (JWT → installation token, 50-minute cache) and issue-comment posting built; diff fetch and line comments not yet.
+- **Storage**: `review_runs` table and `create_run` / `update_run` built, without Alembic.
+- **Finding Schema**: `Finding` and `ReviewResult` defined; `ReviewResult.model_config` renamed `llm_config` (Pydantic reserves `model_config`). `Finding.category` stays a plain string until Q37b settles the security taxonomy.
+- **Tracing**: Langfuse client and trace/span helpers built.
+- Context Builder, Review Graph, Precision Filter, Guardrails, LLM Client: untouched.
+
+---
+
+## M1 implementation deviations from the brief
+**Date**: 2026-09-29
+**File(s) affected**: `pyproject.toml`, `.dockerignore` (created), `infra/docker-compose.yml`, `app/worker/job.py`, `app/worker/queue.py`, `app/github/comments.py`, `app/api/webhook.py`, `app/observability/tracing.py`, `app/storage/repository.py`, `tests/test_queue.py`
+
+### What I am changing
+Recording changes made during M1 implementation that differ from the brief or were not in it:
+1. `sqlalchemy[asyncio]` instead of `sqlalchemy`: SQLAlchemy 2.1 async needs greenlet (3.5.6), only installed via the extra.
+2. `.dockerignore` added: without it `COPY . .` copies `.env` (secrets) and `.venv` into the image.
+3. Healthchecks on redis and postgres, with `depends_on: condition: service_healthy`: without them the API starts before Postgres accepts connections and `ensure_schema` crashes it.
+4. The `review_runs` row is written **inside** the `review.job` trace (as span `storage.create_run`) and the trace ends after it. The brief ended the trace before the DB write, which would leave the write untraced.
+5. `post_review_comment` treats 429 + `Retry-After` like 403 + `Retry-After`. GitHub uses both for secondary rate limits.
+6. A valid-signature `pull_request` event with invalid JSON or missing fields returns 400. The brief did not cover this case.
+7. An extra `update_trace()` helper sets the trace metadata once the payload is parsed; the trace starts before verification, when only the event header is known.
+8. The startup `CREATE TABLE` lives in `ensure_schema()` in `app/storage/repository.py`, not a separate script file, and the worker calls it too. A concurrent-create `IntegrityError` is logged and ignored.
+9. The worker configures logging in `startup()`, otherwise app log lines are not shown under the arq CLI.
+10. An extra test: `GitHubRetryableError` becomes `arq.Retry`.
+
+### Why I am making this change
+Each was needed for the brief's acceptance criteria to pass (1–3, 9), to keep tracing complete (4, 7), or to cover a case the brief left open (5, 6, 8, 10).
+
+### Alternatives I considered
+- Install greenlet as a separate pin instead of the extra.
+- Retry-on-failure in the API's lifespan instead of Compose healthchecks.
+- Keep the brief's order (end trace, then write the row).
+
+### Reasons I rejected each alternative
+- The extra is SQLAlchemy's documented way to get the right greenlet version.
+- Healthchecks keep startup logic out of application code.
+- A DB failure after the trace ends would be invisible in Langfuse.
+
+### Trade-offs I am accepting
+Slightly slower `docker compose up` (waits for healthchecks). 400 for malformed PR payloads is a non-2xx response to GitHub, but a malformed payload is a genuine failure, unlike an ignored event.
+
+### What could go wrong
+- `qdrant/qdrant:latest` is unpinned and can change under us.
+- FastAPI's TestClient warns that using httpx with Starlette's test client is deprecated in favour of `httpx2`; tests pass today but may break on a future upgrade.
+
+### How this affects other components
+- **Job Queue**: trace now covers the DB write.
+- **GitHub Integration**: 429 handled as retryable.
+- **Webhook Service**: 400 for malformed PR payloads.
+- **Storage**: schema bootstrap also runs from the worker.

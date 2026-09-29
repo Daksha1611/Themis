@@ -1,11 +1,11 @@
 ---
 type: tech
-status: planned
+status: in-progress
 tags: [tech]
 related:
   - "[[Storage]]"
   - "[[Eval Harness]]"
-version:
+version: server image postgres:16-alpine
 ---
 
 # PostgreSQL
@@ -16,4 +16,4 @@ version:
 
 **Used by:** [[Storage]], [[Eval Harness]], [[CI Quality Gate]], [[SQLAlchemy]], [[Alembic]], [[ADR-018 Paid VPS over free tier hosting]]
 
-**Version:** not installed yet.
+**Version:** server image postgres:16-alpine (recorded 2026-09-29).

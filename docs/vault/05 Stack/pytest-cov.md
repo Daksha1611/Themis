@@ -1,11 +1,11 @@
 ---
 type: tech
-status: planned
+status: in-progress
 tags: [tech]
 related:
   - "[[CI Quality Gate]]"
   - "[[pytest]]"
-version:
+version: 7.1.0
 ---
 
 # pytest-cov
@@ -16,4 +16,4 @@ version:
 
 **Used by:** [[CI Quality Gate]], [[pytest]]
 
-**Version:** not installed yet.
+**Version:** 7.1.0 (recorded 2026-09-29).

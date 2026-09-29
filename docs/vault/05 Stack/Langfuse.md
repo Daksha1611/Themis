@@ -1,11 +1,11 @@
 ---
 type: tech
-status: planned
+status: in-progress
 tags: [tech]
 related:
   - "[[Tracing]]"
   - "[[ADR-006 Langfuse tracing]]"
-version:
+version: 4.15.6
 ---
 
 # Langfuse
@@ -16,4 +16,4 @@ version:
 
 **Used by:** [[Tracing]], [[ADR-006 Langfuse tracing]], [[ADR-013 Langfuse cloud over self-hosting]]
 
-**Version:** not installed yet.
+**Version:** 4.15.6 (recorded 2026-09-29).

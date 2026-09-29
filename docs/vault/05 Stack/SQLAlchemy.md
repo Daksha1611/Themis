@@ -1,13 +1,13 @@
 ---
 type: tech
-status: planned
+status: in-progress
 tags: [tech]
 related:
   - "[[Storage]]"
   - "[[ADR-012 Alembic for schema migrations]]"
   - "[[Alembic]]"
   - "[[PostgreSQL]]"
-version:
+version: 2.1.1 (asyncio extra, greenlet 3.5.6)
 ---
 
 # SQLAlchemy
@@ -18,4 +18,4 @@ version:
 
 **Used by:** [[Storage]], [[ADR-012 Alembic for schema migrations]], [[Alembic]], [[PostgreSQL]]
 
-**Version:** not installed yet.
+**Version:** 2.1.1 (recorded 2026-09-29), installed as `sqlalchemy[asyncio]` (greenlet 3.5.6) for async use.

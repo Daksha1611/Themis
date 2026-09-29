@@ -1,10 +1,10 @@
 ---
 type: tech
-status: planned
+status: in-progress
 tags: [tech]
 related:
   - "[[Finding Schema]]"
-version:
+version: 2.13.5
 ---
 
 # Pydantic
@@ -15,4 +15,4 @@ version:
 
 **Used by:** [[Finding Schema]]
 
-**Version:** not installed yet.
+**Version:** 2.13.5 (recorded 2026-09-29).

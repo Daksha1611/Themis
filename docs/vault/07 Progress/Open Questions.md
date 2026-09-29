@@ -17,6 +17,10 @@ related:
 - **Q25. Numeric targets.** Deferred until baseline numbers exist ([[Success Metrics]]).
 - **Q37b. CWE Top 25 vs OWASP Top 10 (2021).** Decision needed before building the security pass node ([[ADR-009 OWASP Top 10 security taxonomy]], Open Reconsideration).
 
+- **Q44. Alembic deferred.** M1 carries raw `CREATE TABLE` in a startup script for now; Alembic init is M2 pre-work. Departs from [[ADR-012 Alembic for schema migrations]] until then.
+- **Q45. GitHub App credentials.** No GitHub App is registered yet (`GITHUB_APP_ID`, `GITHUB_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET`), so the live comment post is unverified.
+- **Q46. Langfuse credentials.** No Langfuse cloud project keys yet, so no trace has reached Langfuse.
+
 ## Resolved
 
 ### Document conventions

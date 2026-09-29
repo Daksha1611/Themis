@@ -10,18 +10,23 @@ related:
 
 # Current Status
 
-**Phase:** planning. No application code exists.
+**Phase:** M1 in progress. Code complete; live verification waits on credentials.
 **Last updated:** 2026-09-29
 
-**Done**
-- Knowledge vault, `docs/decision.md`, `docs/flow.md`, [[Themis Map.canvas|Themis Map]], [[Prior Art]]
-- ADR-001 to ADR-019 recorded
-- Open Questions resolved except Q20 (candidates recorded, verification pending), Q25, Q37b
-- ADR-010 (Prometheus + Grafana) superseded for v1
+**Done (M1)**
+- `POST /webhook`: signature verification, event filter, enqueue, 202 ([[Webhook Service]])
+- arq worker posts a dummy comment and writes a `review_runs` row ([[Job Queue]], [[GitHub Integration]], [[Storage]])
+- Langfuse tracing on the webhook and the job ([[Tracing]])
+- `docker compose up` runs api, worker, redis, postgres, qdrant
+- CI: ruff, mypy, pytest (13 tests)
+
+**Not yet verified live**
+- A real comment on a real PR: needs a registered GitHub App (Q45)
+- A trace in Langfuse cloud: needs Langfuse keys (Q46)
 
 **Next**
-- Decide Q37b (CWE Top 25 vs OWASP Top 10) before building the security pass node
-- Verify the benchmark repo candidates and make the final selection (Q20)
-- Set numeric targets after the baseline eval run (Q25)
+- Register the GitHub App and Langfuse project, then re-run the live checks
+- M2: baseline LLM reviewer; Alembic init as M2 pre-work (Q44)
+- Decide Q37b before the security pass node; verify benchmark repos (Q20)
 
-**Blockers:** Q37b blocks the security pass node only.
+**Blockers:** Q45, Q46 block the live acceptance checks.

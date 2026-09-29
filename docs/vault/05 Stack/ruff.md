@@ -1,11 +1,11 @@
 ---
 type: tech
-status: planned
+status: in-progress
 tags: [tech]
 related:
   - "[[CI Quality Gate]]"
   - "[[GitHub Actions]]"
-version:
+version: 0.16.9
 ---
 
 # ruff
@@ -16,4 +16,4 @@ version:
 
 **Used by:** [[CI Quality Gate]], [[GitHub Actions]]
 
-**Version:** not installed yet.
+**Version:** 0.16.9 (recorded 2026-09-29).
