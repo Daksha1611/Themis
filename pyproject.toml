@@ -8,16 +8,19 @@ version = "0.1.0"
 description = "An AI code reviewer that weighs the evidence before it speaks."
 requires-python = ">=3.12"
 dependencies = [
+    "alembic==1.20.0",
     "arq==0.28.0",
-    "fastapi==0.141.1",
+    "fastapi==0.141.1",  # pin until TestClient migration — see Open Questions (Q47)
     "httpx==0.28.1",
     "langfuse==4.15.6",
+    "litellm==1.103.1",
     "psycopg[binary]==3.3.6",
     "pydantic==2.13.5",
     "pydantic-settings==2.15.0",
     "pyjwt[crypto]==2.15.1",
     "redis==5.3.1",
     "sqlalchemy[asyncio]==2.1.1",
+    "starlette==1.7.0",  # pin until TestClient migration — see Open Questions (Q47)
     "uvicorn==0.54.0",
 ]
 

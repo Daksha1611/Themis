@@ -28,4 +28,8 @@ related:
 
 **Planned code location:** `app/github/`.
 
+**Code location (M2):** `app/github/client.py` (shared httpx client, headers, rate-limit detection), `auth.py` (JWT, installation token), `diff.py` (`fetch_pr_diff`, `commentable_lines`), `comments.py` (`post_findings`: one PR review with line comments, out-of-diff findings in the body, 422 fallback; `post_review_comment`: PR-level comment).
+
+**Required GitHub App permissions:** Pull requests: read & write; **Contents: read** (GitHub requires it for the diff media type); Metadata: read. Subscribed event: Pull request.
+
 **Dependencies:** GitHub App credentials. Webhook signature verification stays in the [[Webhook Service]].

@@ -2,27 +2,14 @@
 
 import time
 
-import httpx
 import jwt
 
 from app.config import get_settings
+from app.github import client as gh
 
-GITHUB_API = "https://api.github.com"
 # Installation tokens expire after 60 minutes; refresh 10 minutes early.
 _TOKEN_TTL_SECONDS = 50 * 60
 _token_cache: dict[int, tuple[str, float]] = {}
-
-
-def github_headers(token: str) -> dict[str, str]:
-    return {
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-    }
-
-
-def http_client() -> httpx.AsyncClient:
-    return httpx.AsyncClient(base_url=GITHUB_API, timeout=10.0)
 
 
 def get_jwt() -> str:
@@ -39,11 +26,11 @@ async def get_installation_token(installation_id: int) -> str:
     if cached is not None and cached[1] > time.monotonic():
         return cached[0]
 
-    async with http_client() as client:
-        response = await client.post(
-            f"/app/installations/{installation_id}/access_tokens",
-            headers=github_headers(get_jwt()),
-        )
+    response = await gh.get_client().post(
+        f"/app/installations/{installation_id}/access_tokens",
+        headers=gh.github_headers(get_jwt()),
+    )
+    gh.raise_if_rate_limited(response, f"installation {installation_id} token")
     response.raise_for_status()
     token: str = response.json()["token"]
     _token_cache[installation_id] = (token, time.monotonic() + _TOKEN_TTL_SECONDS)

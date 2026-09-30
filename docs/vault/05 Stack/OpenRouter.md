@@ -1,12 +1,12 @@
 ---
 type: tech
-status: planned
+status: in-progress
 tags: [tech]
 related:
   - "[[LLM Client]]"
   - "[[LiteLLM]]"
   - "[[ADR-005 LiteLLM via OpenRouter]]"
-version:
+version: API v1 (https://openrouter.ai/api/v1)
 ---
 
 # OpenRouter
@@ -17,4 +17,6 @@ version:
 
 **Used by:** [[LLM Client]], [[LiteLLM]], [[ADR-005 LiteLLM via OpenRouter]]
 
-**Version:** not installed yet.
+**Version:** API v1 (https://openrouter.ai/api/v1) (installed 2026-09-30).
+
+Development default model: `openai/gpt-4o-mini`, the cheapest model that can produce valid structured output for baseline measurement. Configured via `LLM_MODEL`.

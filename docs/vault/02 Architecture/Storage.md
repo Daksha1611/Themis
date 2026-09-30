@@ -32,6 +32,6 @@ related:
 **Planned code location:** `app/storage/` ([[ADR-012 Alembic for schema migrations]]):
 - `models.py` ([[SQLAlchemy]])
 - `repository.py`
-- `migrations/` ([[Alembic]])
+- `migrations/` ([[Alembic]]): initialised in M2. Revisions: `75a08c2847ca` (review_runs, M1 columns), `37e292134510` (M2 LLM and finding columns). `alembic upgrade head` runs when the api and worker containers start, under a Postgres advisory lock.
 
 **Dependencies:** [[PostgreSQL]], [[Docker]]. Neon free tier is an option ([[ADR-018 Paid VPS over free tier hosting]]).

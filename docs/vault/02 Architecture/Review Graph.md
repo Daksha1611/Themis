@@ -1,6 +1,6 @@
 ---
 type: component
-status: planned
+status: in-progress
 tags: [component]
 related:
   - "[[Context Builder]]"
@@ -29,6 +29,6 @@ related:
 **Inputs:** a sanitized `ReviewContext` from the [[Context Builder]], via [[Guardrails]].
 **Outputs:** findings in the [[Finding Schema]] **without** a confidence value ([[ADR-016 Confidence comes from the precision filter, not the LLM]]). They go to [[Guardrails]] for validation, then to the [[Precision Filter]].
 
-**Planned code location:** `app/graph/` (bug pass, security pass, merge nodes).
+**Planned code location:** `app/graph/` (bug pass, security pass, merge nodes). **M2:** `app/graph/baseline.py` holds a single baseline pass (one LLM call over the raw diff, no LangGraph, no repo context), which produces the baseline row of the [[Ablation Table]].
 
 **Dependencies:** [[LangGraph]], [[LLM Client]], [[Finding Schema]]. Every node's input/output is recorded by [[Tracing]]. Decision: [[ADR-002 Bugs and security only]].

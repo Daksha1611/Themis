@@ -16,8 +16,14 @@ class Settings(BaseSettings):
     langfuse_public_key: str
     langfuse_secret_key: SecretStr
     langfuse_host: str = "https://cloud.langfuse.com"
+    langfuse_environment: str = "development"
     database_url: str
     log_level: str = "INFO"
+    openrouter_api_key: SecretStr
+    # OpenRouter model ID; LiteLLM is called with "openrouter/<llm_model>".
+    llm_model: str = "openai/gpt-4o-mini"
+    llm_max_tokens: int = 2048
+    llm_temperature: float = 0.0
 
     @field_validator("github_private_key", mode="before")
     @classmethod

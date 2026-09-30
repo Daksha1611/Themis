@@ -17,9 +17,13 @@ related:
 - **Q25. Numeric targets.** Deferred until baseline numbers exist ([[Success Metrics]]).
 - **Q37b. CWE Top 25 vs OWASP Top 10 (2021).** Decision needed before building the security pass node ([[ADR-009 OWASP Top 10 security taxonomy]], Open Reconsideration).
 
-- **Q44. Alembic deferred.** M1 carries raw `CREATE TABLE` in a startup script for now; Alembic init is M2 pre-work. Departs from [[ADR-012 Alembic for schema migrations]] until then.
-- **Q45. GitHub App credentials.** No GitHub App is registered yet (`GITHUB_APP_ID`, `GITHUB_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET`), so the live comment post is unverified.
-- **Q46. Langfuse credentials.** No Langfuse cloud project keys yet, so no trace has reached Langfuse.
+- **Q47. TestClient migration.** Migrate from Starlette's `TestClient` (deprecated with httpx) to the newer async test approach before the test count grows further. `fastapi` and `starlette` are pinned until then.
+- **Q48. Large-PR handling.** Diffs are truncated at 100,000 characters: a stopgap. Chunking or file-level splitting is needed.
+- **Q49. Secrets in traced diffs.** Reviewed diffs (and the LLM prompt containing them) go to OpenRouter and Langfuse cloud unmasked. Decide on masking before reviewing real third-party code.
+
+- **Q50. GitHub App needs Contents: Read.** Diff fetch returns 403 without it. Blocks M2 live verification. Owner action: App settings → Permissions → Contents: Read-only, then accept the updated permissions on the installation.
+- **Q51. OpenRouter spending limit.** The key's total limit is 0, so every LLM call returns 403 "Key limit exceeded". Blocks M2 live verification. Owner action: raise the key limit or add credits.
+- **Q52. Webhook tunnel.** The cloudflared quick tunnel lost its connection (0 ready connections); GitHub deliveries fail with "failed to connect to host". Quick-tunnel URLs change on restart, so the App's webhook URL must be updated each time; a named tunnel or the VPS (ADR-018) removes this.
 
 ## Resolved
 
@@ -67,6 +71,11 @@ related:
 
 ### Operations
 33. Small paid VPS with Docker Compose and Caddy → [[ADR-018 Paid VPS over free tier hosting]]
+
+### Milestones (resolved 2026-09-30)
+44. Alembic initialised in M2 pre-work. Bootstrap removed. Migration confirmed. → [[ADR-012 Alembic for schema migrations]]
+45. GitHub App registered (`themis-reviewer-daksha`), installed on `Daksha1611/themis-test-repo`; JWT and installation token verified against GitHub.
+46. Langfuse cloud (EU) keys set; `auth_check()` passes.
 
 ### Prior art (resolved 2026-09-28)
 34. OWASP Top 10 taxonomy → [[ADR-009 OWASP Top 10 security taxonomy]]

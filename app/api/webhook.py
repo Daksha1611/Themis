@@ -4,7 +4,7 @@ import hashlib
 import hmac
 import json
 import logging
-from typing import Annotated, Any
+from typing import Annotated
 
 from arq.connections import ArqRedis
 from fastapi import APIRouter, Depends, Header, Request
@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 from app.config import get_settings
-from app.observability.tracing import end_trace, start_trace, update_trace
+from app.observability.tracing import Observation, observe, update
 from app.schemas import ReviewJob, WebhookPayload
 from app.worker.queue import REVIEW_JOB
 
@@ -47,21 +47,24 @@ async def receive_webhook(
     x_github_event: Annotated[str | None, Header()] = None,
     x_hub_signature_256: Annotated[str | None, Header()] = None,
 ) -> JSONResponse:
-    trace = start_trace("webhook.received", {"event": x_github_event})
-    try:
-        response = await _handle(request, queue, trace, x_github_event, x_hub_signature_256)
-    except Exception as exc:
-        logger.exception("Unhandled error processing webhook (event=%s)", x_github_event)
-        end_trace(trace, {"status_code": 500}, error=exc)
-        return JSONResponse(status_code=500, content={"error": "internal error"})
-    end_trace(trace, {"status_code": response.status_code})
+    with observe("webhook.received", input={"event": x_github_event}) as trace:
+        try:
+            response = await _handle(request, queue, trace, x_github_event, x_hub_signature_256)
+        except Exception as exc:
+            logger.exception("Unhandled error processing webhook (event=%s)", x_github_event)
+            update(trace, level="ERROR", status_message=repr(exc))
+            response = JSONResponse(status_code=500, content={"error": "internal error"})
+        update(
+            trace,
+            output={"status_code": response.status_code, "body": json.loads(bytes(response.body))},
+        )
     return response
 
 
 async def _handle(
     request: Request,
     queue: ArqRedis,
-    trace: Any,
+    trace: Observation | None,
     event: str | None,
     signature: str | None,
 ) -> JSONResponse:
@@ -89,9 +92,14 @@ async def _handle(
         return JSONResponse(status_code=400, content={"error": "invalid payload"})
 
     job = ReviewJob.from_payload(payload)
-    update_trace(
+    update(
         trace,
-        {"event": event, "action": action, "repo": job.repo_full_name, "pr_number": job.pr_number},
+        input={
+            "event": event,
+            "action": action,
+            "repo": job.repo_full_name,
+            "pr_number": job.pr_number,
+        },
     )
 
     try:

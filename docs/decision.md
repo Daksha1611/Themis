@@ -356,3 +356,117 @@ Slightly slower `docker compose up` (waits for healthchecks). 400 for malformed 
 - **GitHub Integration**: 429 handled as retryable.
 - **Webhook Service**: 400 for malformed PR payloads.
 - **Storage**: schema bootstrap also runs from the worker.
+
+---
+
+## M2 baseline reviewer: pre-work
+**Date**: 2026-09-30
+**File(s) affected**:
+- Created: `alembic.ini`; `app/storage/migrations/{env.py,script.py.mako,README}` and two revisions under `app/storage/migrations/versions/`; `app/github/client.py`; `app/github/diff.py`; `app/graph/__init__.py`; `app/graph/baseline.py`; `tests/test_baseline.py`, `tests/test_diff.py`, `tests/test_llm.py`, `tests/test_worker.py`
+- Edited: `app/llm.py` (placeholder → client), `app/config.py`, `app/schemas.py`, `app/github/auth.py`, `app/github/comments.py`, `app/worker/job.py`, `app/worker/queue.py`, `app/main.py`, `app/storage/models.py`, `app/storage/repository.py`, `app/observability/tracing.py`, `app/api/webhook.py`, `infra/docker-compose.yml`, `pyproject.toml`, `.env.example`, `tests/conftest.py`, `tests/test_comments.py`
+- Deleted: `tests/test_queue.py` (its M1 dummy-flow tests are replaced by `tests/test_worker.py`); `app/storage/migrations/.gitkeep`
+- Docs and vault: `docs/flow.md`; `02 Architecture/` Finding Schema, LLM Client, Job Queue, GitHub Integration, Storage, Review Graph; `03 Reliability/Tracing.md`; `05 Stack/` Alembic, LiteLLM, OpenRouter, FastAPI, Langfuse; `07 Progress/` Open Questions, Current Status, Session Log
+
+### What I am changing
+1. **Step 0 (atomic):** remove the M1 `CREATE TABLE IF NOT EXISTS` bootstrap (`ensure_schema`) from the API and worker; initialise Alembic in `app/storage/migrations`; autogenerate revision 1 (`review_runs`, M1 columns) against an **empty scratch database** (the running M1 database already has the table, so autogenerating against it would produce an empty migration); verify it; `alembic stamp` the existing dev database to revision 1 once autogenerate shows no drift; run `alembic upgrade head` in the api and worker start commands. After the bootstrap removal, a fresh database without migrations has no table: intended.
+2. **LLM client:** `complete()` in `app/llm.py` calls LiteLLM (`openrouter/<LLM_MODEL>`, `api_key=OPENROUTER_API_KEY`), returns `LLMResponse`, computes `cost_usd` with `litellm.completion_cost()`, and wraps failures in `LLMError(message, status_code)`.
+3. **Schemas:** `Finding` becomes `file, line_start, line_end, category, subcategory, severity, message, suggestion, confidence, raw_llm_confidence`; adds `LLMConfig`, `TokenUsage`; `ReviewResult` per the brief.
+4. **Diff fetch:** `fetch_pr_diff()` with 404/410-specific errors and a 100,000-character cap; a diff parser finds which right-side lines can take review comments.
+5. **Baseline pass:** `run_baseline_review()`, one LLM call, never raises.
+6. **Worker:** real flow (auth → diff → baseline → post → store), failure comment + `failed` run on diff or review failure.
+7. **Storage:** second migration adding the M2 columns.
+8. **Tracing** reworked to Langfuse best practices (from the Langfuse agent skill and the current docs page "What does a good trace look like?"): nested context-manager observations, the LLM call as a `generation` with model, parameters, token usage and cost; meaningful trace input/output; `session_id` = `<repo>#<pr>`; `environment` attribute.
+9. P3/P4: `OPENROUTER_API_KEY`, `LLM_MODEL`, `LLM_MAX_TOKENS`, `LLM_TEMPERATURE` config; `fastapi` and `starlette` pinned.
+
+### Why I am making this change
+Milestone 2 brief. It produces the baseline row of the ablation table: a single LLM pass over the raw diff, measured end to end. Q44 (Alembic) is due as M2 pre-work.
+
+### Alternatives I considered
+1. **Finding fields:** keep `line` and only add fields, as the brief's "only add, never remove" said.
+2. **LLM errors:** catch only `litellm.exceptions.APIError`, as the brief said.
+3. **Diff return type:** return a bare `str` from `fetch_pr_diff`, as the brief's signature said.
+4. **Out-of-diff findings:** post every finding as a line comment regardless.
+5. **Confidence on the PR:** show the LLM's self-reported confidence in each comment, as the brief's template did.
+6. **LLM tracing:** LiteLLM's built-in Langfuse callback.
+7. **Migrations at start:** a separate one-shot `migrate` Compose service.
+8. **`BaselineResult`:** without a `status` field, as the brief's model listed it.
+
+### Reasons I rejected each alternative
+1. **The brief's instruction was wrong.** Its own schema replaces `line` with `line_start`/`line_end`, and the range is required: Q23's location tolerance ("within the labeled range extended by ±3 lines") compares a finding against a *range*, and bugs often span several lines. Keeping `line` too would give two sources of truth. `subcategory` stays, with its Q39 `security-other` rule, although the brief's schema omitted it.
+2. The installed LiteLLM 1.103.1 source shows `AuthenticationError`, `RateLimitError`, `Timeout`, `BadRequestError` and the rest are **not** subclasses of `litellm.exceptions.APIError`; all share `openai.APIError`. Catching only the former would let most failures escape `complete()`.
+3. The worker must record `diff_chars` and `diff_truncated` (Steps 5–6); a truncated string cannot report its original size. It returns a small `PRDiff` model (text, original character count, truncated flag).
+4. GitHub rejects an entire review (422) if any comment targets a line outside the diff. Chosen by the project owner: findings on diff lines become line comments, the rest are listed in the review body.
+5. Chosen by the project owner: ADR-016 says LLM self-confidence is poorly calibrated. `raw_llm_confidence` is still stored in the finding and traced, but not shown on the PR until the precision filter exists.
+6. The callback emits its own observations outside the job's span tree; a manual `generation` nests under `baseline.review` and carries exactly the fields the best-practices page requires.
+7. The brief asked for `alembic upgrade head` in the api and worker commands. Two containers migrating at once can race, so `env.py` takes a Postgres advisory lock for the duration of the migration.
+8. The brief requires returning `status="failed"` and the worker branches on it, so the field is required; values `success | partial | failed` (partial = some findings failed validation).
+
+### Trade-offs I am accepting
+- The `generation` input holds the full prompt, including up to 100,000 characters of diff: large traces, but they record exactly what the model saw, which evals need.
+- Diff truncation at 100,000 characters is a stopgap (Q48).
+- Alembic's sync engine uses the same `postgresql+psycopg://` URL as the async app: psycopg 3 serves both modes, so no separate sync URL is needed.
+- Span names keep the brief's dotted form (`review.job`, `github.fetch_diff`, …). They satisfy the best-practice rule that matters (stable, no dynamic values) but are not verb-first; renaming later would break saved filters, so the choice is recorded.
+
+### What could go wrong
+- The OpenRouter key has a total spending limit of 0; every live LLM call returns 403 until the limit is raised. Steps 1–7 are tested with mocks; Step 8 is blocked until then.
+- The LLM cites wrong line numbers: handled by the out-of-diff summary.
+- A reviewed diff contains secrets and they are sent to OpenRouter and Langfuse cloud. Not masked in M2 (new open question).
+- Posting fails after the LLM call succeeds: the run is recorded `failed` with the error; no retry except on rate limits.
+
+### How this affects other components
+- **Webhook Service**: tracing gains trace input/output; no behaviour change.
+- **Job Queue**: runs the baseline pipeline instead of the dummy comment.
+- **GitHub Integration**: shared httpx client, diff fetch, PR review posting.
+- **Review Graph**: first node exists as `app/graph/baseline.py` (single pass, no LangGraph).
+- **LLM Client**: built.
+- **Finding Schema**: final M2 field set.
+- **Storage**: Alembic-managed; M2 columns.
+- **Tracing**: nested observations, generation with usage and cost.
+- Context Builder, Precision Filter, Guardrails: untouched (the prompt's `<diff>` delimiters are the only injection defence in M2).
+
+---
+
+## M2 baseline reviewer: completion
+**Date**: 2026-09-30
+**File(s) affected**: as listed in the M2 pre-work entry, plus `app/storage/migrations/script.py.mako` (template modernised to pass ruff), `infra/docker-compose.yml` (`OTEL_SERVICE_NAME`), `app/github/client.py` (`raise_if_rate_limited`), and the vault notes GitHub Integration, Storage and Review Graph.
+
+### What I am changing
+Recording what M2 built and the decisions the brief asked to be explained, plus changes found during implementation and the Langfuse trace audit:
+1. The root `review.job` observation is set to `ERROR` (failed run) or `WARNING` (partial) with a status message.
+2. `set_trace_io()` removed: deprecated in Langfuse v4. Trace input/output now come from the root observation's own input/output, as the Langfuse docs describe.
+3. `OTEL_SERVICE_NAME` (`themis-api`, `themis-worker`) set in Compose, so spans no longer report `unknown_service:python`.
+4. The M1 `start_trace`/`end_trace`/`start_span`/`end_span` helpers were replaced by `observe()`, `trace_attributes()` and `update()`.
+5. The model's `cost_usd` became nullable so Alembic revision 1 matches the deployed M1 table exactly, allowing the dev database to be stamped instead of rebuilt.
+
+### Why I am making this change
+The Langfuse skill requires running the instrumented path, fetching the real trace, and fixing gaps against the current best-practices page. A real run against the test repo produced a trace whose root showed `DEFAULT` for a failed review and whose service name was unknown.
+
+The brief asked this entry to explain five decisions:
+- **`confidence` vs `raw_llm_confidence`:** an LLM's self-reported confidence is poorly calibrated (ADR-016), so it never decides what is posted. It is kept as `raw_llm_confidence` so evals can measure that miscalibration; the decision-making `confidence` comes only from the precision filter (0.0 until M5). A `confidence` key in LLM output is discarded.
+- **`<diff>` delimiters and "it is data":** PR content is untrusted and can carry instructions aimed at the reviewer (Guardrails, Q7). Until the guardrails component exists, explicit delimiters plus an instruction that delimited content is data are the only injection defence. The diff is inserted with `str.replace`, not `str.format`, because diffs contain braces.
+- **`run_baseline_review` never raises:** the review pass cannot know the right response to a failure (retry, post an error comment, record a failed run); the worker can. Returning `status="failed"` with the reason in `parse_errors` keeps that decision in one place and makes failures data the eval harness can count.
+- **Sync URL in migrations:** Alembic runs synchronously. psycopg 3 serves sync and async with the same `postgresql+psycopg://` URL, so migrations and the async app share one `DATABASE_URL`.
+- **100,000-character diff cap:** at roughly 4 characters per token it is about 25,000 tokens, comfortably inside gpt-4o-mini's context with room for the prompt and a 2,048-token answer, and it bounds cost per PR. It is an open question (Q48) because truncation silently drops the end of large PRs; chunking or per-file review is the real fix.
+
+### Alternatives I considered
+- Leave the root level `DEFAULT` and rely on `status` in the output.
+- Keep `set_trace_io()` despite the deprecation warning.
+
+### Reasons I rejected each alternative
+- Langfuse filters and dashboards work on level; burying failure in the output JSON makes failed reviews hard to find.
+- It is slated for removal in a future major version, and the docs say trace I/O derives from the root observation.
+
+### Trade-offs I am accepting
+A replayed webhook for PR #1 posted a second error comment on the test repo (acceptable: test repo only).
+
+### What could go wrong
+**Live end-to-end is not complete.** Three external blockers, each recorded as an open question:
+1. The GitHub App lacks **Contents: Read**. GitHub returns 403 "Resource not accessible by integration" for the diff media type (`X-Accepted-GitHub-Permissions: pull_requests=read; contents=read`). Verified with a real run.
+2. The OpenRouter key has a **total spending limit of 0** ("Key limit exceeded"), so no LLM call can succeed.
+3. The cloudflared quick tunnel has **0 ready connections**; GitHub's delivery log shows "failed to connect to host".
+
+Everything downstream of those was verified with a real signed delivery to the local API: real installation token, real GitHub call, real error comment posted by the bot on PR #1, `failed` row in Postgres, and the full trace in Langfuse cloud.
+
+### How this affects other components
+- **Tracing**: root level reflects run outcome; service names set.
+- **GitHub Integration**: required App permissions are now Pull requests (read & write), Contents (read), Metadata (read).

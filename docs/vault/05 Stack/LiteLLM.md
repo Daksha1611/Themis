@@ -1,12 +1,12 @@
 ---
 type: tech
-status: planned
+status: in-progress
 tags: [tech]
 related:
   - "[[LLM Client]]"
   - "[[OpenRouter]]"
   - "[[ADR-005 LiteLLM via OpenRouter]]"
-version:
+version: 1.103.1
 ---
 
 # LiteLLM
@@ -17,4 +17,6 @@ version:
 
 **Used by:** [[LLM Client]], [[OpenRouter]], [[ADR-005 LiteLLM via OpenRouter]]
 
-**Version:** not installed yet.
+**Version:** 1.103.1 (installed 2026-09-30).
+
+Called as `litellm.acompletion(model="openrouter/<model>", api_key=...)`. `LITELLM_LOCAL_MODEL_COST_MAP=True` makes it use the cost map bundled with this version (no network fetch at import, reproducible costs). Its specific exceptions (auth, rate limit, timeout, ...) are **not** subclasses of `litellm.exceptions.APIError`; all share `openai.APIError`.

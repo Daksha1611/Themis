@@ -10,23 +10,23 @@ related:
 
 # Current Status
 
-**Phase:** M1 in progress. Code complete; live verification waits on credentials.
-**Last updated:** 2026-09-29
+**Phase:** M2 in progress. Code complete and tested; live end-to-end blocked on three owner actions.
+**Last updated:** 2026-09-30
 
-**Done (M1)**
-- `POST /webhook`: signature verification, event filter, enqueue, 202 ([[Webhook Service]])
-- arq worker posts a dummy comment and writes a `review_runs` row ([[Job Queue]], [[GitHub Integration]], [[Storage]])
-- Langfuse tracing on the webhook and the job ([[Tracing]])
-- `docker compose up` runs api, worker, redis, postgres, qdrant
-- CI: ruff, mypy, pytest (13 tests)
+**Done (M2)**
+- Alembic initialised; startup bootstrap removed; two migrations verified on a fresh database; migrations run on container start ([[Storage]])
+- LLM client via LiteLLM → OpenRouter with cost tracking ([[LLM Client]])
+- Final `Finding` / `ReviewResult` schema, `confidence` vs `raw_llm_confidence` ([[Finding Schema]])
+- Diff fetch, baseline review pass, PR review posting with out-of-diff summary ([[GitHub Integration]], [[Review Graph]])
+- Tracing reworked to Langfuse best practices and audited against real traces in Langfuse cloud ([[Tracing]])
+- 38 tests; ruff, mypy clean
+- Live run verified up to the diff fetch: real App token, real bot comment, real `review_runs` row, real Langfuse trace
 
-**Not yet verified live**
-- A real comment on a real PR: needs a registered GitHub App (Q45)
-- A trace in Langfuse cloud: needs Langfuse keys (Q46)
+**Blocked (owner actions)**
+- Q50: add **Contents: Read** to the GitHub App
+- Q51: raise the OpenRouter key's spending limit
+- Q52: restart the tunnel and update the App's webhook URL
 
 **Next**
-- Register the GitHub App and Langfuse project, then re-run the live checks
-- M2: baseline LLM reviewer; Alembic init as M2 pre-work (Q44)
-- Decide Q37b before the security pass node; verify benchmark repos (Q20)
-
-**Blockers:** Q45, Q46 block the live acceptance checks.
+- After the three actions: rerun the live checks (buggy PR, clean PR), then mark M2 done
+- Q47 (TestClient migration), Q48 (large PRs), Q49 (secrets in traces)

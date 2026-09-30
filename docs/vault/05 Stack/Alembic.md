@@ -1,12 +1,12 @@
 ---
 type: tech
-status: planned
+status: in-progress
 tags: [tech]
 related:
   - "[[Storage]]"
   - "[[ADR-012 Alembic for schema migrations]]"
   - "[[SQLAlchemy]]"
-version:
+version: 1.20.0
 ---
 
 # Alembic
@@ -17,4 +17,6 @@ version:
 
 **Used by:** [[Storage]], [[ADR-012 Alembic for schema migrations]], [[SQLAlchemy]]
 
-**Version:** not installed yet.
+**Version:** 1.20.0 (installed 2026-09-30).
+
+Initialised in M2 at `app/storage/migrations/`. `alembic.ini` leaves `sqlalchemy.url` empty; `env.py` reads `DATABASE_URL`. Migrations run synchronously with the same `postgresql+psycopg://` URL the async app uses (psycopg 3 serves both modes).

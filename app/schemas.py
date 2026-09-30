@@ -1,8 +1,6 @@
 """Typed data contracts: webhook payloads, review jobs, findings, and review results."""
 
-from enum import StrEnum
-from typing import Any, Self
-from uuid import UUID
+from typing import Literal, Self
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -54,28 +52,32 @@ class ReviewJob(BaseModel):
         )
 
 
-class Severity(StrEnum):
-    CRITICAL = "critical"
-    HIGH = "high"
-    MEDIUM = "medium"
-    LOW = "low"
+Severity = Literal["critical", "high", "medium", "low"]
 
 
 class Finding(BaseModel):
     """One review finding. Never free text."""
 
     file: str
-    line: int
-    # Plain string until Q37b settles the security taxonomy (ADR-009, ADR-019).
+    # A range, not a single line: bug-location matching compares against a labeled range (Q23).
+    line_start: int = Field(ge=1)
+    line_end: int = Field(ge=1)
+    # Logic-bug taxonomy (ADR-019) or security taxonomy (ADR-009, pending Q37b). Plain string
+    # until Q37b is decided.
     category: str
     subcategory: str | None = None
     severity: Severity
     message: str
-    # Set by the precision filter, never by the LLM (ADR-016).
-    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    suggestion: str
+    # Set by the precision filter, never by the LLM (ADR-016). 0.0 until the filter exists (M5).
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    # What the LLM reported about itself. Stored for analysis; never used for filtering.
+    raw_llm_confidence: float = Field(ge=0.0, le=1.0)
 
     @model_validator(mode="after")
-    def _security_other_needs_subcategory(self) -> Self:
+    def _check(self) -> Self:
+        if self.line_end < self.line_start:
+            raise ValueError("line_end must be >= line_start")
         if self.category == "security-other" and not self.subcategory:
             raise ValueError("category 'security-other' requires a subcategory")
         return self
@@ -87,25 +89,33 @@ class PRRef(BaseModel):
     head_sha: str
 
 
-class ReviewStatus(StrEnum):
-    SUCCESS = "success"
-    PARTIAL = "partial"
-    FAILED = "failed"
+class LLMConfig(BaseModel):
+    model: str
+    temperature: float
+    max_tokens: int
+
+
+class TokenUsage(BaseModel):
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
 
 
 class ReviewResult(BaseModel):
     """The record of one review run."""
 
-    run_id: UUID
+    run_id: str
     pr_ref: PRRef
-    findings: list[Finding] = Field(default_factory=list)
+    findings: list[Finding]
     raw_finding_count: int
+    # Same as raw until the precision filter exists (M5).
     filtered_finding_count: int
     # `model_config` is reserved by Pydantic v2, hence `llm_config`.
-    llm_config: dict[str, Any]
-    token_usage: dict[str, int]
+    llm_config: LLMConfig
+    token_usage: TokenUsage
     cost_usd: float
     latency_ms: int
+    # Always False until guardrails exist.
     guardrail_triggered: bool
-    status: ReviewStatus
-    error: str | None = None
+    status: Literal["success", "partial", "failed"]
+    error: str | None
