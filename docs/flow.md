@@ -92,7 +92,7 @@ Diff fetch: `fetch_pr_diff(token, repo_full_name, pr_number)` in `app/github/dif
 
 `run_baseline_review(diff, pr_metadata)` in `app/graph/baseline.py`. **Never raises**: any exception ! `logger.exception` ↳ `BaselineResult(status="failed", parse_errors=["<Type>: <message>"])`.
 1. Blank diff ↳ `BaselineResult(status="success", findings=[])` with no LLM call.
-2. → `build_messages(diff, pr_metadata)`: system prompt with the diff between `<diff>` and `</diff>` and the statement that it is data, not instructions (inserted with `str.replace`, since diffs contain braces); user message `PR: {pr_title} in {repo_full_name}`.
+2. → `build_messages(diff, pr_metadata)`: system prompt listing every allowed category (`prompt_category_list()` from `app/taxonomy.py`: 7 logic categories, 11 CWE IDs, `security-other`), then the diff between `<diff>` and `</diff>` with the statement that it is data, not instructions (both inserted with `str.replace`, since diffs contain braces); user message `PR: {pr_title} in {repo_full_name}`.
 3. → `complete(messages)` in `app/llm.py`: the free-tier provider cascade (ADR-021).
    1. Opens span `observe("llm.complete", input={cascade})` ! Langfuse span, nested under `baseline.review`.
    2. For each provider in `LLM_PROVIDER_CASCADE` (default groq → gemini → mistral → openrouter):
@@ -105,7 +105,7 @@ Diff fetch: `fetch_pr_diff(token, repo_full_name, pr_number)` in `app/github/dif
    4. All providers failed or skipped ↳ raises `LLMError("all LLM providers failed: <provider>: <reason>; …", last status)`; span marked `ERROR`.
 4. → `parse_findings(content)`: `strip_fences()` → `json.loads`.
    - Not JSON, or not a JSON array ↳ no findings, one parse error containing the raw response, status `failed`.
-   - Per element: drop any `confidence` key, validate as `Finding` with `confidence=0.0`; invalid elements → `parse_errors`.
+   - Per element: drop any `confidence` key, validate as `Finding` with `confidence=0.0` (`Finding` rejects a category outside `ALLOWED_CATEGORIES`, and `security-other` without a subcategory); invalid elements → `parse_errors`.
    - → `normalize_paths(findings, diff)`: a path with git's `a/` or `b/` prefix that is not in the diff, but whose unprefixed form is, is rewritten to the diff's path (uses `commentable_lines`).
 5. Any parse errors ! warning log with the errors.
 6. ↳ `BaselineResult(status, findings, llm_response, parse_errors)`: `success` (no errors), `partial` (some elements invalid), `failed` (unparseable).
@@ -197,6 +197,8 @@ Traces produced:
 | complete() | _call() | observe(), litellm.acompletion(), _cost(), update() | app/llm.py |
 | _call() | _cost() | litellm.completion_cost() | app/llm.py |
 | complete() | Settings.api_key_for() | getattr(), os.environ.get() | app/config.py |
+| build_messages() | prompt_category_list() | — | app/taxonomy.py |
+| Finding validation | (checks ALLOWED_CATEGORIES) | — | app/schemas.py |
 | run_baseline_review() | normalize_paths() | commentable_lines(), Finding.model_copy() | app/graph/baseline.py |
 | _store() | create_run() | AsyncSession.add(), commit(), refresh() | app/storage/repository.py |
 | — (not called in M2) | update_run() | AsyncSession.get(), commit(), refresh() | app/storage/repository.py |

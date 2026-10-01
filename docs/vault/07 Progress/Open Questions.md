@@ -13,16 +13,17 @@ related:
 # Open Questions
 
 ## Still open
-- **Q20. Benchmark repos.** Candidates recorded, verification pending ([[Benchmark]], Candidate Repos).
+- **Q20. Benchmark repos.** Verification run (M3 Step 1); 3 of 7 viable. Final list awaiting owner decision ([[Benchmark]]).
 - **Q25. Numeric targets.** Deferred until baseline numbers exist ([[Success Metrics]]).
-- **Q37b. CWE Top 25 vs OWASP Top 10 (2021).** Decision needed before building the security pass node ([[ADR-009 OWASP Top 10 security taxonomy]], Open Reconsideration).
 
 - **Q47. TestClient migration.** Migrate from Starlette's `TestClient` (deprecated with httpx) to the newer async test approach before the test count grows further. `fastapi` and `starlette` are pinned until then.
 - **Q48. Large-PR handling.** Diffs are truncated at 100,000 characters: a stopgap. Chunking or file-level splitting is needed.
 - **Q49. Secrets in traced diffs.** Reviewed diffs (and the LLM prompt containing them) go to OpenRouter and Langfuse cloud unmasked. Decide on masking before reviewing real third-party code.
 
 - **Q52b. Stable webhook URL.** Quick-tunnel URLs change on every cloudflared restart, so the App's webhook URL must be updated each time. A named tunnel, or the VPS (ADR-018), removes this.
-- **Q54. Finding categories are free text.** In the live run the model returned categories like "logic bug" and "bug", not the ADR-019 taxonomy, because the baseline prompt never lists the categories. Q23 counts a hit only with the correct category, so the prompt must list the allowed values (logic-bug taxonomy now; security taxonomy once Q37b is decided) before the M3 benchmark measures recall.
+
+- **Q55. No category for arithmetic errors.** ADR-019 has no slot for division by zero or overflow; in a live check the model filed both divide-by-zero bugs under `error-handling`. Benchmark labels must apply the same rule consistently, or the taxonomy needs an `arithmetic` category.
+- **Q56. Step 2 size filter scope.** Should the "≤3 files, ≤60 changed lines" limit count only package source files, or also tests and changelog? Counting everything roughly halves the yield.
 
 ## Resolved
 
@@ -71,6 +72,10 @@ related:
 ### Operations
 33. Small paid VPS with Docker Compose and Caddy → [[ADR-018 Paid VPS over free tier hosting]]
 
+### M3 pre-work (resolved 2026-10-01)
+37. / 37b. Security taxonomy: CWE Top 25 (2024 edition), Python-reachable subset → [[ADR-022 CWE Top 25 security taxonomy]]
+54. Categories constrained: the prompt lists every allowed category; `Finding` rejects others (invalid → parse error). Live check on the test PRs returned only taxonomy categories.
+
 ### Milestones (resolved 2026-09-30 and 2026-10-01)
 50. GitHub App now has Contents: Read-only (required for diff fetching; missing from the original spec) → [[GitHub Integration]]
 51. OpenRouter spending limit: no longer applicable. Free tiers only, four-provider cascade → [[ADR-021 Free-tier four-provider LLM cascade]]
@@ -86,7 +91,7 @@ related:
 36. Outcome labels → [[ADR-011 Finding outcomes as precision-filter labels]]
 
 ### Raised by ADR-009 to ADR-011
-37. OWASP Top 10 (2021) pinned; reconsideration noted in ADR-009, Q37b raised → [[ADR-009 OWASP Top 10 security taxonomy]]
+37. OWASP Top 10 (2021) was pinned, then superseded by CWE Top 25 → [[ADR-022 CWE Top 25 security taxonomy]]
 38. Logic bugs get a seven-category taxonomy → [[ADR-019 Logic bug taxonomy]]
 39. `security-other` with a required subcategory; frequency tracked → [[Finding Schema]], [[Metrics]]
 40. Resolved: no longer applies in v1 (Prometheus deferred) → [[ADR-010 Prometheus and Grafana operational metrics]]

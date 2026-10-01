@@ -10,8 +10,8 @@ related:
 
 # Current Status
 
-**Phase:** M2 done (baseline reviewer verified live). Next: M3 (benchmark).
-**Last updated:** 2026-10-01
+**Phase:** M3 in progress. Pre-work done; Step 1 (repo verification) done; **waiting for the owner to approve the repo list** before mining.
+**Last updated:** 2026-10-01 (M3 Step 1)
 
 **Done (M2)**
 - Alembic-managed schema; startup bootstrap gone ([[Storage]])
@@ -24,7 +24,13 @@ related:
   - PR #2 (planted bugs): 3 line comments, one per bug (off-by-one, missing None check, divide-by-zero); Groq `openai/gpt-oss-120b`; 6.1 s
   - PR #3 (clean change): "no issues found" comment; Groq; 2.5 s
 
+**Done (M3 so far)**
+- CWE Top 25 (2024) security taxonomy ([[ADR-022 CWE Top 25 security taxonomy]]); ADR-009 superseded
+- Categories constrained in prompt and validated in `Finding` (Q54); 73 tests
+- Test repo cleaned (all PRs closed, branches deleted)
+- Repo verification table ([[Benchmark]]); leakage date distribution ([[Benchmark Leakage]])
+
 **Next**
-- Q54: list the category taxonomy in the prompt before the M3 benchmark
-- Q20: verify benchmark repo candidates; Q37b: security taxonomy
+- Owner decision: final repo list (Q20) and size-filter scope (Q56)
+- Then M3 Steps 2–8: mine, build cases, cache, runner, metrics, baseline dev report
 - Q47 (TestClient), Q48 (large PRs), Q49 (secrets in traces), Q52b (stable webhook URL)

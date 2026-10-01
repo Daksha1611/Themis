@@ -9,3 +9,5 @@ __pycache__/
 .coverage
 *.pem
 .env
+evals/.repos/
+evals/.cache/

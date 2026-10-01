@@ -619,3 +619,78 @@ The live run also showed findings use free-text categories ("logic bug", "bug") 
 ### How this affects other components
 - **Tracing / LLM Client**: generations carry thinking and reasoning-token counts.
 - Replaying PR #2 three times to verify the fix posted three duplicate reviews on the test PR (test repo only).
+
+---
+
+## M3 pre-work: CWE taxonomy, constrained categories, repo verification
+**Date**: 2026-10-01
+**File(s) affected**:
+- Created: `app/taxonomy.py`; `evals/__init__.py`, `evals/benchmark/__init__.py`, `evals/benchmark/verify_repos.py`; `docs/vault/04 Decisions/ADR-022 CWE Top 25 security taxonomy.md`
+- Edited: `app/schemas.py` (category validation), `app/graph/baseline.py` (prompt lists categories), `tests/test_baseline.py`, `tests/test_schemas.py` (created), `.gitignore` (`evals/.repos/`, `evals/.cache/`)
+- Vault: ADR-009 (status → superseded), Finding Schema, Review Graph, Benchmark, Metrics, Benchmark Leakage, Glossary, 00 Index, Open Questions (Q37, Q37b, Q54 closed), Current Status, Session Log; `docs/flow.md`
+- External: `Daksha1611/themis-test-repo` (all open PRs closed, their branches deleted)
+
+This entry covers M3 pre-work A–C and Step 1 only. Steps 2–8 (mining, cases, cache, runner, metrics, report) get their own pre-work entry after the repo list is approved.
+
+### What I am changing
+1. **ADR-022:** CWE Top 25 (**2024 edition**) replaces OWASP Top 10 as the security taxonomy; ADR-009 superseded. The Python-reachable subset, verified against MITRE's CWE view 1430 (2024 Top 25, CWE 4.20): CWE-20, CWE-22, CWE-78, CWE-79, CWE-89, CWE-94, CWE-200, CWE-400, CWE-502, CWE-798, CWE-918, plus `security-other` (required subcategory, Q39).
+2. **Q54:** `app/taxonomy.py` holds the allowed categories; `Finding` rejects any other category; the baseline system prompt lists every allowed category with a one-line description.
+3. **Test repo cleanup:** close PRs #1–#3 on `Daksha1611/themis-test-repo` and delete their branches.
+4. **Step 1:** `evals/benchmark/verify_repos.py` clones each candidate (treeless, history only) and reports bug-fix commit counts, package-only counts, linked issues, date range and distribution, and whether the changelog has a separable "fixed" section.
+
+### Why I am making this change
+Q37b decided by the project owner (CWE Top 25). Q54: with free-text categories, Q23's "correct category" condition makes recall meaningless. Q20 needs evidence before mining.
+
+### Alternatives I considered
+1. Pin the **2025** CWE Top 25 (it exists: MITRE CWE view 1435).
+2. Use the brief's candidate CWE list as given.
+3. Free-text category with fuzzy matching at scoring time.
+4. Count only commits touching *exclusively* package `.py` files.
+
+### Reasons I rejected each alternative
+1. The 2025 list drops CWE-798 (hard-coded credentials) and CWE-400 (uncontrolled resource consumption), two of the weaknesses most visible in a Python diff. Its additions are memory-buffer (120/121/122) and access-control (284, 639, 770) entries, mostly unreachable in Python or overlapping 400. The 2024 list fits Python code review better, and it is the edition the brief named.
+2. CWE-327 (broken crypto) and CWE-611 (XXE) are in neither the 2024 nor the 2025 Top 25; they fall under `security-other`. CWE-94 (code injection: `eval`/`exec`), CWE-79 (XSS from Python HTML/template code) and CWE-200 (information exposure) are Top 25 entries reachable in Python and are added. CWE-77 is left to its Python-relevant child CWE-78. Memory-safety entries (787, 125, 416, 119, 190, 476) are excluded (Python is memory-safe; 476 overlaps `null-or-none-handling`), as are authentication/authorisation entries (287, 306, 862, 863, 269, 352, 434), which are application-level and rarely visible in one diff.
+3. Fuzzy matching hides model errors instead of measuring them; an invalid category is a parse error.
+4. Good fixes usually ship with a test, so "only package files" would discard most of the best cases. The script reports both: commits whose *non-test, non-doc* changes are all package `.py` (used for viability), and commits touching package `.py` files exclusively.
+
+### Trade-offs I am accepting
+- Eleven CWE categories plus seven logic categories make a long prompt (~40 lines of category list) and a harder classification task; category confusion will show up as the gap between location-only and category-correct recall.
+- Pinning 2024 means the taxonomy is one edition behind from the start (recorded in ADR-022).
+
+### What could go wrong
+- The model picks a plausible but wrong category (e.g. CWE-20 versus a specific CWE), lowering category-correct recall; tracked by per-category metrics.
+- Treeless clones still download all commit and tree objects in the window; large repos make Step 1 slower.
+
+### How this affects other components
+- **Finding Schema**: `category` restricted to the taxonomy.
+- **Review Graph** (baseline): prompt lists the categories.
+- **Benchmark / Metrics**: security labels use CWE IDs.
+
+---
+
+## M3 Step 1 results and small additions
+**Date**: 2026-10-01
+**File(s) affected**: `pyproject.toml` (ruff per-file ignore for `evals/*`: S603, S607), `evals/benchmark/data/repo_verification.json` (created), `docs/vault/03 Reliability/Benchmark.md`, `docs/vault/06 Risks/Benchmark Leakage.md`, `docs/flow.md`
+
+### What I am changing
+1. Recording the repo verification results (table in `Benchmark.md`, date distribution in `Benchmark Leakage.md`).
+2. Allowing ruff's subprocess rules in `evals/`: the eval scripts invoke `git` with fixed arguments by design.
+3. Raising Q55 (no arithmetic-error category) and Q56 (size-filter scope).
+
+### Why I am making this change
+The brief requires the table before mining. Q55 came from the live category check; Q56 from estimating Step 2's yield.
+
+### Alternatives I considered
+Suppress S603/S607 inline at each call site.
+
+### Reasons I rejected each alternative
+Every subprocess call in the eval tooling is a `git` call with fixed arguments; one documented per-directory rule is clearer than repeated inline suppressions.
+
+### Trade-offs I am accepting
+A future subprocess call in `evals/` taking untrusted input would not be flagged.
+
+### What could go wrong
+With only three viable repos the case count may land near the bottom of the 150–300 target after Step 2's filters and Step 3's discards.
+
+### How this affects other components
+None; tooling and documentation only.

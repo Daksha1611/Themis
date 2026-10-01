@@ -1,6 +1,6 @@
 ---
 type: decision
-status: accepted
+status: superseded
 tags: [decision]
 related:
   - "[[Finding Schema]]"
@@ -13,6 +13,8 @@ related:
 
 
 # ADR-009 OWASP Top 10 security taxonomy
+
+> **Superseded (2026-10-01)** by [[ADR-022 CWE Top 25 security taxonomy]]. Q37 and Q37b are decided: CWE Top 25 (2024 edition). The `security-other` rule carries over.
 
 ## Context
 Security findings need a shared vocabulary so they can be labeled in the [[Benchmark]], compared across runs, and reported per category. Proposed from [[Prior Art]].

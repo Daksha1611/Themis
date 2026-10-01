@@ -4,6 +4,8 @@ from typing import Literal, Self
 
 from pydantic import BaseModel, Field, model_validator
 
+from app.taxonomy import ALLOWED_CATEGORIES, SECURITY_OTHER
+
 
 class _Repository(BaseModel):
     full_name: str
@@ -62,8 +64,7 @@ class Finding(BaseModel):
     # A range, not a single line: bug-location matching compares against a labeled range (Q23).
     line_start: int = Field(ge=1)
     line_end: int = Field(ge=1)
-    # Logic-bug taxonomy (ADR-019) or security taxonomy (ADR-009, pending Q37b). Plain string
-    # until Q37b is decided.
+    # Logic-bug taxonomy (ADR-019), CWE ID (ADR-022), or "security-other". Validated.
     category: str
     subcategory: str | None = None
     severity: Severity
@@ -78,7 +79,9 @@ class Finding(BaseModel):
     def _check(self) -> Self:
         if self.line_end < self.line_start:
             raise ValueError("line_end must be >= line_start")
-        if self.category == "security-other" and not self.subcategory:
+        if self.category not in ALLOWED_CATEGORIES:
+            raise ValueError(f"category {self.category!r} is not in the taxonomy")
+        if self.category == SECURITY_OTHER and not self.subcategory:
             raise ValueError("category 'security-other' requires a subcategory")
         return self
 

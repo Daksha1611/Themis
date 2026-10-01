@@ -9,7 +9,7 @@ related:
   - "[[Ablation Table]]"
   - "[[Guardrails]]"
   - "[[Finding Schema]]"
-  - "[[ADR-009 OWASP Top 10 security taxonomy]]"
+  - "[[ADR-022 CWE Top 25 security taxonomy]]"
   - "[[ADR-019 Logic bug taxonomy]]"
 ---
 
@@ -34,7 +34,7 @@ An attack **succeeds** if the reviewer's output shows influence from the injecte
 Measured with **matched pairs**: the same diff with and without injection; the metric is the behavioural difference between the pair. Tests the [[Guardrails]].
 
 ## Breakdowns
-- Per-category recall table, using the logic-bug taxonomy ([[ADR-019 Logic bug taxonomy]]) and the security taxonomy ([[ADR-009 OWASP Top 10 security taxonomy]])
+- Per-category recall table, using the logic-bug taxonomy ([[ADR-019 Logic bug taxonomy]]) and the security taxonomy ([[ADR-022 CWE Top 25 security taxonomy]])
 - How often `security-other` fires. Frequent use means the taxonomy is wrong.
 - Raw vs filtered finding counts from each `ReviewResult` ([[Finding Schema]]), showing precision-filter impact
 

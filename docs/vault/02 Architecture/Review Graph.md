@@ -11,7 +11,7 @@ related:
   - "[[Tracing]]"
   - "[[LangGraph]]"
   - "[[ADR-002 Bugs and security only]]"
-  - "[[ADR-009 OWASP Top 10 security taxonomy]]"
+  - "[[ADR-022 CWE Top 25 security taxonomy]]"
   - "[[ADR-016 Confidence comes from the precision filter, not the LLM]]"
   - "[[ADR-019 Logic bug taxonomy]]"
 ---
@@ -22,7 +22,7 @@ related:
 
 **Responsibilities**
 - Run a logic-bug pass, categorising each finding by the logic-bug taxonomy ([[ADR-019 Logic bug taxonomy]])
-- Run a security pass, categorising each finding by OWASP Top 10 or `security-other` ([[ADR-009 OWASP Top 10 security taxonomy]])
+- Run a security pass, categorising each finding by CWE Top 25 ID or `security-other` ([[ADR-022 CWE Top 25 security taxonomy]])
 - Merge and de-duplicate the findings from both passes
 - Treat delimited content as data to review, never as instructions ([[Guardrails]])
 

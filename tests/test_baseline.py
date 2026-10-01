@@ -133,3 +133,23 @@ async def test_git_prefixed_paths_are_normalized(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setattr(baseline, "complete", llm_returning(json.dumps([valid(file="b/a.py")])))
     result = await run_baseline_review(DIFF, META)
     assert result.findings[0].file == "a.py"
+
+
+async def test_invalid_category_goes_to_parse_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    items = [valid(), valid(category="logic bug"), valid(category="security-other")]
+    monkeypatch.setattr(baseline, "complete", llm_returning(json.dumps(items)))
+    result = await run_baseline_review(DIFF, META)
+
+    assert result.status == "partial"
+    assert len(result.findings) == 1
+    assert len(result.parse_errors) == 2
+    assert "not in the taxonomy" in result.parse_errors[0]
+    assert "requires a subcategory" in result.parse_errors[1]
+
+
+def test_prompt_lists_every_category() -> None:
+    from app.taxonomy import ALLOWED_CATEGORIES
+
+    system = baseline.build_messages(DIFF, META)[0]["content"]
+    for category in ALLOWED_CATEGORIES:
+        assert category in system

@@ -32,7 +32,7 @@ related:
 - **ReviewContext / ReviewResult**: the Context Builder's output and the record of one review run. See [[Finding Schema]].
 - **Matched pair**: the same diff with and without an injected instruction, used to measure injection resistance.
 - **Prompt injection**: instructions hidden in code comments, docstrings, or PR descriptions that try to steer the reviewer. See [[Guardrails]].
-- **OWASP Top 10**: a standard list of the ten most critical web application security risk categories. Used as the category for security findings. See [[ADR-009 OWASP Top 10 security taxonomy]].
+- **CWE Top 25**: MITRE's list of the 25 most dangerous software weaknesses. The Python-reachable subset of the 2024 edition is the security category set. See [[ADR-022 CWE Top 25 security taxonomy]].
 - **Finding outcome**: whether a posted finding was validated (code near the line changed later on the PR) or dismissed (thread resolved with no change, or a negative maintainer reaction). A pilot label source for the precision filter. See [[ADR-011 Finding outcomes as precision-filter labels]].
 - **Ablation**: measuring metrics while adding one component at a time. See [[Ablation Table]].
 - **Drift**: change in review quality across LLM providers or model versions over time. See [[Drift Monitoring]].

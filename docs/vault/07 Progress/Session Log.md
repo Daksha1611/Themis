@@ -53,3 +53,8 @@ related:
 **Done:** owner fixed the clock (Q53) and restarted the tunnel. Verified all five preconditions (UTC time, `/health` through the tunnel, App JWT, installation token, diff fetch with Contents: Read). Live test: GitHub delivered both PR events through the tunnel; PR #2 (planted bugs) got 3 accurate line comments; PR #3 (clean) got the no-issues comment; both answered by Groq `openai/gpt-oss-120b`; both traces complete in Langfuse with provider, tokens and cost; two `review_runs` rows with non-zero `prompt_tokens`. Trace audit: model thinking was missing; fixed (Groq exposes it as `reasoning`, and metadata truncates, so it now sits in the generation output). M2 closed.
 **Next:** Q54 (categories in the prompt), then M3.
 **Blockers / questions:** none blocking. Q54 must be fixed before M3 measures recall.
+
+## 2026-10-01 (3): M3 pre-work and Step 1
+**Done:** Q37b decided: CWE Top 25 (2024 edition, verified against MITRE's CWE view 1430; a 2025 edition exists but drops CWE-798 and CWE-400), Python-reachable subset of 11 + `security-other` ([[ADR-022 CWE Top 25 security taxonomy]]); ADR-009 superseded. Q54 fixed: categories listed in the prompt, validated in `Finding`; live check on the three test PRs returned only taxonomy categories (CWE-89, CWE-22, resource-leak, off-by-one-or-boundary, null-or-none-handling, error-handling). Test repo cleaned. Step 1: `evals/benchmark/verify_repos.py`; viable: click (65), anyio (67), fastapi fallback (58); not viable: httpx (0), marshmallow (26), rich (24), httpcore (2).
+**Next:** owner approves the repo list and size-filter scope; then Steps 2–8.
+**Blockers / questions:** Q20 (repo list), Q55 (arithmetic category), Q56 (size-filter scope).

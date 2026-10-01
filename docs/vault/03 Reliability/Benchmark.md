@@ -6,7 +6,7 @@ related:
   - "[[Eval Harness]]"
   - "[[Metrics]]"
   - "[[ADR-007 dev-holdout benchmark split]]"
-  - "[[ADR-009 OWASP Top 10 security taxonomy]]"
+  - "[[ADR-022 CWE Top 25 security taxonomy]]"
   - "[[ADR-011 Finding outcomes as precision-filter labels]]"
   - "[[ADR-017 Dev-split-only training data for the precision filter]]"
   - "[[ADR-019 Logic bug taxonomy]]"
@@ -22,7 +22,7 @@ related:
 ## Construction
 - Mine bug-fix commits from ~5 mid-sized, well-tested Python repos
 - Revert the fix to create a "buggy PR", labeled with the file and line range of the bug
-- Label each case with its category: logic-bug taxonomy ([[ADR-019 Logic bug taxonomy]]) or OWASP Top 10 ([[ADR-009 OWASP Top 10 security taxonomy]])
+- Label each case with its category: logic-bug taxonomy ([[ADR-019 Logic bug taxonomy]]) or CWE Top 25 ID ([[ADR-022 CWE Top 25 security taxonomy]])
 - Include clean PRs with no known bug to measure false positives
 - Target: 150–300 cases
 
@@ -47,7 +47,24 @@ Merged PRs from the same repos whose touched files had no bug-fix commit for the
 
 Consumed by the [[Eval Harness]]. Risks: [[Benchmark Leakage]], [[Label Noise]], [[Eval Cost]].
 
-## Candidate Repos
+## Repo verification (Q20, M3 Step 1, 2026-10-01): pending owner decision
+`python -m evals.benchmark.verify_repos --include-fallbacks` (raw data: `evals/benchmark/data/repo_verification.json`). Window 2025-04-01 → 2026-10-01 (18 months), non-merge commits on the default branch. **Package-scoped** = message matches a bug-fix pattern and every non-test, non-doc, non-CI file touched is `.py` under the package directory. Viable = ≥40 package-scoped.
+
+| Repo | Commits | Bug-fix msgs | Package-scoped | Package-only | Issue link | After 2025-07-01 | "Fixed" section | Viable | Est. after Step 2 filters* |
+|---|---|---|---|---|---|---|---|---|---|
+| encode/httpx | 17 | 2 | 0 | 0 | 0 | 0 | yes | ❌ | 0 |
+| pallets/click | 446 | 109 | 65 | 15 | 22 | 59 (90%) | no | ✅ | 49 |
+| marshmallow-code/marshmallow | 144 | 31 | 26 | 5 | 1 | 24 (92%) | yes | ❌ | 18 |
+| Textualize/rich | 196 | 31 | 24 | 12 | 3 | 16 (66%) | yes | ❌ | 21 |
+| agronholm/anyio | 318 | 96 | 67 | 4 | 27 | 62 (92%) | no | ✅ | 58 |
+| encode/httpcore (fallback) | 7 | 3 | 2 | 1 | 0 | 1 (50%) | yes | ❌ | 2 |
+| fastapi/fastapi (fallback) | 2046 | 128 | 58 | 10 | 0 | 55 (94%) | no | ✅ | 49 |
+
+\* Rough estimate: package-source changes ≤3 files and ≤60 lines, subject line not refactor/typo/docs/bump. Counting test and changelog files toward the limits roughly halves the yield (click 55 → 30).
+
+- `encode/httpx` has almost no development in the window (17 commits); `encode/httpcore` likewise.
+- `python-trio/anyio` (as listed in the brief) does not exist; `agronholm/anyio` was verified. `tiangolo/fastapi` is now `fastapi/fastapi`.
+
 Shortlist for Q20. **Not final:** each repo must pass the verification rule below.
 
 ### 1. encode/httpx (shape: web/HTTP library)

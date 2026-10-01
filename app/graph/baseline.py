@@ -10,6 +10,7 @@ from pydantic import BaseModel, ValidationError
 from app.github.diff import commentable_lines
 from app.llm import LLMResponse, complete
 from app.schemas import Finding
+from app.taxonomy import prompt_category_list
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,12 @@ Respond with a JSON array only. No markdown, no explanation, no preamble.
 Each element must have these exact keys:
   file, line_start, line_end, category, severity, message, suggestion,
   raw_llm_confidence
+Add the key subcategory only when category is security-other.
 
+category must be exactly one of these IDs:
+{categories}
+
+file is the path as it appears in the diff header, without an a/ or b/ prefix.
 severity must be one of: critical, high, medium, low
 raw_llm_confidence must be a float between 0.0 and 1.0
 If you find no issues, respond with an empty array: []
@@ -50,7 +56,12 @@ class BaselineResult(BaseModel):
 def build_messages(diff: str, pr_metadata: dict[str, Any]) -> list[dict[str, str]]:
     return [
         # replace(), not format(): the diff itself may contain braces.
-        {"role": "system", "content": SYSTEM_PROMPT.replace("{diff}", diff)},
+        {
+            "role": "system",
+            "content": SYSTEM_PROMPT.replace("{categories}", prompt_category_list()).replace(
+                "{diff}", diff
+            ),
+        },
         {
             "role": "user",
             "content": f"PR: {pr_metadata.get('pr_title', '')} in "

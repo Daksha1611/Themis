@@ -7,7 +7,7 @@ related:
   - "[[Review Graph]]"
   - "[[Benchmark]]"
   - "[[Metrics]]"
-  - "[[ADR-009 OWASP Top 10 security taxonomy]]"
+  - "[[ADR-022 CWE Top 25 security taxonomy]]"
 ---
 
 # ADR-019 Logic bug taxonomy
