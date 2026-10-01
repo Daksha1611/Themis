@@ -4,6 +4,7 @@ status: in-progress
 tags: [tech]
 related:
   - "[[LLM Client]]"
+  - "[[ADR-021 Free-tier four-provider LLM cascade]]"
   - "[[LiteLLM]]"
   - "[[ADR-005 LiteLLM via OpenRouter]]"
 version: API v1 (https://openrouter.ai/api/v1)
@@ -19,4 +20,4 @@ version: API v1 (https://openrouter.ai/api/v1)
 
 **Version:** API v1 (https://openrouter.ai/api/v1) (installed 2026-09-30).
 
-Development default model: `openai/gpt-4o-mini`, the cheapest model that can produce valid structured output for baseline measurement. Configured via `LLM_MODEL`.
+**Free-tier only (ADR-021):** last provider in the cascade, model `qwen/qwen3.8-27b:free` (chosen 2026-10-01 from the live `:free` model list; valid JSON array in 14.8 s). OpenRouter's free tier allows roughly 50 requests/day. `cohere/north-mini-code:free` returned empty content in the same test.

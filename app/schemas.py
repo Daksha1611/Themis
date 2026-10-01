@@ -90,6 +90,8 @@ class PRRef(BaseModel):
 
 
 class LLMConfig(BaseModel):
+    # Which cascade provider answered (ADR-021); None when no LLM call succeeded.
+    provider: str | None = None
     model: str
     temperature: float
     max_tokens: int

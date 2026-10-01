@@ -10,23 +10,19 @@ related:
 
 # Current Status
 
-**Phase:** M2 in progress. Code complete and tested; live end-to-end blocked on three owner actions.
-**Last updated:** 2026-09-30
+**Phase:** M2 in progress. Code complete and tested; live end-to-end blocked by the machine clock (Q53).
+**Last updated:** 2026-10-01
 
 **Done (M2)**
-- Alembic initialised; startup bootstrap removed; two migrations verified on a fresh database; migrations run on container start ([[Storage]])
-- LLM client via LiteLLM → OpenRouter with cost tracking ([[LLM Client]])
-- Final `Finding` / `ReviewResult` schema, `confidence` vs `raw_llm_confidence` ([[Finding Schema]])
-- Diff fetch, baseline review pass, PR review posting with out-of-diff summary ([[GitHub Integration]], [[Review Graph]])
-- Tracing reworked to Langfuse best practices and audited against real traces in Langfuse cloud ([[Tracing]])
-- 38 tests; ruff, mypy clean
-- Live run verified up to the diff fetch: real App token, real bot comment, real `review_runs` row, real Langfuse trace
+- Alembic; LLM client; Finding/ReviewResult schema; diff fetch; baseline pass; PR review posting; Langfuse tracing audited against real traces
+- Free-tier four-provider cascade groq → gemini → mistral → openrouter, providers as configuration ([[ADR-021 Free-tier four-provider LLM cascade]]); model IDs chosen from live provider APIs and verified with live calls
+- GitHub App permission set corrected: Contents: Read-only added (Q50)
+- 46 tests; ruff, mypy clean
 
 **Blocked (owner actions)**
-- Q50: add **Contents: Read** to the GitHub App
-- Q51: raise the OpenRouter key's spending limit
-- Q52: restart the tunnel and update the App's webhook URL
+- Q53: fix the machine clock (5 h 22 min fast): `sudo chronyc makestep`, `sudo timedatectl set-local-rtc 0`
+- Q52: then restart cloudflared and update the App's webhook URL
 
 **Next**
-- After the three actions: rerun the live checks (buggy PR, clean PR), then mark M2 done
-- Q47 (TestClient migration), Q48 (large PRs), Q49 (secrets in traces)
+- Rerun the live checks: bug PR, clean PR, traces with `provider`, two `review_runs` rows; then mark M2 done
+- Q47 (TestClient migration), Q48 (large PRs), Q49 (secrets in traces, more pressing with free tiers)

@@ -1,4 +1,8 @@
-"""LLM client: LiteLLM routed through OpenRouter (ADR-005). The model is configuration, not code."""
+"""LLM client: a free-tier provider cascade through LiteLLM (ADR-021).
+
+Providers, their order and their models are configuration (`LLM_PROVIDER_CASCADE`,
+`LLM_MODELS`, `<PROVIDER>_API_KEY`), never code.
+"""
 
 import os
 
@@ -20,65 +24,116 @@ litellm.suppress_debug_info = True
 
 
 class LLMError(Exception):
-    """Any failure calling the LLM. Carries the provider's HTTP status code when there is one."""
+    """Every provider in the cascade failed. Carries the last provider's HTTP status if any."""
 
     def __init__(self, message: str, status_code: int | None = None) -> None:
         super().__init__(message)
         self.status_code = status_code
 
 
+class _ProviderFailed(Exception):
+    def __init__(self, reason: str, status_code: int | None) -> None:
+        super().__init__(reason)
+        self.status_code = status_code
+
+
 class LLMResponse(BaseModel):
     content: str
+    provider: str
     model: str
     prompt_tokens: int
     completion_tokens: int
     total_tokens: int
+    # LiteLLM's list-price estimate; actual free-tier spend is $0 (ADR-021).
     cost_usd: float
 
 
 async def complete(
     messages: list[dict[str, str]],
-    model: str | None = None,
     max_tokens: int | None = None,
     temperature: float | None = None,
 ) -> LLMResponse:
-    """One chat completion. Traced as a Langfuse `generation` under the current observation."""
+    """One chat completion from the first provider in the cascade that succeeds."""
     settings = get_settings()
-    model = model or settings.llm_model
     max_tokens = max_tokens if max_tokens is not None else settings.llm_max_tokens
     temperature = temperature if temperature is not None else settings.llm_temperature
-    litellm_model = f"openrouter/{model}"
+    attempts: list[str] = []
+    last_status: int | None = None
 
-    with observe("llm.complete", as_type="generation", input=messages) as generation:
+    with observe("llm.complete", input={"cascade": settings.llm_provider_cascade}) as span:
+        for provider in settings.llm_provider_cascade:
+            model = settings.llm_models.get(provider)
+            api_key = settings.api_key_for(provider)
+            if not model:
+                attempts.append(f"{provider}: skipped (no model configured in LLM_MODELS)")
+                logger.debug("LLM cascade: skipping %s, no model configured", provider)
+                continue
+            if not api_key:
+                attempts.append(f"{provider}: skipped (no API key)")
+                logger.debug("LLM cascade: skipping %s, no API key", provider)
+                continue
+            try:
+                response = await _call(provider, model, api_key, messages, max_tokens, temperature)
+            except _ProviderFailed as exc:
+                attempts.append(f"{provider}: {exc}")
+                last_status = exc.status_code
+                logger.debug("LLM cascade: %s failed (%s); falling back", provider, exc)
+                continue
+            attempts.append(f"{provider}: ok")
+            update(
+                span, output={"provider": provider, "model": response.model, "attempts": attempts}
+            )
+            return response
+
+        update(span, output={"provider": None, "attempts": attempts})
+        raise LLMError("all LLM providers failed: " + "; ".join(attempts), last_status)
+
+
+async def _call(
+    provider: str,
+    model: str,
+    api_key: str,
+    messages: list[dict[str, str]],
+    max_tokens: int,
+    temperature: float,
+) -> LLMResponse:
+    """One provider attempt, traced as its own Langfuse generation."""
+    litellm_model = f"{provider}/{model}"
+    with observe(
+        "llm.generate", as_type="generation", input=messages, metadata={"provider": provider}
+    ) as generation:
         update(
             generation,
             model=model,
             model_parameters={"temperature": temperature, "max_tokens": max_tokens},
         )
         try:
-            response: Any = await litellm.acompletion(
+            raw: Any = await litellm.acompletion(
                 model=litellm_model,
                 messages=messages,
                 max_tokens=max_tokens,
                 temperature=temperature,
-                api_key=settings.openrouter_api_key.get_secret_value(),
+                api_key=api_key,
             )
         except Exception as exc:
-            # LiteLLM's specific errors (auth, rate limit, timeout, ...) are not subclasses of
-            # litellm.exceptions.APIError, so everything is caught and wrapped here.
-            status_code = getattr(exc, "status_code", None)
-            logger.warning("LLM call to %s failed (status %s): %s", model, status_code, exc)
-            raise LLMError(str(exc), status_code if isinstance(status_code, int) else None) from exc
+            # Any provider error falls through to the next provider: rate limits, bad keys,
+            # retired models (404), oversized requests, outages (ADR-021, Free Tier Throughput).
+            status = getattr(exc, "status_code", None)
+            status = status if isinstance(status, int) else None
+            raise _ProviderFailed(f"{type(exc).__name__} (status {status})", status) from exc
 
-        content = response.choices[0].message.content or ""
-        usage = response.usage
+        content = raw.choices[0].message.content or ""
+        if not content.strip():
+            raise _ProviderFailed("empty response", None)
+        usage = raw.usage
         result = LLMResponse(
             content=content,
-            model=response.model or model,
+            provider=provider,
+            model=raw.model or model,
             prompt_tokens=usage.prompt_tokens,
             completion_tokens=usage.completion_tokens,
             total_tokens=usage.total_tokens,
-            cost_usd=_cost(response, litellm_model),
+            cost_usd=_cost(raw, provider, model),
         )
         update(
             generation,
@@ -90,9 +145,15 @@ async def complete(
     return result
 
 
-def _cost(response: Any, litellm_model: str) -> float:
+def _cost(response: Any, provider: str, model: str) -> float:
+    # Provider passed explicitly: model IDs can contain "/" (e.g. Groq's "openai/gpt-oss-120b"),
+    # which LiteLLM would otherwise misread as the provider.
     try:
-        return float(litellm.completion_cost(completion_response=response, model=litellm_model))
+        return float(
+            litellm.completion_cost(
+                completion_response=response, model=model, custom_llm_provider=provider
+            )
+        )
     except Exception:
-        logger.warning("No LiteLLM cost available for %s; recording 0.0", litellm_model)
+        logger.warning("No LiteLLM cost available for %s/%s; recording 0.0", provider, model)
         return 0.0

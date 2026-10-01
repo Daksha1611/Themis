@@ -21,9 +21,9 @@ related:
 - **Q48. Large-PR handling.** Diffs are truncated at 100,000 characters: a stopgap. Chunking or file-level splitting is needed.
 - **Q49. Secrets in traced diffs.** Reviewed diffs (and the LLM prompt containing them) go to OpenRouter and Langfuse cloud unmasked. Decide on masking before reviewing real third-party code.
 
-- **Q50. GitHub App needs Contents: Read.** Diff fetch returns 403 without it. Blocks M2 live verification. Owner action: App settings → Permissions → Contents: Read-only, then accept the updated permissions on the installation.
-- **Q51. OpenRouter spending limit.** The key's total limit is 0, so every LLM call returns 403 "Key limit exceeded". Blocks M2 live verification. Owner action: raise the key limit or add credits.
 - **Q52. Webhook tunnel.** The cloudflared quick tunnel lost its connection (0 ready connections); GitHub deliveries fail with "failed to connect to host". Quick-tunnel URLs change on restart, so the App's webhook URL must be updated each time; a named tunnel or the VPS (ADR-018) removes this.
+
+- **Q53. Machine clock.** The dev machine's clock is about 5 h 22 min fast and not NTP-synchronised (RTC kept in local time). GitHub rejects the App JWT with 401, and it likely breaks the cloudflared tunnel. Owner action: `sudo chronyc makestep` and `sudo timedatectl set-local-rtc 0`. Blocks M2 live verification.
 
 ## Resolved
 
@@ -72,7 +72,9 @@ related:
 ### Operations
 33. Small paid VPS with Docker Compose and Caddy → [[ADR-018 Paid VPS over free tier hosting]]
 
-### Milestones (resolved 2026-09-30)
+### Milestones (resolved 2026-09-30 and 2026-10-01)
+50. GitHub App now has Contents: Read-only (required for diff fetching; missing from the original spec) → [[GitHub Integration]]
+51. OpenRouter spending limit: no longer applicable. Free tiers only, four-provider cascade → [[ADR-021 Free-tier four-provider LLM cascade]]
 44. Alembic initialised in M2 pre-work. Bootstrap removed. Migration confirmed. → [[ADR-012 Alembic for schema migrations]]
 45. GitHub App registered (`themis-reviewer-daksha`), installed on `Daksha1611/themis-test-repo`; JWT and installation token verified against GitHub.
 46. Langfuse cloud (EU) keys set; `auth_check()` passes.

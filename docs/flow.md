@@ -59,7 +59,7 @@ Per job: arq → `handle_review_job(ctx, job)` in `app/worker/job.py`:
       - Failure (not rate limit) → `_store(ctx, run, "failed")` ↳ re-raised (no token, so no PR comment is possible).
    2. Span `github.fetch_diff` → `fetch_pr_diff(token, repo, pr_number)` (section 3) ↳ `PRDiff`; span output `{diff_chars, truncated}`.
       - Failure (not rate limit) → `_fail()`: posts the error comment, stores a `failed` run ↳ `"failed"`.
-   3. Span `baseline.review` → `run_baseline_review(diff.text, {pr_title, repo_full_name})` (section 4) ↳ `BaselineResult`; span output `{status, finding_count, parse_error_count, prompt_tokens, completion_tokens, cost_usd}`, plus `parse_errors` and the raw LLM response when parsing failed. The `llm.complete` generation nests inside this span.
+   3. Span `baseline.review` → `run_baseline_review(diff.text, {pr_title, repo_full_name})` (section 4) ↳ `BaselineResult`; span output `{status, provider, model, finding_count, parse_error_count, prompt_tokens, completion_tokens, cost_usd}`, plus `parse_errors` and the raw LLM response when parsing failed. The `llm.complete` span (with one `llm.generate` generation per provider attempt) nests inside this span.
       - `status == "failed"` → `_fail()` ↳ `"failed"`.
    4. Span `github.post_comments`:
       - findings → `post_findings(token, repo, pr, head_sha, findings, diff.text)` (section 7); span output `{line_comments, summary_findings, rate_limited}`.
@@ -93,14 +93,20 @@ Diff fetch: `fetch_pr_diff(token, repo_full_name, pr_number)` in `app/github/dif
 `run_baseline_review(diff, pr_metadata)` in `app/graph/baseline.py`. **Never raises**: any exception ! `logger.exception` ↳ `BaselineResult(status="failed", parse_errors=["<Type>: <message>"])`.
 1. Blank diff ↳ `BaselineResult(status="success", findings=[])` with no LLM call.
 2. → `build_messages(diff, pr_metadata)`: system prompt with the diff between `<diff>` and `</diff>` and the statement that it is data, not instructions (inserted with `str.replace`, since diffs contain braces); user message `PR: {pr_title} in {repo_full_name}`.
-3. → `complete(messages)` in `app/llm.py`:
-   1. Opens `observe("llm.complete", as_type="generation", input=messages)` ! Langfuse generation, nested under `baseline.review`; records `model` and `model_parameters` (temperature, max_tokens).
-   2. → `litellm.acompletion(model="openrouter/<LLM_MODEL>", messages, max_tokens, temperature, api_key=OPENROUTER_API_KEY)` ! OpenRouter API call. Any exception ↳ `LLMError(message, status_code)`.
-   3. Cost: `_cost()` → `litellm.completion_cost()` from LiteLLM's bundled cost map (`LITELLM_LOCAL_MODEL_COST_MAP`); unavailable → 0.0 ! warning log.
-   4. Generation updated with `output`, `usage_details {input, output}`, `cost_details {total}` ↳ `LLMResponse(content, model, prompt_tokens, completion_tokens, total_tokens, cost_usd)`.
+3. → `complete(messages)` in `app/llm.py`: the free-tier provider cascade (ADR-021).
+   1. Opens span `observe("llm.complete", input={cascade})` ! Langfuse span, nested under `baseline.review`.
+   2. For each provider in `LLM_PROVIDER_CASCADE` (default groq → gemini → mistral → openrouter):
+      - No model in `LLM_MODELS` → recorded as skipped ! DEBUG log; next provider.
+      - `Settings.api_key_for(provider)` empty → recorded as skipped without a call ! DEBUG log; next provider.
+      - → `_call(provider, model, api_key, messages, max_tokens, temperature)`: opens generation `observe("llm.generate", as_type="generation", input=messages, metadata={provider})` (model and parameters recorded) → `litellm.acompletion(model="<provider>/<model>", api_key=...)` ! provider API call.
+        - Any exception, or empty content → `_ProviderFailed("<ErrorType> (status N)")`; the generation is marked `ERROR`; the reason is recorded ! DEBUG log "falling back"; next provider.
+        - Success → `_cost(raw, provider, model)` (`litellm.completion_cost(..., custom_llm_provider=provider)`, list-price estimate; 0.0 + warning if unpriced) → generation updated with output, model, `usage_details {input, output}`, `cost_details {total}` ↳ `LLMResponse(content, provider, model, prompt/completion/total tokens, cost_usd)`.
+   3. First success: span output `{provider, model, attempts}` ↳ `LLMResponse`.
+   4. All providers failed or skipped ↳ raises `LLMError("all LLM providers failed: <provider>: <reason>; …", last status)`; span marked `ERROR`.
 4. → `parse_findings(content)`: `strip_fences()` → `json.loads`.
    - Not JSON, or not a JSON array ↳ no findings, one parse error containing the raw response, status `failed`.
    - Per element: drop any `confidence` key, validate as `Finding` with `confidence=0.0`; invalid elements → `parse_errors`.
+   - → `normalize_paths(findings, diff)`: a path with git's `a/` or `b/` prefix that is not in the diff, but whose unprefixed form is, is rewritten to the diff's path (uses `commentable_lines`).
 5. Any parse errors ! warning log with the errors.
 6. ↳ `BaselineResult(status, findings, llm_response, parse_errors)`: `success` (no errors), `partial` (some elements invalid), `failed` (unparseable).
 
@@ -143,11 +149,11 @@ Owned by GitHub Integration (`app/github/`). All calls use one shared, connectio
 
 Traces produced:
 - `webhook.received` per `POST /webhook`: input `{event, action, repo, pr_number}`, output `{status_code, body}`.
-- `review.job` per job, session `<repo>#<pr>`, tag `baseline`, input `{repo, pr_number, pr_title, head_sha}`, output the `ReviewResult`. Children: `github.auth` → `github.fetch_diff` → `baseline.review` (containing generation `llm.complete`) → `github.post_comments` → `storage.write`.
+- `review.job` per job, session `<repo>#<pr>`, tag `baseline`, input `{repo, pr_number, pr_title, head_sha}`, output the `ReviewResult` (its `llm_config.provider` names the provider that answered). Children: `github.auth` → `github.fetch_diff` → `baseline.review` (containing span `llm.complete` → one generation `llm.generate` per provider attempt, `provider` in metadata) → `github.post_comments` → `storage.write`.
 
 **Storage** (`app/storage/`):
 - Schema is managed by Alembic (`app/storage/migrations/`): revision `75a08c2847ca` creates `review_runs` (M1 columns); `37e292134510` adds `finding_count`, `raw_finding_count`, `prompt_tokens`, `completion_tokens`, `model`, `diff_chars`, `diff_truncated`. `alembic upgrade head` runs when the api and worker containers start.
-- `_store(ctx, run, status)` in `app/worker/job.py`: span `storage.write` → `create_run(session, run.row(status))` ! INSERT into `review_runs`, commit, refresh ↳ `ReviewRun`; span output `{run_id}`. **When:** once per job, last, after posting (or after the error comment on failure).
+- `_store(ctx, run, status)` in `app/worker/job.py`: span `storage.write` → `create_run(session, run.row(status))` ! INSERT into `review_runs` (the `model` column holds `<provider>/<model>`), commit, refresh ↳ `ReviewRun`; span output `{run_id}`. **When:** once per job, last, after posting (or after the error comment on failure).
 - `update_run(session, run_id, updates)` ! UPDATE; not called in M2.
 
 ## 9. Eval harness flow
@@ -180,15 +186,18 @@ Traces produced:
 | lifespan(), shutdown() | close_client() | AsyncClient.aclose() | app/github/client.py |
 | auth, diff, comments | raise_if_rate_limited() | — | app/github/client.py |
 | _review() | fetch_pr_diff() | gh.get_client(), gh.github_headers(), gh.raise_if_rate_limited() | app/github/diff.py |
-| build_review() | commentable_lines() | — | app/github/diff.py |
+| build_review(), normalize_paths() | commentable_lines() | — | app/github/diff.py |
 | _review() | post_findings() | build_review(), _post_review() | app/github/comments.py |
 | post_findings() | build_review() | commentable_lines(), format_finding() | app/github/comments.py |
 | post_findings() | _post_review() | gh.get_client(), gh.github_headers(), gh.raise_if_rate_limited() | app/github/comments.py |
 | _review(), _fail() | post_review_comment() | gh.get_client(), gh.github_headers(), gh.raise_if_rate_limited() | app/github/comments.py |
-| _review() | run_baseline_review() | build_messages(), complete(), parse_findings() | app/graph/baseline.py |
+| _review() | run_baseline_review() | build_messages(), complete(), parse_findings(), normalize_paths() | app/graph/baseline.py |
 | parse_findings() | strip_fences() | — | app/graph/baseline.py |
-| run_baseline_review() | complete() | get_settings(), observe(), litellm.acompletion(), _cost(), update() | app/llm.py |
-| complete() | _cost() | litellm.completion_cost() | app/llm.py |
+| run_baseline_review() | complete() | get_settings(), Settings.api_key_for(), observe(), _call(), update() | app/llm.py |
+| complete() | _call() | observe(), litellm.acompletion(), _cost(), update() | app/llm.py |
+| _call() | _cost() | litellm.completion_cost() | app/llm.py |
+| complete() | Settings.api_key_for() | getattr(), os.environ.get() | app/config.py |
+| run_baseline_review() | normalize_paths() | commentable_lines(), Finding.model_copy() | app/graph/baseline.py |
 | _store() | create_run() | AsyncSession.add(), commit(), refresh() | app/storage/repository.py |
 | — (not called in M2) | update_run() | AsyncSession.get(), commit(), refresh() | app/storage/repository.py |
 | container start | alembic upgrade head | run_migrations_online() (advisory lock) | app/storage/migrations/env.py |

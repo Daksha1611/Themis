@@ -51,7 +51,8 @@ CTX: dict[str, Any] = {"session_factory": FakeSession}
 def llm_response(content: str) -> LLMResponse:
     return LLMResponse(
         content=content,
-        model="openai/gpt-4o-mini",
+        provider="groq",
+        model="openai/gpt-oss-120b",
         prompt_tokens=1200,
         completion_tokens=80,
         total_tokens=1280,
@@ -101,7 +102,7 @@ async def test_full_flow_in_order(mocks: Mock) -> None:
     assert row["status"] == "success"
     assert (row["finding_count"], row["raw_finding_count"]) == (2, 2)
     assert (row["prompt_tokens"], row["completion_tokens"]) == (1200, 80)
-    assert row["model"] == "openai/gpt-4o-mini" and float(row["cost_usd"]) == 0.000228
+    assert row["model"] == "groq/openai/gpt-oss-120b" and float(row["cost_usd"]) == 0.000228
     assert (row["diff_chars"], row["diff_truncated"]) == (4, False)
 
 

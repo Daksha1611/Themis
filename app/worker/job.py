@@ -55,7 +55,8 @@ class _Run:
             "raw_finding_count": len(findings),
             "prompt_tokens": llm.prompt_tokens if llm else None,
             "completion_tokens": llm.completion_tokens if llm else None,
-            "model": llm.model if llm else None,
+            # LiteLLM-style "<provider>/<model>", so the row records which provider answered.
+            "model": f"{llm.provider}/{llm.model}" if llm else None,
             "diff_chars": self.diff_chars,
             "diff_truncated": self.diff_truncated,
         }
@@ -73,7 +74,8 @@ class _Run:
             raw_finding_count=len(findings),
             filtered_finding_count=len(findings),
             llm_config=LLMConfig(
-                model=llm.model if llm else settings.llm_model,
+                provider=llm.provider if llm else None,
+                model=llm.model if llm else "",
                 temperature=settings.llm_temperature,
                 max_tokens=settings.llm_max_tokens,
             ),
@@ -169,6 +171,8 @@ async def _review(ctx: dict[str, Any], run: _Run) -> Status:
         llm = baseline.llm_response
         output: dict[str, Any] = {
             "status": baseline.status,
+            "provider": llm.provider if llm else None,
+            "model": llm.model if llm else None,
             "finding_count": len(baseline.findings),
             "parse_error_count": len(baseline.parse_errors),
             "prompt_tokens": llm.prompt_tokens if llm else 0,

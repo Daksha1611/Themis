@@ -30,6 +30,6 @@ related:
 
 **Code location (M2):** `app/github/client.py` (shared httpx client, headers, rate-limit detection), `auth.py` (JWT, installation token), `diff.py` (`fetch_pr_diff`, `commentable_lines`), `comments.py` (`post_findings`: one PR review with line comments, out-of-diff findings in the body, 422 fallback; `post_review_comment`: PR-level comment).
 
-**Required GitHub App permissions:** Pull requests: read & write; **Contents: read** (GitHub requires it for the diff media type); Metadata: read. Subscribed event: Pull request.
+**Required GitHub App permissions:** Pull requests (Read & write), Contents (Read-only), Metadata (Read-only). Subscribed event: Pull request. Contents: Read-only is required for diff fetching (GitHub's diff media type) and was missing from the original spec.
 
 **Dependencies:** GitHub App credentials. Webhook signature verification stays in the [[Webhook Service]].

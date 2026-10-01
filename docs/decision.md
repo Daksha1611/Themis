@@ -470,3 +470,112 @@ Everything downstream of those was verified with a real signed delivery to the l
 ### How this affects other components
 - **Tracing**: root level reflects run outcome; service names set.
 - **GitHub Integration**: required App permissions are now Pull requests (read & write), Contents (read), Metadata (read).
+
+---
+
+## Vault correction: GitHub App needs Contents: Read
+**Date**: 2026-10-01
+**File(s) affected**: `docs/vault/02 Architecture/GitHub Integration.md`, `docs/vault/07 Progress/Open Questions.md` (Q50 closed)
+
+### What I am changing
+Recording the GitHub App's required permission set: Pull requests (Read & write), **Contents (Read-only)**, Metadata (Read-only). No code change.
+
+### Why I am making this change
+Contents: Read is required for diff fetching and was missing from the original spec. A real M2 run got 403 "Resource not accessible by integration" on `GET /pulls/{n}` with the diff media type; GitHub's `X-Accepted-GitHub-Permissions` header named `pull_requests=read; contents=read`. The owner has added the permission and accepted it on the installation.
+
+### Alternatives I considered
+Fetch the diff another way (e.g. the PR files endpoint) to avoid the Contents permission.
+
+### Reasons I rejected each alternative
+The unified diff is the input the baseline prompt is built on; reconstructing it from per-file patches adds code for no benefit, and later milestones (repo context) need Contents: Read anyway.
+
+### Trade-offs I am accepting
+The App can read repository contents, a broader permission than before.
+
+### What could go wrong
+Installations created before the permission change must accept the updated permissions, or diff fetch keeps failing with 403.
+
+### How this affects other components
+- **GitHub Integration**: permission set corrected; no behaviour change.
+
+---
+
+## Free-tier four-provider LLM cascade (ADR-021)
+**Date**: 2026-10-01
+**File(s) affected**:
+- Code: `app/llm.py`, `app/config.py`, `app/graph/baseline.py` (file-path normalisation), `app/schemas.py` (`LLMConfig.provider`), `app/worker/job.py` (provider in trace/config), `.env.example`, `tests/test_llm.py`, `tests/test_baseline.py`, `tests/conftest.py`
+- Vault: `04 Decisions/ADR-021 Free-tier four-provider LLM cascade.md` (created); `06 Risks/Free Tier Throughput.md` (created); `05 Stack/` Groq, Gemini, Mistral (created), OpenRouter, LiteLLM (edited); `02 Architecture/LLM Client.md`; `00 Index.md`; `07 Progress/` Open Questions, Current Status, Session Log
+- Docs: `docs/flow.md`
+
+### What I am changing
+`complete()` iterates `LLM_PROVIDER_CASCADE` (default groq → gemini → mistral → openrouter). For each provider it builds the LiteLLM model string `<provider>/<LLM_MODELS[provider]>` and the provider's API key, skips providers with an empty key, tries the call, and moves on if the provider fails. `LLMError` is raised only when every provider has failed, naming each provider and why. `LLMResponse` gains `provider`. `LLM_MODEL` (single string) becomes `LLM_MODELS` (provider → model mapping).
+
+Model IDs, chosen from each provider's live model list and a live test call through LiteLLM 1.103.1 on 2026-10-01:
+- groq: `openai/gpt-oss-120b`
+- gemini: `gemini-3.5-flash` (`gemini-2.5-flash` returned 404, retired)
+- mistral: `codestral-2508`
+- openrouter: `qwen/qwen3.8-27b:free`
+
+### Why I am making this change
+The project runs on free tiers only; the single OpenRouter key had a spending limit of 0, and OpenRouter's free tier (~50 requests/day) is too tight to be a primary.
+
+### Alternatives I considered
+1. Fall through only on `RateLimitError`, `AuthenticationError`, or an empty key, as the brief listed.
+2. One provider with retries.
+3. Record `cost_usd` as 0.0 for every free-tier call.
+
+### Reasons I rejected each alternative
+1. During model selection a listed model returned 404 (gemini-2.5-flash), and Groq's free tier caps 8K tokens per minute, so a large prompt is rejected outright rather than rate-limited. Stopping the cascade on those errors would fail reviews another provider could serve, contradicting the Free Tier Throughput risk ("degrade gracefully when a provider disappears"). Every provider error falls through; the reason is recorded per provider.
+2. Any single free tier's daily cap is too low for benchmark runs.
+3. Free-tier spend is $0, but a zero everywhere makes the cost-per-PR metric meaningless. `cost_usd` keeps LiteLLM's list-price estimate (0.0 where it has no price, e.g. `:free` models), documented as notional.
+
+### Trade-offs I am accepting
+- Which model answered varies run to run, so results mix models. Every response records `provider` and `model`, and traces show both, so evals can stratify.
+- A slow provider (gemini-3.5-flash took 51 s in the live test) slows the review when earlier providers fail.
+
+### What could go wrong
+- All four free tiers exhausted at once: the review fails with an `LLMError` listing all four reasons.
+- Free tiers may use submitted prompts to improve provider models. Diffs are sent unmasked (Q49), which matters more now.
+- Model IDs go stale; the fix is a config change.
+
+### How this affects other components
+- **LLM Client**: provider cascade, `provider` in responses and traces.
+- **Review Graph** (baseline): file paths normalised against the diff (some models prefix `a/` or `b/`).
+- **Tracing**: `llm.complete` becomes a span containing one `llm.generate` generation per provider attempt.
+- **Eval Harness / CI Quality Gate / Benchmark**: throughput constraints (risk note).
+
+---
+
+## Cascade implementation notes and live-test blocker
+**Date**: 2026-10-01
+**File(s) affected**: `app/llm.py`, `app/graph/baseline.py`, `app/worker/job.py`, `tests/test_llm.py`, `tests/test_baseline.py`, `.env` (local only: obsolete `LLM_MODEL` line removed), `docs/flow.md`, `docs/vault/07 Progress/` Open Questions, Current Status, Session Log
+
+### What I am changing
+Recording changes found while building and testing the cascade:
+1. `_cost()` passes `custom_llm_provider` explicitly. LiteLLM read `groq/openai/gpt-oss-120b` as provider `openai` (Groq's model ID contains a slash) and could not price it; the cost silently became 0.0. Caught by a unit test. Verified prices for all four chosen models.
+2. `normalize_paths()` maps `a/`- or `b/`-prefixed file paths back to the diff's paths. In the live model test, two models (qwen on Groq and on OpenRouter) reported `b/a.py` for `a.py`, which would put every finding outside the diff.
+3. `complete()` lost its `model` parameter: a single override does not fit a per-provider model mapping, and nothing called it.
+4. The `review_runs.model` column stores `<provider>/<model>`, so each row records which provider answered without a new migration.
+5. Every provider attempt is its own `llm.generate` generation under one `llm.complete` span, as Langfuse's best practices ask (one generation per model invocation). Skipped providers appear in the span output.
+
+### Why I am making this change
+1 and 2 fix real defects found in testing; 3–5 follow from the cascade design.
+
+### Alternatives I considered
+- Add a `provider` column with a third migration.
+- Normalise file paths in `build_review()` only.
+
+### Reasons I rejected each alternative
+- `<provider>/<model>` in the existing column carries the same information without a schema change; a dedicated column can come with M3 if evals need to index on it.
+- Findings are also stored, traced and later scored against benchmark labels; the path must be right at the source, not only when posting.
+
+### Trade-offs I am accepting
+The `model` column now mixes two pieces of information in one string.
+
+### What could go wrong
+**The live test (M2 Step 8) could not run.** The machine's clock is about 19,300 seconds (5 h 22 min) fast and not NTP-synchronised (`chronyc tracking`: "19346 seconds fast of NTP time"; RTC kept in local time). GitHub rejects the App JWT (`iat` in the future) with 401 "Bad credentials", and the clock is a likely cause of the cloudflared tunnel holding 0 ready connections. Fixing it needs root: `sudo chronyc makestep` and `sudo timedatectl set-local-rtc 0`. Recorded as Q53.
+
+### How this affects other components
+- **LLM Client**: cost is correct for all providers.
+- **Review Graph** (baseline): findings carry the diff's file paths.
+- **Storage**: `model` column format is `<provider>/<model>`.

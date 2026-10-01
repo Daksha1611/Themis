@@ -69,6 +69,7 @@ Outside the vault: `README.md` (repo overview), `docs/flow.md` (what the code do
 - [[ADR-018 Paid VPS over free tier hosting]]
 - [[ADR-019 Logic bug taxonomy]]
 - [[ADR-020 M1 runtime dependencies]]
+- [[ADR-021 Free-tier four-provider LLM cascade]]
 
 ## 05 Stack
 - [[Python]]
@@ -101,10 +102,14 @@ Outside the vault: `README.md` (repo overview), `docs/flow.md` (what the code do
 - [[pydantic-settings]]
 - [[uvicorn]]
 - [[psycopg]]
+- [[Groq]]
+- [[Gemini]]
+- [[Mistral]]
 
 ## 06 Risks
 - [[Benchmark Leakage]]
 - [[Eval Cost]]
+- [[Free Tier Throughput]]
 - [[Hosting]]
 - [[Label Noise]]
 - [[Scope Creep]]

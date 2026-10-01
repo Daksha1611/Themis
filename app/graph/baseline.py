@@ -7,6 +7,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ValidationError
 
+from app.github.diff import commentable_lines
 from app.llm import LLMResponse, complete
 from app.schemas import Finding
 
@@ -90,6 +91,21 @@ def parse_findings(content: str) -> tuple[list[Finding], list[str], bool]:
     return findings, errors, True
 
 
+def normalize_paths(findings: list[Finding], diff: str) -> list[Finding]:
+    """Some models report paths with git's `a/` or `b/` prefix; map them to the diff's paths."""
+    files = set(commentable_lines(diff))
+    normalized = []
+    for finding in findings:
+        if (
+            finding.file not in files
+            and finding.file[:2] in ("a/", "b/")
+            and finding.file[2:] in files
+        ):
+            finding = finding.model_copy(update={"file": finding.file[2:]})
+        normalized.append(finding)
+    return normalized
+
+
 async def run_baseline_review(diff: str, pr_metadata: dict[str, Any]) -> BaselineResult:
     """Never raises: every failure comes back as status="failed" so the caller decides."""
     try:
@@ -98,6 +114,7 @@ async def run_baseline_review(diff: str, pr_metadata: dict[str, Any]) -> Baselin
 
         response = await complete(build_messages(diff, pr_metadata))
         findings, errors, parsed = parse_findings(response.content)
+        findings = normalize_paths(findings, diff)
         if errors:
             logger.warning(
                 "Baseline review of %s had %d parse error(s): %s",

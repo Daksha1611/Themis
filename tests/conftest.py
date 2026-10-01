@@ -13,6 +13,9 @@ os.environ.update(
         # Read by the Langfuse SDK itself: no spans are exported, so no network calls.
         "LANGFUSE_TRACING_ENABLED": "false",
         "DATABASE_URL": "postgresql+psycopg://themis:themis@localhost:5432/themis",
+        "GROQ_API_KEY": "gsk-test",
+        "GEMINI_API_KEY": "gm-test",
+        "MISTRAL_API_KEY": "ms-test",
         "OPENROUTER_API_KEY": "sk-or-test",
     }
 )
