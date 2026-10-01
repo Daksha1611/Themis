@@ -135,12 +135,27 @@ async def _call(
             total_tokens=usage.total_tokens,
             cost_usd=_cost(raw, provider, model),
         )
+        # Reasoning models think before answering; Langfuse's best practices say to capture it.
+        # LiteLLM exposes it as `reasoning_content` for most providers but `reasoning` for Groq.
+        message = raw.choices[0].message
+        reasoning = getattr(message, "reasoning_content", None) or getattr(
+            message, "reasoning", None
+        )
+        details = getattr(usage, "completion_tokens_details", None)
+        reasoning_tokens = getattr(details, "reasoning_tokens", None)
+        # Output as an OpenAI-format assistant message so Langfuse renders it, with the thinking
+        # alongside (metadata values are truncated, so it cannot live there).
+        output: dict[str, Any] = {"role": "assistant", "content": content}
+        if reasoning:
+            output["reasoning_content"] = reasoning
         update(
             generation,
-            output=content,
+            output=output,
             model=result.model,
             usage_details={"input": result.prompt_tokens, "output": result.completion_tokens},
             cost_details={"total": result.cost_usd},
+            # Reasoning tokens are already in "output"; metadata only, to avoid double counting.
+            metadata={"provider": provider, "reasoning_tokens": reasoning_tokens},
         )
     return result
 

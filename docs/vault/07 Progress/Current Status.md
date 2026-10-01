@@ -10,19 +10,21 @@ related:
 
 # Current Status
 
-**Phase:** M2 in progress. Code complete and tested; live end-to-end blocked by the machine clock (Q53).
+**Phase:** M2 done (baseline reviewer verified live). Next: M3 (benchmark).
 **Last updated:** 2026-10-01
 
 **Done (M2)**
-- Alembic; LLM client; Finding/ReviewResult schema; diff fetch; baseline pass; PR review posting; Langfuse tracing audited against real traces
-- Free-tier four-provider cascade groq → gemini → mistral → openrouter, providers as configuration ([[ADR-021 Free-tier four-provider LLM cascade]]); model IDs chosen from live provider APIs and verified with live calls
-- GitHub App permission set corrected: Contents: Read-only added (Q50)
-- 46 tests; ruff, mypy clean
-
-**Blocked (owner actions)**
-- Q53: fix the machine clock (5 h 22 min fast): `sudo chronyc makestep`, `sudo timedatectl set-local-rtc 0`
-- Q52: then restart cloudflared and update the App's webhook URL
+- Alembic-managed schema; startup bootstrap gone ([[Storage]])
+- Free-tier four-provider LLM cascade ([[ADR-021 Free-tier four-provider LLM cascade]], [[LLM Client]])
+- Final `Finding` / `ReviewResult` schema with `confidence` vs `raw_llm_confidence` ([[Finding Schema]])
+- Diff fetch, baseline pass, PR review posting ([[GitHub Integration]], [[Review Graph]])
+- Langfuse tracing audited against real traces: provider, tokens, cost and model thinking captured ([[Tracing]])
+- 46 tests; ruff, mypy, CI green
+- **Live test, 2026-10-01** on `Daksha1611/themis-test-repo`, delivered by GitHub through the tunnel:
+  - PR #2 (planted bugs): 3 line comments, one per bug (off-by-one, missing None check, divide-by-zero); Groq `openai/gpt-oss-120b`; 6.1 s
+  - PR #3 (clean change): "no issues found" comment; Groq; 2.5 s
 
 **Next**
-- Rerun the live checks: bug PR, clean PR, traces with `provider`, two `review_runs` rows; then mark M2 done
-- Q47 (TestClient migration), Q48 (large PRs), Q49 (secrets in traces, more pressing with free tiers)
+- Q54: list the category taxonomy in the prompt before the M3 benchmark
+- Q20: verify benchmark repo candidates; Q37b: security taxonomy
+- Q47 (TestClient), Q48 (large PRs), Q49 (secrets in traces), Q52b (stable webhook URL)

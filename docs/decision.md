@@ -579,3 +579,43 @@ The `model` column now mixes two pieces of information in one string.
 - **LLM Client**: cost is correct for all providers.
 - **Review Graph** (baseline): findings carry the diff's file paths.
 - **Storage**: `model` column format is `<provider>/<model>`.
+
+---
+
+## M2 live verification, and capturing model thinking in traces
+**Date**: 2026-10-01
+**File(s) affected**: `app/llm.py`, `docs/flow.md`, `docs/vault/03 Reliability/Tracing.md`, `docs/vault/07 Progress/` Open Questions, Current Status, Session Log
+
+### What I am changing
+1. Recording the M2 live test results (below).
+2. `_call()` now records the model's thinking on each `llm.generate` generation. The output becomes an OpenAI-format assistant message `{role, content, reasoning_content}`, and `reasoning_tokens` goes in metadata.
+
+Live test, 2026-10-01, `Daksha1611/themis-test-repo`, events delivered by GitHub through the cloudflared tunnel:
+- Preconditions all passed: system clock synchronised (1 s skew vs GitHub); `/health` through the tunnel returned `{"status":"ok"}`; `GET /app` with a fresh JWT returned 200; the installation token exchange returned 201; the diff fetch returned PR #1's diff (Contents: Read live).
+- **PR #2** (planted off-by-one, missing None check, divide-by-zero): one review with 3 line comments, one per planted bug. Provider **groq** (`openai/gpt-oss-120b`); 468 prompt / 909 completion tokens; list-price $0.000616; 6.1 s.
+- **PR #3** (docstring and variable rename): "⚖️ Themis found no logic bugs or security issues in this diff." Provider **groq**; 407 / 123 tokens; $0.000135; 2.5 s.
+- Langfuse: both `review.job` traces with all six child spans, `provider=groq` on the generation, the `llm.complete` span and the root `ReviewResult`; token usage and cost on the generation.
+- Postgres: two `success` rows with non-zero `prompt_tokens`, `model=groq/openai/gpt-oss-120b`.
+
+### Why I am making this change
+The Langfuse skill requires auditing real traces against the current best-practices page, which says to always capture thinking on generations. `gpt-oss-120b` is a reasoning model (509 of 909 completion tokens were reasoning on one run), and the trace did not show any of it.
+
+### Alternatives I considered
+1. Read only `reasoning_content`.
+2. Store the thinking in generation metadata.
+
+### Reasons I rejected each alternative
+1. For Groq, LiteLLM puts the thinking in `message.reasoning`, not `reasoning_content`; a live run with only the latter captured nothing.
+2. Tried and verified against Langfuse: metadata values are truncated, so only the first 200 of ~2,300 characters were stored.
+
+### Trade-offs I am accepting
+The generation output is a message object instead of a plain string, so anything reading it must take `content`. The trace root's output (the `ReviewResult`) is unchanged.
+
+### What could go wrong
+Thinking can be long and may echo the reviewed code, so traces grow, and the unmasked-secrets concern (Q49) applies to it too.
+
+The live run also showed findings use free-text categories ("logic bug", "bug") because the baseline prompt does not list the ADR-019 taxonomy. Recorded as Q54; must be fixed before M3 measures recall, since Q23 requires the correct category for a hit.
+
+### How this affects other components
+- **Tracing / LLM Client**: generations carry thinking and reasoning-token counts.
+- Replaying PR #2 three times to verify the fix posted three duplicate reviews on the test PR (test repo only).

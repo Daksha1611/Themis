@@ -21,9 +21,8 @@ related:
 - **Q48. Large-PR handling.** Diffs are truncated at 100,000 characters: a stopgap. Chunking or file-level splitting is needed.
 - **Q49. Secrets in traced diffs.** Reviewed diffs (and the LLM prompt containing them) go to OpenRouter and Langfuse cloud unmasked. Decide on masking before reviewing real third-party code.
 
-- **Q52. Webhook tunnel.** The cloudflared quick tunnel lost its connection (0 ready connections); GitHub deliveries fail with "failed to connect to host". Quick-tunnel URLs change on restart, so the App's webhook URL must be updated each time; a named tunnel or the VPS (ADR-018) removes this.
-
-- **Q53. Machine clock.** The dev machine's clock is about 5 h 22 min fast and not NTP-synchronised (RTC kept in local time). GitHub rejects the App JWT with 401, and it likely breaks the cloudflared tunnel. Owner action: `sudo chronyc makestep` and `sudo timedatectl set-local-rtc 0`. Blocks M2 live verification.
+- **Q52b. Stable webhook URL.** Quick-tunnel URLs change on every cloudflared restart, so the App's webhook URL must be updated each time. A named tunnel, or the VPS (ADR-018), removes this.
+- **Q54. Finding categories are free text.** In the live run the model returned categories like "logic bug" and "bug", not the ADR-019 taxonomy, because the baseline prompt never lists the categories. Q23 counts a hit only with the correct category, so the prompt must list the allowed values (logic-bug taxonomy now; security taxonomy once Q37b is decided) before the M3 benchmark measures recall.
 
 ## Resolved
 
@@ -75,6 +74,8 @@ related:
 ### Milestones (resolved 2026-09-30 and 2026-10-01)
 50. GitHub App now has Contents: Read-only (required for diff fetching; missing from the original spec) → [[GitHub Integration]]
 51. OpenRouter spending limit: no longer applicable. Free tiers only, four-provider cascade → [[ADR-021 Free-tier four-provider LLM cascade]]
+52. Webhook tunnel restarted and connected; GitHub deliveries reach the API (live test 2026-10-01). Stable-URL follow-up is Q52b.
+53. Machine clock fixed (`set-local-rtc 0`, `chronyc makestep`); skew vs GitHub 1 s; App JWT accepted.
 44. Alembic initialised in M2 pre-work. Bootstrap removed. Migration confirmed. → [[ADR-012 Alembic for schema migrations]]
 45. GitHub App registered (`themis-reviewer-daksha`), installed on `Daksha1611/themis-test-repo`; JWT and installation token verified against GitHub.
 46. Langfuse cloud (EU) keys set; `auth_check()` passes.

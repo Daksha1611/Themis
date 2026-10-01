@@ -32,11 +32,14 @@ Helpers in `app/observability/tracing.py`: `observe()` (context manager; nests a
 | `github.auth` | installation ID in; `ok` out |
 | `github.fetch_diff` | repo and PR in; `diff_chars`, `truncated` out |
 | `baseline.review` | diff length in; `status`, `finding_count`, `parse_error_count`, `prompt_tokens`, `completion_tokens`, `cost_usd` out; `parse_errors` and the raw LLM response when parsing failed; `ERROR` level on failure |
-| ↳ `llm.complete` (generation) | full messages in; completion out; `model`, `model_parameters` (temperature, max_tokens), `usage_details` (input, output), `cost_details` (total from LiteLLM's cost map) |
+| ↳ `llm.complete` (span) | cascade in; `provider` that answered, `model`, every attempt with its outcome out |
+| ↳↳ `llm.generate` (generation, one per provider attempt) | full messages in; assistant message out (`content` plus the model's thinking as `reasoning_content`); `model`, `model_parameters`, `usage_details` (input, output), `cost_details` (list-price estimate); metadata `provider`, `reasoning_tokens`. Failed attempts are marked `ERROR` |
 | `github.post_comments` | finding count in; `line_comments`, `summary_findings`, `rate_limited` out (or the no-issues / error comment) |
 | `storage.write` | status in; `run_id` out |
 
 Names keep the dotted `component.action` form: stable and free of dynamic values, as the best-practices page requires; not verb-first, a deliberate choice recorded in `docs/decision.md`.
+
+Thinking is captured in the generation output because Langfuse truncates long metadata values (a first attempt stored only 200 of ~2,300 characters).
 
 Secrets inside reviewed diffs are not masked before tracing (Q49).
 
