@@ -1061,3 +1061,30 @@ The trailers remain in the history of commit `2415208` until the owner decides.
 - **Benchmark:** final M3 case set pending labels.
 - **Metrics:** definitions for Step 6.
 - **Review Graph:** the prompt carries the new ADR-023 clause.
+
+---
+
+## No history rewrite for mined commit trailers
+**Date**: 2026-10-03
+**File(s) affected**: `docs/decision.md`, `docs/vault/03 Reliability/Metrics.md`
+
+### What I am changing
+Recording the owner's decision not to rewrite history or force-push. Commits `2415208` and `4951eb5` keep the upstream commit trailers they contain. Also recording one Step 6 metric rule: the false-positive rate is reported per repo as well as per size bucket.
+
+### Why I am making this change
+The trailers are upstream maintainers' own commit attributions inside mined third-party data, not a statement about this project. The forward fix is sufficient: trailers are stripped when mining (`clean_message()`), and commits are gated on staged additions. The stripping is cosmetic: it does not affect case IDs, labels, diffs or any other case content. The per-repo false-positive rate is needed because `Textualize/rich` supplies 17 clean cases against 16 buggy, a much larger clean share than other repos, so a per-repo difference in reviewer behaviour could move the overall rate unnoticed.
+
+### Alternatives I considered
+Rewrite the two commits and force-push to `main`.
+
+### Reasons I rejected each alternative
+Owner decision: a force-push rewrites public history for content that is third-party data, not a statement about this project.
+
+### Trade-offs I am accepting
+The two commits' history keeps the upstream trailers.
+
+### What could go wrong
+Nothing at runtime.
+
+### How this affects other components
+- **Metrics:** false-positive rate per repo (Step 6).

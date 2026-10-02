@@ -54,6 +54,7 @@ So one over-represented category (anyio contributes many `concurrency-or-async` 
 - **Chance baseline**, computed with no LLM calls: a trivial reviewer that flags the first changed line of every hunk with the most common category. Its location and category recall are reported next to the real reviewer's. If it scores high, the metric is too lenient, and that must be visible.
 - **Macro recall floor:** macro recall includes only categories with **≥5 labelled cases**; smaller categories are listed separately with raw counts.
 - **False-positive rate per size bucket** (1–5, 6–15, 16–30, 31–60 changed lines), always, so a "big diff means bug" shortcut is detectable.
+- **False-positive rate per repo**, always, alongside the size-bucket breakdown. Clean cases are unevenly spread (`Textualize/rich` supplies 17 clean against 16 buggy, a much larger clean share than other repos), so a per-repo difference in reviewer behaviour could otherwise move the overall rate unnoticed.
 - Category-correct recall uses human labels only; until the holdout is labelled, it covers human-labelled dev cases only, while location recall covers all cases.
 
 ## Breakdowns
