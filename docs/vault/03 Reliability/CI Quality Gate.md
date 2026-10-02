@@ -1,6 +1,8 @@
 ---
+name: CI Quality Gate
+description: "What CI checks: lint, types, tests and the vault check today; the eval gate against main later."
 type: reliability
-status: planned
+status: in-progress
 tags: [reliability]
 related:
   - "[[Eval Harness]]"
@@ -20,7 +22,7 @@ related:
 **Purpose:** block changes that make review quality worse.
 
 ## The gate
-- Compares against **main**, not a fixed number. Each main-branch eval run's metrics are stored in the separate eval database ([[Storage]]).
+- Compares against **main**, not a fixed number. Each eval run's **run-level summary** (precision, recall, cost, latency, git SHA, split, timestamp) is stored as one row in the dedicated eval database ([[Storage]]); the gate (M7) compares the PR's run against main's last recorded row. Case-level results stay in `results.jsonl` files and are not used by the gate ([[Eval Harness]]).
 - Fails if precision drops more than **3 percentage points** or recall more than **5**, relative to main's last recorded run.
 - Prints the full comparison in the PR check output, so failures explain themselves.
 
@@ -29,9 +31,13 @@ related:
 - **Fork PRs:** unit tests only. **Limitation:** fork PRs cannot access repository secrets, so the eval gate cannot run on them.
 - **Nightly:** the full dev split.
 
-## Lint and tests (`ci.yml`)
-[[ruff]] (lint + format), [[mypy]] (types), [[pytest]] with pytest-asyncio, [[pytest-cov]].
+## Lint, tests and vault check (`ci.yml`, built)
+Runs on every push and pull request:
+- `test` job: [[ruff]] (lint and format), [[mypy]] (strict, `app/`), [[pytest]] with [[pytest-asyncio]].
+- `vault-check` job: `python scripts/check_vault.py`, which fails the build when the vault, `docs/flow.md` and the code drift apart.
 
-**Planned code location:** `.github/workflows/eval-gate.yml` and `.github/workflows/ci.yml`, run by [[GitHub Actions]].
+[[pytest-cov]] is installed but CI does not run coverage yet.
+
+**Code location:** `.github/workflows/ci.yml` (built), run by [[GitHub Actions]]. Planned: `.github/workflows/eval-gate.yml` for the gate above.
 
 Decision: [[ADR-007 dev-holdout benchmark split]]. Risk: [[Eval Cost]].

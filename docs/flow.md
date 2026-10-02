@@ -7,6 +7,7 @@ The authoritative answer to "what does this system actually do when it runs?" It
 - A new function gets its row in the call graph index in the same session it is added.
 - A renamed or moved function is updated everywhere in this file in the same session.
 - This file describes what the code does, not what it should do. If code and this file disagree, stop and flag it. Do not silently update either.
+- `scripts/check_vault.py` (run in CI) checks the call graph index both ways: every entry in its Function column must exist in the stated file, and every function in `app/` must have a row. Exempt by rule: dunder methods, Pydantic validators, everything under `app/storage/migrations/` (revision files and `env.py` internals), and private leaf helpers (a `_name` function that calls no function defined in `app/`). Exempt functions may still have rows.
 
 ## How to read this document
 - `→` calls
@@ -27,9 +28,9 @@ Entry point: `POST /webhook` → `receive_webhook()` in `app/api/webhook.py`.
    1. Reads the raw body (`await request.body()`).
    2. → `get_settings().github_webhook_secret` → `verify_signature(body, X-Hub-Signature-256, secret)`: computes `"sha256=" + HMAC-SHA256(secret, body).hexdigest()` and compares with `hmac.compare_digest`.
       - Header missing, not prefixed `sha256=`, or mismatch ↳ **403** `{"error": "invalid signature"}` ! warning log.
-   3. `X-GitHub-Event` ≠ `pull_request` ↳ **200** `{"ignored": true}`.
+   3. `X-GitHub-Event` ≠ `pull_request` → `_ignored()` ↳ **200** `{"ignored": true}`.
    4. `json.loads(body)`; invalid JSON ↳ **400** `{"error": "invalid JSON"}`.
-   5. `action` not in `{"opened", "synchronize"}` ↳ **200** `{"ignored": true}`.
+   5. `action` not in `{"opened", "synchronize"}` (or the body is not a JSON object) → `_ignored()` ↳ **200** `{"ignored": true}`.
    6. `WebhookPayload.model_validate(data)` (`app/schemas.py`); missing fields ↳ **400** `{"error": "invalid payload"}` ! warning log.
    7. → `ReviewJob.from_payload(payload)` ↳ `ReviewJob(installation_id, repo_full_name, pr_number, head_sha, pr_title)`.
    8. → `update(trace, input={event, action, repo, pr_number})` ! Langfuse root input (becomes the trace input).
@@ -41,13 +42,15 @@ Entry point: `POST /webhook` → `receive_webhook()` in `app/api/webhook.py`.
 
 Health: `GET /health` → `health()` in `app/api/health.py` ↳ `{"status": "ok"}`.
 
-Container start: `alembic upgrade head` ! runs pending migrations under a Postgres advisory lock (`app/storage/migrations/env.py`), then uvicorn starts.
+Container start: `alembic upgrade head` → `run_migrations_online()` (`app/storage/migrations/env.py`) ! takes Postgres advisory lock `7406001`, runs pending migrations, releases the lock; then uvicorn starts. `run_migrations_offline()` (Alembic `--sql` mode) only renders SQL. The compose file sets `OTEL_SERVICE_NAME=themis-api` (section 8).
 
-Startup (`lifespan()` in `app/main.py`): `logging.basicConfig` → `create_queue_client()` ! Redis connection → `init_tracing()`. Shutdown: close the arq pool → `close_client()` (shared GitHub httpx client) → `shutdown_tracing()` ! Langfuse flush.
+App factory: `create_app()` builds the FastAPI app with `lifespan` and includes the health and webhook routers.
+
+Startup (`lifespan()` in `app/main.py`): `logging.basicConfig` → `create_queue_client()` → `redis_settings()` (`REDIS_URL`) ! Redis connection → `init_tracing()` → `get_langfuse()`. Shutdown: close the arq pool → `close_client()` (shared GitHub httpx client) → `shutdown_tracing()` ! Langfuse flush.
 
 ## 2. Job consumption
 
-Process: container start runs `alembic upgrade head` (advisory-locked), then `python -m arq app.worker.queue.WorkerSettings`. `WorkerSettings` (`app/worker/queue.py`) registers `functions = [handle_review_job]`, `max_tries = 5`, and `redis_settings` from `REDIS_URL`.
+Process: container start runs `alembic upgrade head` (advisory-locked), then `python -m arq app.worker.queue.WorkerSettings`, with `OTEL_SERVICE_NAME=themis-worker`. `WorkerSettings` (`app/worker/queue.py`) registers `functions = [handle_review_job]`, `max_tries = 5`, and `redis_settings` from `REDIS_URL`.
 
 Worker startup: `startup(ctx)` → `logging.basicConfig` → `create_async_engine(DATABASE_URL)` → stores `ctx["engine"]` and `ctx["session_factory"]` → `init_tracing()`. Worker shutdown: `shutdown(ctx)` disposes the engine → `close_client()` → `shutdown_tracing()` ! Langfuse flush.
 
@@ -66,7 +69,8 @@ Per job: arq → `handle_review_job(ctx, job)` in `app/worker/job.py`:
       - no findings → `post_review_comment(..., "⚖️ Themis found no logic bugs or security issues in this diff.")`.
       - any other exception → stores a `failed` run ↳ `"failed"` (no retry, so the LLM call is not repeated).
    5. → `_store(ctx, run, "success" | "partial")` (section 8) ↳ status.
-4. `update(root, output=ReviewResult)`: the trace output is the full `ReviewResult` (findings, counts, llm_config, token_usage, cost_usd, latency_ms, status, error) ↳ status string stored by arq as the job result.
+4. `update(root, output=_Run.result(status))`: the trace output is the full `ReviewResult` (findings, counts, llm_config, token_usage, cost_usd, latency_ms, status, error).
+5. Root level: `failed` → `update(root, level="ERROR", status_message=<error, first 500 chars>)`; `partial` → `level="WARNING"`, `status_message="some findings failed validation"`. Failed reviews can then be filtered by level in Langfuse ↳ status string stored by arq as the job result.
 
 `_fail(ctx, run, token, error)`: span `github.post_comments` → `post_review_comment(..., "⚖️ Themis encountered an error during review. This run has been logged.")` (a failure here is logged, not raised) → `_store(ctx, run, "failed")`.
 
@@ -145,7 +149,10 @@ Owned by GitHub Integration (`app/github/`). All calls use one shared, connectio
 - `observe(name, as_type, input, metadata)`: a context manager that opens an observation as the current OpenTelemetry context (`start_as_current_observation`), so observations opened inside it, in any function, nest under it. On exception it marks the observation `ERROR` and re-raises; on exit it ends the observation. The trace name and input/output come from the root observation.
 - `trace_attributes(session_id, tags, metadata)` wraps `propagate_attributes()` for trace-level attributes; entered before the root observation.
 - `update(observation, **fields)` sets output, metadata, level, model, usage and cost.
+- `init_tracing()` builds the client at startup (it just calls `get_langfuse()`); `shutdown_tracing()` flushes pending spans and stops the exporter.
+- `_exit(cm, exc)` ends an observation's context manager, passing the exception when there is one.
 - Every helper catches and logs its own errors. Spans are exported by the SDK's background exporter, so an unreachable Langfuse never blocks work.
+- Service name: `OTEL_SERVICE_NAME` (set per container in `infra/docker-compose.yml`: `themis-api`, `themis-worker`) names the service on every span; without it spans report `unknown_service`.
 
 Traces produced:
 - `webhook.received` per `POST /webhook`: input `{event, action, repo, pr_number}`, output `{status_code, body}`.
@@ -153,7 +160,7 @@ Traces produced:
 
 **Storage** (`app/storage/`):
 - Schema is managed by Alembic (`app/storage/migrations/`): revision `75a08c2847ca` creates `review_runs` (M1 columns); `37e292134510` adds `finding_count`, `raw_finding_count`, `prompt_tokens`, `completion_tokens`, `model`, `diff_chars`, `diff_truncated`. `alembic upgrade head` runs when the api and worker containers start.
-- `_store(ctx, run, status)` in `app/worker/job.py`: span `storage.write` → `create_run(session, run.row(status))` ! INSERT into `review_runs` (the `model` column holds `<provider>/<model>`), commit, refresh ↳ `ReviewRun`; span output `{run_id}`. **When:** once per job, last, after posting (or after the error comment on failure).
+- `_store(ctx, run, status)` in `app/worker/job.py`: span `storage.write` → `_Run.row(status)` builds the column dict → `create_run(session, row)` ! INSERT into `review_runs` (the `model` column holds `<provider>/<model>`), commit, refresh ↳ `ReviewRun`; span output `{run_id}`. **When:** once per job, last, after posting (or after the error comment on failure).
 - `update_run(session, run_id, updates)` ! UPDATE; not called in M2.
 
 ## 9. Eval harness flow
@@ -164,43 +171,55 @@ Traces produced:
 | Caller | Function | Calls | File |
 |--------|----------|-------|------|
 | uvicorn (startup) | lifespan() | get_settings(), create_queue_client(), init_tracing(), close_client(), shutdown_tracing() | app/main.py |
-| uvicorn | create_app() | FastAPI(), include_router() | app/main.py |
+| module import (`app = create_app()`) | create_app() | FastAPI(), include_router() | app/main.py |
 | FastAPI `GET /health` | health() | — | app/api/health.py |
 | FastAPI `POST /webhook` | receive_webhook() | observe(), _handle(), update() | app/api/webhook.py |
 | FastAPI dependency | get_queue() | — | app/api/webhook.py |
 | receive_webhook() | _handle() | get_settings(), verify_signature(), WebhookPayload.model_validate(), ReviewJob.from_payload(), update(), ArqRedis.enqueue_job() | app/api/webhook.py |
 | _handle() | verify_signature() | hmac.new(), hmac.compare_digest() | app/api/webhook.py |
+| _handle() | _ignored() | JSONResponse() | app/api/webhook.py |
 | _handle() | ReviewJob.from_payload() | — | app/schemas.py |
 | all modules | get_settings() | Settings() | app/config.py |
 | lifespan() | create_queue_client() | redis_settings(), arq.create_pool() | app/worker/queue.py |
+| create_queue_client(), WorkerSettings (class body) | redis_settings() | get_settings(), RedisSettings.from_dsn() | app/worker/queue.py |
 | arq worker (startup) | startup() | get_settings(), create_async_engine(), init_tracing() | app/worker/queue.py |
 | arq worker (shutdown) | shutdown() | close_client(), shutdown_tracing() | app/worker/queue.py |
 | arq worker | handle_review_job() | trace_attributes(), observe(), _review(), update() | app/worker/job.py |
 | handle_review_job() | _review() | observe(), get_installation_token(), fetch_pr_diff(), run_baseline_review(), post_findings(), post_review_comment(), _fail(), _store(), update() | app/worker/job.py |
 | _review() | _fail() | observe(), post_review_comment(), _store() | app/worker/job.py |
-| _review(), _fail() | _store() | observe(), create_run(), _Run.row() | app/worker/job.py |
+| _review(), _fail() | _store() | observe(), _Run.row(), create_run(), update() | app/worker/job.py |
+| _store() | _Run.row() | — | app/worker/job.py |
 | handle_review_job() | _Run.result() | get_settings() | app/worker/job.py |
 | _review() | get_installation_token() | get_jwt(), gh.get_client(), gh.github_headers(), gh.raise_if_rate_limited() | app/github/auth.py |
 | get_installation_token() | get_jwt() | get_settings(), jwt.encode() | app/github/auth.py |
 | auth, diff, comments | get_client() | httpx.AsyncClient() | app/github/client.py |
 | lifespan(), shutdown() | close_client() | AsyncClient.aclose() | app/github/client.py |
 | auth, diff, comments | raise_if_rate_limited() | — | app/github/client.py |
+| auth, diff, comments | github_headers() | — | app/github/client.py |
 | _review() | fetch_pr_diff() | gh.get_client(), gh.github_headers(), gh.raise_if_rate_limited() | app/github/diff.py |
 | build_review(), normalize_paths() | commentable_lines() | — | app/github/diff.py |
 | _review() | post_findings() | build_review(), _post_review() | app/github/comments.py |
 | post_findings() | build_review() | commentable_lines(), format_finding() | app/github/comments.py |
+| build_review() | format_finding() | — | app/github/comments.py |
 | post_findings() | _post_review() | gh.get_client(), gh.github_headers(), gh.raise_if_rate_limited() | app/github/comments.py |
 | _review(), _fail() | post_review_comment() | gh.get_client(), gh.github_headers(), gh.raise_if_rate_limited() | app/github/comments.py |
 | _review() | run_baseline_review() | build_messages(), complete(), parse_findings(), normalize_paths() | app/graph/baseline.py |
+| run_baseline_review() | build_messages() | prompt_category_list() | app/graph/baseline.py |
+| run_baseline_review() | parse_findings() | strip_fences(), json.loads(), Finding.model_validate() | app/graph/baseline.py |
 | parse_findings() | strip_fences() | — | app/graph/baseline.py |
 | run_baseline_review() | complete() | get_settings(), Settings.api_key_for(), observe(), _call(), update() | app/llm.py |
 | complete() | _call() | observe(), litellm.acompletion(), _cost(), update() | app/llm.py |
 | _call() | _cost() | litellm.completion_cost() | app/llm.py |
 | complete() | Settings.api_key_for() | getattr(), os.environ.get() | app/config.py |
 | build_messages() | prompt_category_list() | — | app/taxonomy.py |
-| Finding validation | (checks ALLOWED_CATEGORIES) | — | app/schemas.py |
+| Pydantic validation of Finding | Finding._check() | — (checks the line range, `ALLOWED_CATEGORIES`, the `security-other` subcategory) | app/schemas.py |
 | run_baseline_review() | normalize_paths() | commentable_lines(), Finding.model_copy() | app/graph/baseline.py |
 | _store() | create_run() | AsyncSession.add(), commit(), refresh() | app/storage/repository.py |
 | — (not called in M2) | update_run() | AsyncSession.get(), commit(), refresh() | app/storage/repository.py |
-| container start | alembic upgrade head | run_migrations_online() (advisory lock) | app/storage/migrations/env.py |
+| container start (`alembic upgrade head`) | run_migrations_online() | engine_from_config(), pg_advisory_lock, context.run_migrations(), pg_advisory_unlock | app/storage/migrations/env.py |
+| `alembic upgrade --sql` | run_migrations_offline() | context.run_migrations() | app/storage/migrations/env.py |
 | webhook, worker, llm | observe() / update() / trace_attributes() | get_langfuse(), start_as_current_observation(), propagate_attributes() | app/observability/tracing.py |
+| observe() | _exit() | ContextManager.__exit__() | app/observability/tracing.py |
+| observe(), init_tracing(), shutdown_tracing() | get_langfuse() | Langfuse() | app/observability/tracing.py |
+| lifespan(), startup() | init_tracing() | get_langfuse() | app/observability/tracing.py |
+| lifespan(), shutdown() | shutdown_tracing() | get_langfuse(), Langfuse.shutdown() | app/observability/tracing.py |

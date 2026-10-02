@@ -1,4 +1,6 @@
 ---
+name: ADR-012 Alembic for schema migrations
+description: "Decision: storage lives in app/storage with SQLAlchemy models and Alembic migrations."
 type: decision
 status: accepted
 tags: [decision]

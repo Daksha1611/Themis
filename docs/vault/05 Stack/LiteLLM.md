@@ -1,11 +1,14 @@
 ---
+name: LiteLLM
+description: "LiteLLM: one client interface to every provider in the LLM cascade."
 type: tech
-status: in-progress
+status: done
 tags: [tech]
 related:
   - "[[LLM Client]]"
   - "[[OpenRouter]]"
   - "[[ADR-005 LiteLLM via OpenRouter]]"
+  - "[[ADR-021 Free-tier four-provider LLM cascade]]"
 version: 1.103.1
 ---
 
@@ -15,10 +18,10 @@ version: 1.103.1
 
 **What it does in Themis:** The LLM client library.
 
-**Used by:** [[LLM Client]], [[OpenRouter]], [[ADR-005 LiteLLM via OpenRouter]]
+**Used by:** [[LLM Client]], [[Groq]], [[Gemini]], [[Mistral]], [[OpenRouter]], [[ADR-005 LiteLLM via OpenRouter]], [[ADR-021 Free-tier four-provider LLM cascade]]
 
 **Version:** 1.103.1 (installed 2026-09-30).
 
-Called as `litellm.acompletion(model="openrouter/<model>", api_key=...)`. `LITELLM_LOCAL_MODEL_COST_MAP=True` makes it use the cost map bundled with this version (no network fetch at import, reproducible costs). Its specific exceptions (auth, rate limit, timeout, ...) are **not** subclasses of `litellm.exceptions.APIError`; all share `openai.APIError`.
+Called as `litellm.acompletion(model="<provider>/<model>", api_key=...)`, once per provider tried by the cascade. `LITELLM_LOCAL_MODEL_COST_MAP=True` makes it use the cost map bundled with this version (no network fetch at import, reproducible costs). Its specific exceptions (auth, rate limit, timeout, ...) are **not** subclasses of `litellm.exceptions.APIError`; all share `openai.APIError`.
 
 Per the installed 1.103.1 source, `groq/`, `gemini/`, `mistral/` and `openrouter/` prefixes route to each provider's API, and an `api_key` passed per call takes precedence over the provider's environment variable ([[ADR-021 Free-tier four-provider LLM cascade]]).

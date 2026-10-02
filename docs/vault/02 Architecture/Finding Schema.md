@@ -1,4 +1,6 @@
 ---
+name: Finding Schema
+description: "Typed data contracts: Finding, ReviewResult and ReviewContext; confidence versus raw_llm_confidence."
 type: component
 status: in-progress
 tags: [component]
@@ -36,8 +38,8 @@ Defined in `app/schemas.py` (M2).
 ### `confidence` vs `raw_llm_confidence`
 This split is central to the project's thesis. An LLM's self-reported confidence is poorly calibrated, so Themis never lets it decide what gets posted. The LLM's number is kept as `raw_llm_confidence` so the eval harness can measure how badly calibrated it is; the decision-making `confidence` comes only from the trained precision filter. If the LLM's output includes a `confidence` key, it is discarded.
 
-## `ReviewContext`
-Output of the [[Context Builder]]:
+## `ReviewContext` (planned)
+**Not in code yet**: it is defined when the [[Context Builder]] is built. Planned fields:
 - `pr_metadata`
 - `changed_files`: path, hunks, full file content when small
 - `related_chunks`: path, symbol name, code, retrieval score, reason retrieved
@@ -48,17 +50,17 @@ Output of the [[Context Builder]]:
 - `pr_ref: PRRef` (repo, number, head_sha)
 - `findings: list[Finding]`
 - `raw_finding_count`, `filtered_finding_count` (required to report precision-filter impact; equal until M5)
-- `llm_config: LLMConfig` (model, temperature, max_tokens). `model_config` is reserved by Pydantic v2
+- `llm_config: LLMConfig` (provider, model, temperature, max_tokens). `provider` names the cascade provider that answered ([[ADR-021 Free-tier four-provider LLM cascade]]), or is None when no LLM call succeeded. `model_config` is reserved by Pydantic v2
 - `token_usage: TokenUsage` (prompt_tokens, completion_tokens, total_tokens)
 - `cost_usd`, `latency_ms`
 - `guardrail_triggered: bool` (always False until guardrails exist)
 - `status`: `success` \| `partial` \| `failed`
 - `error: str | None`
 
-In M2 the worker builds a `ReviewResult` at the end of every job and records it as the Langfuse trace output.
+In M2 the worker builds a `ReviewResult` at the end of every job and records it as the Langfuse trace output ([[Tracing]]). It is not stored whole: [[Storage]] keeps a `review_runs` row with selected fields.
 
 **Used by:** [[Review Graph]], [[Precision Filter]], [[Eval Harness]], [[Storage]].
 
-**Planned code location:** `app/schemas.py`.
+**Code location:** `app/schemas.py` (`Finding`, `ReviewResult` and its parts, plus the `WebhookPayload` and `ReviewJob` models); the allowed categories in `app/taxonomy.py`.
 
 **Dependencies:** [[Pydantic]].

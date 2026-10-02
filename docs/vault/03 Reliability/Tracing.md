@@ -1,4 +1,6 @@
 ---
+name: Tracing
+description: "Langfuse tracing: what each trace, span and generation records for webhooks and review jobs."
 type: reliability
 status: in-progress
 tags: [reliability]
@@ -25,7 +27,9 @@ Helpers in `app/observability/tracing.py`: `observe()` (context manager; nests a
 
 **`webhook.received`** (one per `POST /webhook`): input `{event, action, repo, pr_number}`; output `{status_code, body}`.
 
-**`review.job`** (one per review): session `<repo>#<pr>` (all reviews of one PR grouped), tag `baseline`, environment `development`. Input `{repo, pr_number, pr_title, head_sha}`; output the full `ReviewResult` ([[Finding Schema]]).
+**`review.job`** (one per review): session `<repo>#<pr>` (all reviews of one PR grouped), tag `baseline`, environment `development`. Input `{repo, pr_number, pr_title, head_sha}`; output the full `ReviewResult` ([[Finding Schema]]). Level `ERROR` with the error as status message when the review failed, `WARNING` when it was partial, so failed reviews can be filtered by level.
+
+**Service name:** `OTEL_SERVICE_NAME` is set per container in `infra/docker-compose.yml` (`themis-api`, `themis-worker`), so spans don't report `unknown_service`.
 
 | Child span | Captures |
 |---|---|

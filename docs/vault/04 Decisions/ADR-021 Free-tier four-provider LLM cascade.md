@@ -1,4 +1,6 @@
 ---
+name: ADR-021 Free-tier four-provider LLM cascade
+description: "Decision: free tiers only; LLM calls cascade Groq, Gemini, Mistral, then OpenRouter."
 type: decision
 status: accepted
 tags: [decision]

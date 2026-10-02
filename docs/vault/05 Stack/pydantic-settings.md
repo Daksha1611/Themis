@@ -1,6 +1,8 @@
 ---
+name: pydantic-settings
+description: "pydantic-settings: loads all configuration from environment variables."
 type: tech
-status: in-progress
+status: done
 tags: [tech]
 related:
   - "[[Webhook Service]]"

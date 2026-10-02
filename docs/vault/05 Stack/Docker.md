@@ -1,14 +1,16 @@
 ---
+name: Docker
+description: "Docker and Compose: run the api, worker, Redis, PostgreSQL and Qdrant."
 type: tech
-status: in-progress
+status: done
 tags: [tech]
 related:
+  - "[[ADR-010 Prometheus and Grafana operational metrics]]"
   - "[[Webhook Service]]"
   - "[[Job Queue]]"
   - "[[Storage]]"
   - "[[Hosting]]"
-version: Docker 29.7.1, Compose v5.3.1 (local dev machine)
-  - "[[ADR-010 Prometheus and Grafana operational metrics]]"
+version: "Docker 29.7.1, Compose v5.3.1 (local dev machine)"
 ---
 
 # Docker

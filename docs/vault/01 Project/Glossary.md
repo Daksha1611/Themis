@@ -1,4 +1,6 @@
 ---
+name: Glossary
+description: "Project terms, and what each frontmatter status value means per note type."
 type: project
 status: done
 tags: [project]
@@ -11,25 +13,31 @@ related:
 
 # Glossary
 
+## Note frontmatter
+Every note has `name` (its filename), a one-line `description`, `type`, `status`, `tags` and `related`. Stack (`tech`) notes also have `version`, read from the installed package or image, never from memory; `version: not installed` is allowed only while the note is `planned`. `scripts/check_vault.py` enforces all of this in CI.
+
 ## Note `status` values
-| Note type | Valid `status` values |
-|---|---|
-| project, component, reliability, tech, risk, progress | `planned` \| `in-progress` \| `done` |
-| decision | `accepted` \| `superseded` |
+| Note type | `planned` | `in-progress` | `done` |
+|---|---|---|---|
+| project, component, reliability, progress | not started | partly built, or ongoing | built or complete |
+| tech | not installed | installed, not yet used by the code | installed and in use |
+| risk | no mitigation in place | partly mitigated | mitigated |
+
+Decision notes use `accepted` \| `superseded` instead.
 
 ## Terms
 
-- **Finding**: one structured review result (file, line, category, severity, message, confidence). See [[Finding Schema]].
+- **Finding**: one structured review result (file, line range, category, subcategory, severity, message, suggestion, confidence, raw_llm_confidence). See [[Finding Schema]].
 - **Logic bug / security issue**: the only two finding categories in v1.
 - **Buggy PR**: a benchmark case created by reverting a bug-fix commit, labeled with the file and line range of the bug. See [[Benchmark]].
 - **Clean PR**: a benchmark case with no known bug, used to measure false positives.
 - **Dev split**: benchmark cases used for tuning and in CI.
 - **Holdout split**: benchmark cases run only at milestones.
 - **Leakage**: a benchmark case the model may have seen in training.
-- **Bug recall**: share of seeded bugs flagged at the correct location. See [[Metrics]].
-- **Comment precision**: share of posted comments that are correct. Headline metric.
+- **Bug recall**: share of seeded bugs with a finding at the labeled location (±3 lines) and in the correct category. See [[Metrics]].
+- **Comment precision**: share of findings that land on a labeled bug; on clean PRs every finding is a false positive. Headline metric. See [[Metrics]].
 - **Hybrid search**: retrieval combining sparse keyword vectors and dense embeddings, fused with Reciprocal Rank Fusion (RRF). See [[Context Builder]].
-- **ReviewContext / ReviewResult**: the Context Builder's output and the record of one review run. See [[Finding Schema]].
+- **ReviewContext / ReviewResult**: the Context Builder's output (planned) and the record of one review run (built). See [[Finding Schema]].
 - **Matched pair**: the same diff with and without an injected instruction, used to measure injection resistance.
 - **Prompt injection**: instructions hidden in code comments, docstrings, or PR descriptions that try to steer the reviewer. See [[Guardrails]].
 - **CWE Top 25**: MITRE's list of the 25 most dangerous software weaknesses. The Python-reachable subset of the 2024 edition is the security category set. See [[ADR-022 CWE Top 25 security taxonomy]].

@@ -1,4 +1,6 @@
 ---
+name: ADR-013 Langfuse cloud over self-hosting
+description: "Decision: use the Langfuse cloud free tier instead of self-hosting."
 type: decision
 status: accepted
 tags: [decision]

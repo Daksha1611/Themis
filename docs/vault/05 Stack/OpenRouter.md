@@ -1,6 +1,8 @@
 ---
+name: OpenRouter
+description: "OpenRouter: last provider in the free-tier LLM cascade."
 type: tech
-status: in-progress
+status: done
 tags: [tech]
 related:
   - "[[LLM Client]]"
@@ -14,9 +16,9 @@ version: API v1 (https://openrouter.ai/api/v1)
 
 **What it is:** Hosted API that routes requests to many LLM providers.
 
-**What it does in Themis:** Provider routing for all LLM calls.
+**What it does in Themis:** Last provider in the free-tier LLM cascade ([[ADR-021 Free-tier four-provider LLM cascade]]). Until 2026-10-01 it routed every LLM call ([[ADR-005 LiteLLM via OpenRouter]]).
 
-**Used by:** [[LLM Client]], [[LiteLLM]], [[ADR-005 LiteLLM via OpenRouter]]
+**Used by:** [[LLM Client]], [[LiteLLM]], [[ADR-005 LiteLLM via OpenRouter]], [[ADR-021 Free-tier four-provider LLM cascade]]
 
 **Version:** API v1 (https://openrouter.ai/api/v1) (installed 2026-09-30).
 

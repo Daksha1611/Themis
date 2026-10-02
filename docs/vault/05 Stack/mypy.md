@@ -1,6 +1,8 @@
 ---
+name: mypy
+description: "mypy: strict static type checking in CI."
 type: tech
-status: in-progress
+status: done
 tags: [tech]
 related:
   - "[[CI Quality Gate]]"

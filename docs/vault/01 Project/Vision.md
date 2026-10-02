@@ -1,4 +1,6 @@
 ---
+name: Vision
+description: "What Themis is and its core promise: trustworthy, evidence-backed review judgment."
 type: project
 status: done
 tags: [project]

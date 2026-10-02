@@ -1,6 +1,8 @@
 ---
+name: psycopg
+description: "psycopg 3: PostgreSQL driver for SQLAlchemy and Alembic."
 type: tech
-status: in-progress
+status: done
 tags: [tech]
 related:
   - "[[Storage]]"

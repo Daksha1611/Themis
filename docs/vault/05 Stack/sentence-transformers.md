@@ -1,4 +1,6 @@
 ---
+name: sentence-transformers
+description: "sentence-transformers: local embeddings for the repo index."
 type: tech
 status: planned
 tags: [tech]

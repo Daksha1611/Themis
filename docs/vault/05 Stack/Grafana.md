@@ -1,4 +1,6 @@
 ---
+name: Grafana
+description: "Grafana: dashboards for operational metrics, deferred to post-v1."
 type: tech
 status: planned
 tags: [tech]

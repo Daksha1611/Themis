@@ -1,9 +1,12 @@
 ---
+name: FastAPI
+description: "FastAPI: web framework for the webhook and health endpoints."
 type: tech
-status: in-progress
+status: done
 tags: [tech]
 related:
   - "[[Webhook Service]]"
+  - "[[starlette]]"
 version: 0.141.1
 ---
 
@@ -17,4 +20,4 @@ version: 0.141.1
 
 **Version:** 0.141.1 (recorded 2026-09-29).
 
-`fastapi==0.141.1` and `starlette==1.7.0` are pinned until the TestClient migration (Q47).
+`fastapi==0.141.1` and `starlette==1.7.0` ([[starlette]]) are pinned until the TestClient migration (Q47).

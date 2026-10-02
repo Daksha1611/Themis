@@ -1,6 +1,8 @@
 ---
+name: Redis
+description: "Redis: backing store for the arq job queue."
 type: tech
-status: in-progress
+status: done
 tags: [tech]
 related:
   - "[[Job Queue]]"

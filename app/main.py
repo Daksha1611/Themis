@@ -18,7 +18,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     logging.basicConfig(level=settings.log_level)
     # The schema is managed by Alembic: `alembic upgrade head` runs before the app starts.
-    # Schema is managed by Alembic (`alembic upgrade head` runs before the app starts).
     app.state.arq_pool = await create_queue_client()
     init_tracing()
     yield

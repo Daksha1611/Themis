@@ -1,4 +1,6 @@
 ---
+name: ADR-017 Dev-split-only training data for the precision filter
+description: "Decision: the precision filter trains only on dev-split findings, never holdout."
 type: decision
 status: accepted
 tags: [decision]

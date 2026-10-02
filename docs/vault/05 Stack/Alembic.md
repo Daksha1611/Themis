@@ -1,6 +1,8 @@
 ---
+name: Alembic
+description: "Alembic: schema migrations for the review database, run when the containers start."
 type: tech
-status: in-progress
+status: done
 tags: [tech]
 related:
   - "[[Storage]]"

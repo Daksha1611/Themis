@@ -1,6 +1,8 @@
 ---
+name: arq
+description: "arq: async Redis-backed job queue that runs review jobs."
 type: tech
-status: in-progress
+status: done
 tags: [tech]
 related:
   - "[[Job Queue]]"

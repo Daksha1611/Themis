@@ -1,4 +1,6 @@
 ---
+name: ADR-015 Local embeddings and Qdrant native hybrid search
+description: "Decision: local sentence-transformers embeddings plus Qdrant native sparse vectors, fused with RRF."
 type: decision
 status: accepted
 tags: [decision]

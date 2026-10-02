@@ -1,6 +1,8 @@
 ---
+name: PyJWT
+description: "PyJWT: signs the GitHub App JWT (RS256)."
 type: tech
-status: in-progress
+status: done
 tags: [tech]
 related:
   - "[[GitHub Integration]]"

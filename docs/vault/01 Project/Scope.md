@@ -1,4 +1,6 @@
 ---
+name: Scope
+description: "v1 scope: Python repositories only, logic bugs and security issues only."
 type: project
 status: done
 tags: [project]

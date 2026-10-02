@@ -1,4 +1,6 @@
 ---
+name: ADR-022 CWE Top 25 security taxonomy
+description: "Decision: security findings use a Python-reachable CWE Top 25 (2024) entry or security-other."
 type: decision
 status: accepted
 tags: [decision]

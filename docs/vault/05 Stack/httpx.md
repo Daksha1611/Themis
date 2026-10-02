@@ -1,6 +1,8 @@
 ---
+name: httpx
+description: "httpx: async HTTP client for every GitHub API call."
 type: tech
-status: in-progress
+status: done
 tags: [tech]
 related:
   - "[[GitHub Integration]]"
@@ -12,7 +14,7 @@ version: 0.28.1
 
 **What it is:** Async-capable HTTP client for Python.
 
-**What it does in Themis:** All GitHub API calls: installation tokens and comment posting.
+**What it does in Themis:** All GitHub API calls: installation tokens, diff fetch and review posting, through one shared connection-pooled client.
 
 **Used by:** [[GitHub Integration]], [[ADR-020 M1 runtime dependencies]]
 

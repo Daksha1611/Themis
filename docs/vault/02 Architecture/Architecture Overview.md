@@ -1,6 +1,8 @@
 ---
+name: Architecture Overview
+description: "Diagram and summary of the review path and the reliability layer, marking what is built and what is planned."
 type: component
-status: planned
+status: in-progress
 tags: [component]
 related:
   - "[[Webhook Service]]"
@@ -40,7 +42,7 @@ flowchart LR
     PF -->|filtered Findings| GI
     GI -->|review comments| GH2[GitHub PR]
     RG --> LLM[LLM Client<br/>LiteLLM]
-    LLM --> OR[OpenRouter]
+    LLM --> CAS[Free-tier cascade<br/>Groq → Gemini → Mistral → OpenRouter]
     W --> DB[(Storage<br/>PostgreSQL)]
     GH2 -.outcome signals.-> GI
     GI -.raw signals.-> DB
@@ -53,7 +55,8 @@ flowchart LR
         MET --> CI[CI Quality Gate]
         MET --> DM[Drift Monitoring]
         MET --> AB[Ablation Table]
-        EH --> EDB[(Eval database)]
+        EH --> RJ[(results.jsonl<br/>+ response cache)]
+        CI -.main-branch history.-> EDB[(Eval database)]
     end
     RG -.traced.-> T
     EH -.runs full review path.-> W
@@ -64,3 +67,18 @@ flowchart LR
 **Reliability layer:** [[Tracing]], [[Benchmark]], [[Eval Harness]], [[Metrics]], [[CI Quality Gate]], [[Drift Monitoring]], [[Ablation Table]].
 
 **Deferred to post-v1:** [[Operational Monitoring]] (Prometheus + Grafana).
+
+## Built so far (M1–M2) versus planned
+The diagram is the target design. What runs today (details in `docs/flow.md`):
+
+[[Webhook Service]] → [[Job Queue]] worker → [[GitHub Integration]] (installation token, diff fetch) → [[Review Graph]] as a single baseline pass over the raw diff → [[GitHub Integration]] (post review) → [[Storage]] (`review_runs` row). [[LLM Client]] (four-provider cascade), [[Finding Schema]] (`Finding`, `ReviewResult`) and [[Tracing]] are built.
+
+| Part | State |
+|---|---|
+| Webhook Service, LLM Client | built |
+| Job Queue, GitHub Integration, Finding Schema, Storage, Tracing | built for the M2 path; later parts planned |
+| Review Graph | baseline pass built; LangGraph bug and security passes planned |
+| Context Builder, Guardrails, Precision Filter | planned |
+| Outcome signals (dotted lines) | planned |
+| Benchmark | in progress (M3) |
+| Eval Harness, Metrics, CI Quality Gate eval job, Drift Monitoring, Ablation Table | planned; `ci.yml` (lint, types, tests, vault check) runs today |

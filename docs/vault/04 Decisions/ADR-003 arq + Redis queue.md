@@ -1,4 +1,6 @@
 ---
+name: ADR-003 arq + Redis queue
+description: "Decision: the webhook enqueues jobs on arq and Redis, and a worker runs the reviews."
 type: decision
 status: accepted
 tags: [decision]

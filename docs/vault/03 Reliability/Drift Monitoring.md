@@ -1,4 +1,6 @@
 ---
+name: Drift Monitoring
+description: "Weekly comparison of review quality and cost across providers and model versions."
 type: reliability
 status: planned
 tags: [reliability]
@@ -19,8 +21,8 @@ related:
 - **Weekly**, on the same fixed subset of dev cases used by the [[CI Quality Gate]]
 - Compares the models actually in use, plus one cheaper and one stronger alternative, via the [[LLM Client]]
 - **Output:** a chart over time of quality and cost per model
-- Results go to the separate eval database in [[Storage]]
+- Results go to the separate eval database planned in [[Storage]]
 
 **Planned code location:** `evals/drift/` plus a scheduled [[GitHub Actions]] workflow. Not application code: it runs the [[Eval Harness]] on a schedule.
 
-Enabled by [[ADR-005 LiteLLM via OpenRouter]] (model choice is configuration). Risk: [[Eval Cost]].
+Enabled by [[ADR-005 LiteLLM via OpenRouter]] and [[ADR-021 Free-tier four-provider LLM cascade]]: providers and models are configuration. Risk: [[Eval Cost]].

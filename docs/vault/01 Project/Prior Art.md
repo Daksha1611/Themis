@@ -1,4 +1,6 @@
 ---
+name: Prior Art
+description: "The course PR-reviewer project Themis was compared against, and what was taken from it or rejected."
 type: project
 status: done
 tags: [project]
@@ -25,13 +27,13 @@ Source: https://www.krishnaik.in/project/lfnm (public listing only; course conte
 | Noise control | None stated | [[Precision Filter]] |
 | Repo context | Not stated | [[Context Builder]] (tree-sitter + Qdrant hybrid) |
 | Prompt injection | Not stated | [[Guardrails]] |
-| Model | Fixed GPT-4o-mini | Configurable via [[LLM Client]], [[Drift Monitoring]] |
+| Model | Fixed GPT-4o-mini | Free-tier provider cascade, configurable via [[LLM Client]]; compared by [[Drift Monitoring]] |
 | Evidence | Feature list | [[Ablation Table]] |
 | Services | 5 microservices | Webhook + worker |
 
 ## What Themis takes from it
 Approved and recorded as ADRs:
-- OWASP Top 10 security taxonomy: [[ADR-009 OWASP Top 10 security taxonomy]]
+- OWASP Top 10 security taxonomy: [[ADR-009 OWASP Top 10 security taxonomy]] (later superseded by [[ADR-022 CWE Top 25 security taxonomy]])
 - Operational metrics with Prometheus + Grafana: [[ADR-010 Prometheus and Grafana operational metrics]] (later superseded for v1; post-v1 stretch goal)
 - Learning from real usage, scoped to precision (not style): [[ADR-011 Finding outcomes as precision-filter labels]]
 

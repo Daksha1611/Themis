@@ -1,4 +1,6 @@
 ---
+name: Precision Filter
+description: "Encoder classifier that sets each finding's confidence and drops likely noise before posting."
 type: component
 status: planned
 tags: [component]

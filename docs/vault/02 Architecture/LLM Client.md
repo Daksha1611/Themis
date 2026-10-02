@@ -1,6 +1,8 @@
 ---
+name: LLM Client
+description: "The single path to language models: LiteLLM over the free-tier four-provider cascade."
 type: component
-status: in-progress
+status: done
 tags: [component]
 related:
   - "[[Review Graph]]"
@@ -22,8 +24,8 @@ related:
 **Purpose:** the single path from Themis to language models.
 
 **Responsibilities**
-- Call models through [[LiteLLM]] routed via [[OpenRouter]]
-- Keep model choice in configuration
+- Call models through [[LiteLLM]], over the free-tier provider cascade ([[ADR-021 Free-tier four-provider LLM cascade]])
+- Keep providers and model choice in configuration
 
 **Inputs:** prompts from the [[Review Graph]].
 **Outputs:** model responses back to the [[Review Graph]].
@@ -38,4 +40,4 @@ related:
 
 **Cost:** `cost_usd` is LiteLLM's list-price estimate (actual free-tier spend is $0); 0.0 where LiteLLM has no price.
 
-**Dependencies:** [[LiteLLM]], [[OpenRouter]]. Decision: [[ADR-005 LiteLLM via OpenRouter]]. The [[Eval Harness]] caches LLM calls; [[Drift Monitoring]] compares providers and model versions through it. Risk: [[Eval Cost]].
+**Dependencies:** [[LiteLLM]]; providers [[Groq]], [[Gemini]], [[Mistral]], [[OpenRouter]]. Decisions: [[ADR-005 LiteLLM via OpenRouter]] (amended by ADR-021), [[ADR-021 Free-tier four-provider LLM cascade]]. Planned: the [[Eval Harness]] caches LLM calls (M3); [[Drift Monitoring]] compares providers and model versions through it. Risks: [[Eval Cost]], [[Free Tier Throughput]].

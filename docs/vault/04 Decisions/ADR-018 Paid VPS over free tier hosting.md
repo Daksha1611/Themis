@@ -1,4 +1,6 @@
 ---
+name: ADR-018 Paid VPS over free tier hosting
+description: "Decision: host on a small paid VPS with Docker Compose and Caddy."
 type: decision
 status: accepted
 tags: [decision]

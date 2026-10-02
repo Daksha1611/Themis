@@ -1,4 +1,6 @@
 ---
+name: ADR-008 Encoder classifier as precision filter
+description: "Decision: a small fine-tuned encoder classifier is the precision filter."
 type: decision
 status: accepted
 tags: [decision]

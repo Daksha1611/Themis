@@ -1,4 +1,6 @@
 ---
+name: HuggingFace Transformers
+description: "HuggingFace Transformers: fine-tuning and inference for the precision filter."
 type: tech
 status: planned
 tags: [tech]

@@ -1,4 +1,6 @@
 ---
+name: ADR-011 Finding outcomes as precision-filter labels
+description: "Decision: finding outcomes (validated or dismissed) are a pilot label source for the precision filter."
 type: decision
 status: accepted
 tags: [decision]

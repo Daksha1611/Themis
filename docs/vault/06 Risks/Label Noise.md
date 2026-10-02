@@ -1,4 +1,6 @@
 ---
+name: Label Noise
+description: "Risk that some mined bug-fix labels are wrong, distorting the metrics."
 type: risk
 status: planned
 tags: [risk]

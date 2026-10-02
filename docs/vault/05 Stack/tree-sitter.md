@@ -1,4 +1,6 @@
 ---
+name: tree-sitter
+description: "tree-sitter: function-level code chunking for the repo index."
 type: tech
 status: planned
 tags: [tech]

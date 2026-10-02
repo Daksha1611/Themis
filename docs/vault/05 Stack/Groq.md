@@ -1,6 +1,8 @@
 ---
+name: Groq
+description: "Groq: first provider in the free-tier LLM cascade."
 type: tech
-status: in-progress
+status: done
 tags: [tech]
 related:
   - "[[LLM Client]]"

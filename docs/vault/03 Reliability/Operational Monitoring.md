@@ -1,4 +1,6 @@
 ---
+name: Operational Monitoring
+description: "Service health metrics with Prometheus and Grafana, deferred to post-v1."
 type: reliability
 status: planned
 tags: [reliability]

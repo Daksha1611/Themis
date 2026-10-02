@@ -1,6 +1,8 @@
 ---
+name: uvicorn
+description: "uvicorn: ASGI server for the FastAPI app."
 type: tech
-status: in-progress
+status: done
 tags: [tech]
 related:
   - "[[Webhook Service]]"

@@ -1,6 +1,8 @@
 ---
+name: Gemini
+description: "Gemini API: second provider in the free-tier LLM cascade."
 type: tech
-status: in-progress
+status: done
 tags: [tech]
 related:
   - "[[LLM Client]]"

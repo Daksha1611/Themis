@@ -1,4 +1,6 @@
 ---
+name: Guardrails
+description: "Prompt-injection defence: sanitize input before the review graph, validate findings after it."
 type: component
 status: planned
 tags: [component]

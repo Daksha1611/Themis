@@ -1,4 +1,6 @@
 ---
+name: ADR-007 dev-holdout benchmark split
+description: "Decision: a dev split for tuning and a holdout split run only at milestones."
 type: decision
 status: accepted
 tags: [decision]

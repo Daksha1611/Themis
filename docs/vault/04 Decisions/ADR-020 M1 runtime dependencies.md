@@ -1,4 +1,6 @@
 ---
+name: ADR-020 M1 runtime dependencies
+description: "Decision: the M1 runtime dependencies httpx, PyJWT, pydantic-settings, uvicorn and psycopg."
 type: decision
 status: accepted
 tags: [decision]

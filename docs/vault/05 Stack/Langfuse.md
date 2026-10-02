@@ -1,6 +1,8 @@
 ---
+name: Langfuse
+description: "Langfuse SDK and cloud: tracing for webhooks, review jobs and LLM calls."
 type: tech
-status: in-progress
+status: done
 tags: [tech]
 related:
   - "[[Tracing]]"

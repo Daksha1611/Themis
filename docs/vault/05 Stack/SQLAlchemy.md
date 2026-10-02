@@ -1,6 +1,8 @@
 ---
+name: SQLAlchemy
+description: "SQLAlchemy: async ORM models for Storage."
 type: tech
-status: in-progress
+status: done
 tags: [tech]
 related:
   - "[[Storage]]"

@@ -1,4 +1,6 @@
 ---
+name: pytest-cov
+description: "pytest-cov: test coverage plugin for pytest."
 type: tech
 status: in-progress
 tags: [tech]
@@ -12,7 +14,7 @@ version: 7.1.0
 
 **What it is:** pytest plugin for test coverage.
 
-**What it does in Themis:** Reports test coverage in `ci.yml`.
+**What it does in Themis:** Installed with the `dev` extra but **not used yet**: `ci.yml` does not run coverage. Planned for the [[CI Quality Gate]].
 
 **Used by:** [[CI Quality Gate]], [[pytest]]
 

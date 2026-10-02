@@ -1,6 +1,8 @@
 ---
+name: ruff
+description: "ruff: lint and format checks."
 type: tech
-status: in-progress
+status: done
 tags: [tech]
 related:
   - "[[CI Quality Gate]]"

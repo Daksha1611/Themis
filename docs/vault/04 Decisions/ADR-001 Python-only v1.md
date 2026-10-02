@@ -1,4 +1,6 @@
 ---
+name: ADR-001 Python-only v1
+description: "Decision: v1 reviews Python repositories only."
 type: decision
 status: accepted
 tags: [decision]

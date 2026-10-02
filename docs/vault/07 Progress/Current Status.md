@@ -1,4 +1,6 @@
 ---
+name: Current Status
+description: "Where the project stands: current milestone, what is done, what is next."
 type: progress
 status: in-progress
 tags: [progress]
@@ -11,7 +13,9 @@ related:
 # Current Status
 
 **Phase:** M3 in progress. Pre-work done; Step 1 (repo verification) done; **waiting for the owner to approve the repo list** before mining.
-**Last updated:** 2026-10-01 (M3 Step 1)
+**Last updated:** 2026-10-02 (vault audit and hardening)
+
+New sessions start with [[00 Brief]].
 
 **Done (M2)**
 - Alembic-managed schema; startup bootstrap gone ([[Storage]])
@@ -30,7 +34,13 @@ related:
 - Test repo cleaned (all PRs closed, branches deleted)
 - Repo verification table ([[Benchmark]]); leakage date distribution ([[Benchmark Leakage]])
 
+**Done (vault audit and hardening, 2026-10-02)**
+- Vault corrected against the code and the live system: superseded decisions, component notes, statuses, stack versions, open-question numbering, metric definitions
+- [[00 Brief]] (mandatory first read) and [[09 External Facts]] (outside-world facts with verification dates, re-checked live on 2026-10-02)
+- `scripts/check_vault.py` with 21 tests; `vault-check` CI job. 94 tests in all
+- OpenRouter's free model returned 429 (upstream rate limit) on 2026-10-02; the other three providers answered
+
 **Next**
-- Owner decision: final repo list (Q20) and size-filter scope (Q56)
+- Owner decision: final repo list (Q20), size-filter scope (Q56), arithmetic category (Q55)
 - Then M3 Steps 2–8: mine, build cases, cache, runner, metrics, baseline dev report
 - Q47 (TestClient), Q48 (large PRs), Q49 (secrets in traces), Q52b (stable webhook URL)

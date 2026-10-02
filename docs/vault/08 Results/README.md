@@ -1,4 +1,6 @@
 ---
+name: README
+description: "What may go in 08 Results: real eval outputs only, never placeholder numbers."
 type: reliability
 status: planned
 tags: [reliability]

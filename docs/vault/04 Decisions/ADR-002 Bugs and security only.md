@@ -1,4 +1,6 @@
 ---
+name: ADR-002 Bugs and security only
+description: "Decision: v1 findings are logic bugs and security issues only, never style."
 type: decision
 status: accepted
 tags: [decision]

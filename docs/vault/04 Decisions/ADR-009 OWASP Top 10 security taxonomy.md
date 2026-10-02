@@ -1,4 +1,6 @@
 ---
+name: ADR-009 OWASP Top 10 security taxonomy
+description: "Superseded by ADR-022: OWASP Top 10 as the security taxonomy."
 type: decision
 status: superseded
 tags: [decision]

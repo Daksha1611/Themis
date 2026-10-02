@@ -26,7 +26,7 @@
       "label": "Risks",
       "x": -40,
       "y": 1000,
-      "width": 1420,
+      "width": 2140,
       "height": 200,
       "color": "1"
     },
@@ -242,9 +242,29 @@
       "color": "1"
     },
     {
+      "id": "r_leak",
+      "type": "file",
+      "file": "06 Risks/Benchmark Leakage.md",
+      "x": 1440,
+      "y": 1060,
+      "width": 260,
+      "height": 100,
+      "color": "1"
+    },
+    {
+      "id": "r_tput",
+      "type": "file",
+      "file": "06 Risks/Free Tier Throughput.md",
+      "x": 1800,
+      "y": 1060,
+      "width": 260,
+      "height": 100,
+      "color": "1"
+    },
+    {
       "id": "legend",
       "type": "text",
-      "text": "### Themis Map\nData flows left \u2192 right.\n\n- Cyan: review path\n- Green: reliability layer\n- Red: risks\n- Yellow: deferred to post-v1\n- Orange: outcome-label feedback loop\n\nClick any box to open its note.\nStart at [[00 Index]] \u00b7 [[Architecture Overview]] \u00b7 [[Open Questions]]",
+      "text": "### Themis Map\nData flows left → right.\n\n- Cyan: review path\n- Green: reliability layer\n- Red: risks\n- Yellow: deferred to post-v1\n- Orange: outcome-label feedback loop\n\nClick any box to open its note.\nStart at [[00 Index]] · [[Architecture Overview]] · [[Open Questions]]",
       "x": 1800,
       "y": 480,
       "width": 480,
@@ -514,6 +534,24 @@
       "toSide": "bottom",
       "label": "raw outcome signals",
       "color": "2"
+    },
+    {
+      "id": "r_leak-bench",
+      "fromNode": "r_leak",
+      "fromSide": "top",
+      "toNode": "bench",
+      "toSide": "bottom",
+      "label": "memorisation, holdout contamination",
+      "color": "1"
+    },
+    {
+      "id": "r_tput-llm",
+      "fromNode": "r_tput",
+      "fromSide": "top",
+      "toNode": "llm",
+      "toSide": "bottom",
+      "label": "free-tier rate limits",
+      "color": "1"
     }
   ]
 }

@@ -694,3 +694,185 @@ With only three viable repos the case count may land near the bottom of the 150�
 
 ### How this affects other components
 None; tooling and documentation only.
+
+---
+
+## Vault consistency audit and hardening: pre-work
+**Date**: 2026-10-01
+**File(s) affected** (planned; Part B's exact list depends on the approved audit report):
+- Part A: none (read-only audit, report shown before any fix)
+- Part B: vault notes named in the approved report
+- Part C: `docs/vault/00 Brief.md` (create); the local project rules file (reading order). It is git-excluded, so it never reaches the repo.
+- Part D: `scripts/check_vault.py` (create), `tests/test_check_vault.py` (create), `.github/workflows/ci.yml` (`vault-check` job)
+- Part E: the local project rules file ("Verify before trusting" section)
+- Part F: `docs/vault/09 External Facts.md` (create)
+- `docs/vault/07 Progress/` Current Status, Session Log
+
+
+### What I am changing
+A maintenance pass, no application code and no M3 work. Audit the whole vault against the code, `docs/flow.md`, installed packages and itself (Part A); after approval, fix notes to match reality (B); add a short mandatory-first-read brief (C); add a mechanical checker run in CI so drift fails the build (D); add verification rules to the local project rules file (E); add a register of external facts that expire (F).
+
+### Why I am making this change
+M3 depends on the vault being accurate. Several decisions were superseded or extended in M1–M3 pre-work (ADR-009, ADR-010, ADR-005 by ADR-021), and nothing checks the vault mechanically.
+
+### Alternatives I considered
+1. Fix inconsistencies while auditing.
+2. Run the checker as a pre-commit hook only.
+
+### Reasons I rejected each alternative
+1. The owner asked to see the report before any fix; some findings need a decision, not a correction.
+2. A pre-commit hook can be skipped locally; a CI job fails the build for everyone, like a lint error.
+
+### Trade-offs I am accepting
+The checker makes vault conventions strict: every note change must keep frontmatter, links and numbering valid, or CI fails.
+
+### What could go wrong
+- The checker's rules must match the vault's real conventions, or it fails on valid notes. Where the requested rules conflict with existing conventions, the audit report flags it for a decision.
+- The local project rules file is not in git, so CI cannot check it.
+
+### How this affects other components
+None at runtime. CI gains a `vault-check` job.
+
+---
+
+## Vault consistency audit and hardening: completion
+**Date**: 2026-10-02
+**File(s) affected**:
+- Created: `docs/vault/00 Brief.md`, `docs/vault/09 External Facts.md`, `docs/vault/05 Stack/starlette.md`, `docs/vault/05 Stack/pytest-asyncio.md`, `scripts/check_vault.py`, `tests/test_check_vault.py`
+- Edited: every vault note (frontmatter); bodies of Architecture Overview, Webhook Service, Job Queue, GitHub Integration, Finding Schema, Storage, LLM Client, Review Graph, Benchmark, CI Quality Gate, Drift Monitoring, Eval Harness, Metrics, Tracing, Glossary, Prior Art, 00 Index, Open Questions, ADR-004, ADR-005, the risk notes Benchmark Leakage, Eval Cost, Free Tier Throughput, Hosting and Scope Creep, the stack notes Docker, GitHub Actions, pytest, pytest-cov, LiteLLM, OpenRouter, PostgreSQL, Pydantic, httpx, Qdrant and FastAPI; `Themis Map.canvas`; `docs/flow.md`; `README.md`; `app/main.py` (one duplicated comment line removed); `.github/workflows/ci.yml` (`vault-check` job); the local project rules file (not in git)
+
+### What I am changing
+Applied the owner's approval of the Part A report, then Parts C–F. **The approval (2026-10-02):** the nine recommendations with three amendments: #2 (an empty `version:` is allowed only while `planned`, no "not installed" marker), #5 (eval output has two destinations: case-level `results.jsonl`, run-level summaries in the eval database for the M7 gate; resolved, not an open question), #7 (public repositories only, stated in the README; Q49 retitled to the masking work). Plus two extra fixes (F1 Eval Cost as a request budget; F2 three repos and raw counts) and an M3 reporting requirement.
+
+**How the work was done:** a second local session, told only "continue", applied the nine recommendations *without* the amendments, and had also inserted an approval paragraph into the pre-work entry above, describing an approval that was never given in that form. That paragraph was removed and the pre-work entry restored as written; this session then applied the amendments on top (items 18–24). Every correction makes a note match the code or the live system; nothing in the code was changed to match a note.
+
+**Frontmatter and conventions**
+1. `name` (= filename) and a one-line `description` added to all 91 notes, so check 5 can run.
+2. `status` now has a defined meaning per type, written in the Glossary: tech `planned` = not installed, `in-progress` = installed but not yet used by code, `done` = installed and in use; risk `planned` = no mitigation, `in-progress` = partly mitigated, `done` = mitigated. The middle tech value was not in the approved recommendation; it covers Qdrant (runs in Compose, no code uses it) and pytest-cov (installed, not run in CI).
+3. Statuses corrected: Webhook Service and LLM Client `done`; Architecture Overview, Benchmark and CI Quality Gate `in-progress`; 26 installed stack notes `done`, Qdrant and pytest-cov `in-progress`; risks Benchmark Leakage, Eval Cost, Free Tier Throughput and Scope Creep `in-progress`, Hosting and Label Noise stay `planned`.
+4. Stack versions: the seven uninstalled `planned` notes have an empty `version:` (amendment #2; first written as `not installed`, then emptied). GitHub Actions now records its action pins and runner. Docker.md frontmatter repaired: a `related:` entry had been appended under `version:`, which made the frontmatter invalid YAML.
+5. Open Questions: every entry is now `- **Q<n>.** …`. The old numbered-list form also rendered wrongly, because Markdown renumbers ordered lists (the Milestones section showed 50–56 instead of 50–53, 44–46). Q20 and Q25 no longer appear twice: their partial resolutions moved into the open entries. Q37 is no longer listed three times: Q37 (OWASP edition) and Q37b (CWE replaces OWASP) are separate entries. Q20, Q55 and Q56 are marked as blocking M3. Q49 records the decision on public diffs. New Q57 records where eval results go.
+
+**Superseded decisions (A1)**
+6. ADR-005 keeps `accepted`, with a banner saying ADR-021 amended it (LiteLLM stays; OpenRouter-only routing is replaced).
+7. Architecture Overview diagram: the LLM Client points at the four-provider cascade instead of OpenRouter alone; eval results go to `results.jsonl` and the cache, and the eval database only holds the CI gate's history.
+8. LLM Client, LiteLLM, OpenRouter, Drift Monitoring, Prior Art and Eval Cost no longer describe OpenRouter-only routing, a "cheap model" or OWASP as current.
+
+**Notes against code (A2, A3)**
+9. `docs/flow.md`: rows added for `build_messages`, `parse_findings`, `format_finding`, `github_headers`, `get_langfuse`, `init_tracing`, `shutdown_tracing`, `redis_settings`, `_ignored`, `_exit`, `_Run.row`, `run_migrations_online` and `run_migrations_offline`. The two non-function rows became `Finding._check()` and `run_migrations_online()`. Section 2 now describes the root `ERROR`/`WARNING` level, and sections 1, 2 and 8 describe `OTEL_SERVICE_NAME`.
+10. Component notes: each marks what is built (M2) and what is planned. Finding Schema marks `ReviewContext` as not in code and adds `LLMConfig.provider`. Storage lists the real `review_runs` columns and says `model` holds `<provider>/<model>`. Job Queue describes the real M2 flow and the retry rules. Webhook Service lists every response, including the 400 and 200-ignored ones. "Planned code location" became "Code location" wherever the code exists.
+
+**Contradictions (A8)**
+11. Eval results (amendment #5, resolved, not an open question): **two destinations.** Case-level results (one record per benchmark case; large; regenerable) go to `results.jsonl` files, the M3 artifact, backed by the SQLite response cache. Run-level summary metrics (one row per eval run: precision, recall, cost, latency, git SHA, split, timestamp; small; must persist) go to the dedicated eval database, consumed by the CI quality gate in M7. Stated in Eval Harness, Storage, CI Quality Gate, PostgreSQL and the Architecture Overview. An open question (Q57) first created for this was withdrawn.
+12. Metrics: precision, false-positive rate, cost per PR, latency and parse error rate now have definitions, taken from the M3 brief. Recall and exact-line accuracy are defined over the finding's line range. Glossary entries for Finding, bug recall and comment precision match.
+13. Benchmark and Benchmark Leakage: the "~5 repos" and "after the primary model's training cutoff" wording now matches the verified window and the three viable repos.
+14. **Found while fixing, not in the report:** ADR-004 said hybrid search was "BM25 + embeddings", while ADR-015 (Q13) settled on Qdrant native sparse vectors with no separate BM25 index. ADR-004 gets a "refined by ADR-015" banner. ADR-015 is clearly the later and more specific decision, so this needed no open question.
+
+**Outside the vault**
+15. README status line was "planning, no application code"; it now states M1–M2 built and M3 in progress, and says the training-set guard is planned. (The `app/main.py` comment change and the CI job are logged in separate entries below.)
+
+**Parts C–F**
+16. `00 Brief.md` (52 lines) is the mandatory first read. `09 External Facts.md` is seeded from checks run on 2026-10-02:
+   - each provider's model listed live and test-called;
+   - Groq and Mistral limits read from response headers;
+   - the App's permissions read from `GET /app/installations`, plus a real diff fetch;
+   - library versions read from the installed packages;
+   - MITRE checked for a newer CWE edition.
+   The local rules file gains the Brief as step 1, "Verify before trusting", the 30-day re-verification rule, and running the checker before committing.
+17. `scripts/check_vault.py` implements the seven checks with the standard library only, so the CI job installs nothing. Beyond the brief:
+   - check 1 also runs in reverse (every function in `app/` must have a row; recommendation 8);
+   - check 4 rejects numbered-list entries, so the old form cannot hide a duplicate;
+   - check 7 also requires a pinned package's note to state the pinned version.
+   `tests/test_check_vault.py` builds a valid fixture repo and breaks it 17 ways. Each check fails on its own breakage, and only that check fails.
+
+**Amendments applied on top (this session)**
+18. **Check 7** (amendment #2): no "not installed" marker. An empty `version:` passes only when `status: planned`; empty with any other status fails. Tests: empty-but-not-planned fails; planned-and-empty passes.
+19. **Check 1 exemptions as rules** (as approved): everything under `app/storage/migrations/` (revision `upgrade`/`downgrade` and `env.py` internals), dunder methods, Pydantic validators, and **private leaf helpers**: a `_name` function that calls no function defined in `app/` (covers `_exit`, `_Run.row`, `_ignored`, `_cost`). Rows for exempt functions may still exist and are still checked for existence. Tests: env.py and a private leaf need no row; a private helper that calls app code does. The two non-function rows needed no marker: they were rewritten as real function rows (`Finding._check()`, `run_migrations_online()`), which removes the need for any tolerance.
+20. **Public repositories only** (amendment #7): README gains a Limitations section; the Brief lists it as a hard constraint; Q49 retitled "Secret masking for private-repo support", recording that some providers' free-tier terms permit using submitted data (Google's Gemini API free tier states this). Private-repo support is out of scope for v1.
+21. **F1:** Eval Cost rewritten in terms of request budget (requests and tokens per day/minute per provider, not dollars), cross-linked with Free Tier Throughput; both notes now carry the same joint mitigation list (response cache, dev-split-only CI runs, batched first run, cascade).
+22. **F2:** Benchmark says three repos (click, anyio, fastapi; final confirmation Q20) and requires per-category recall with raw counts, never bare percentages (also in Metrics). Benchmark Leakage records that the 2025-04-01 window start is what reduced the viable set.
+23. **M3 reporting requirement** (Benchmark Leakage): M3 Step 1 must output the date distribution of the actually-mined commits by quarter; if a substantial fraction predates mid-2025, the caveat goes on the public results page itself.
+24. **External Facts:** all 19 pinned packages with installed versions (read via `importlib.metadata`, all match); Groq's 8,000 tokens/minute marked as the binding constraint.
+25. **Owner approval (2026-10-02)** of the second session's three departures: tech `in-progress` means installed but not yet used by code; the two non-function call-graph rows became real function rows; ADR-004 carries a "refined by ADR-015" banner. All three kept.
+
+### Why I am making this change
+M3 is about to depend on the vault. The audit found drift that a reader could act on wrongly: for example the eval-results location, `ReviewContext` described as built, OpenRouter presented as the only provider, and metric definitions missing. A checker in CI turns the mechanical part of that drift into a build failure.
+
+### Alternatives I considered
+1. Leave `status` meanings undefined, and only fix the clearly wrong values.
+2. Put the checker in pytest instead of a separate CI job.
+3. Parse frontmatter with PyYAML, which is installed as a transitive dependency.
+
+### Reasons I rejected each alternative
+1. Without defined meanings, 25 stack notes said `in-progress` while fully in use, and no check could be written.
+2. A separate job shows vault drift as its own failure, and it needs no install step.
+3. Relying on a transitive dependency would break silently if it were dropped; the vault uses a small YAML subset that the standard library parses in about 40 lines.
+
+### Trade-offs I am accepting
+- Every note edit must keep frontmatter, links and numbering valid, or CI fails.
+- Every new function in `app/` needs a call-graph row in the same change.
+- `description` lines can themselves go stale; no check can catch that.
+
+### What could go wrong
+- The checker validates structure, not meaning. A wrong statement in valid form still passes, which is why the Brief and the 30-day rule exist.
+- **OpenRouter's model `qwen/qwen3.8-27b:free` returned 429 ("temporarily rate-limited upstream") on both test calls on 2026-10-02.** It is still listed, and it answered on 2026-10-01. It is the last fallback, so reviews still succeed through Groq, Gemini or Mistral. Recorded in External Facts; to be re-checked before M3's long runs.
+- The local rules file is not in git, so CI cannot check it.
+
+### How this affects other components
+No runtime behaviour changes. Future sessions read `00 Brief.md` first. Code-adjacent changes are logged separately below.
+
+---
+
+## Remove a duplicated comment in app/main.py
+**Date**: 2026-10-02
+**File(s) affected**: `app/main.py`
+
+### What I am changing
+Deleting one of two consecutive comment lines in `lifespan()` that said the same thing ("Schema is managed by Alembic … `alembic upgrade head` runs before the app starts"). **Comment-only; no behavioural effect.**
+
+### Why I am making this change
+Found by the vault audit (Part A); approved by the project owner.
+
+### Alternatives I considered
+Leave it until the next code change in `app/main.py`.
+
+### Reasons I rejected each alternative
+The owner approved the fix now; deferring leaves a known defect for no benefit.
+
+### Trade-offs I am accepting
+None.
+
+### What could go wrong
+Nothing at runtime; tests, ruff and mypy confirm the file is otherwise unchanged in behaviour.
+
+### How this affects other components
+None.
+
+---
+
+## Add the vault-check CI job
+**Date**: 2026-10-02
+**File(s) affected**: `.github/workflows/ci.yml`
+
+### What I am changing
+A second job, `vault-check`, runs `python scripts/check_vault.py` on every push and pull request, alongside the existing `test` job. It installs nothing (the checker uses the standard library only).
+
+### Why I am making this change
+Part D of the vault audit: vault drift should fail the build the same way a lint error does.
+
+### Alternatives I considered
+1. Run the checker inside the `test` job.
+2. A pre-commit hook.
+
+### Reasons I rejected each alternative
+1. A separate job reports vault drift as its own failure and needs no dependency install.
+2. Hooks can be skipped locally; CI cannot.
+
+### Trade-offs I am accepting
+Any vault edit that breaks links, numbering or frontmatter now fails CI.
+
+### What could go wrong
+The checker's rules could reject a valid new convention; the fix is to change the checker and its tests in the same change.
+
+### How this affects other components
+CI only.

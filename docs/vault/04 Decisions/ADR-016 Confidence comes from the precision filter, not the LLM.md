@@ -1,4 +1,6 @@
 ---
+name: ADR-016 Confidence comes from the precision filter, not the LLM
+description: "Decision: a finding's confidence comes from the precision filter, never from the LLM."
 type: decision
 status: accepted
 tags: [decision]

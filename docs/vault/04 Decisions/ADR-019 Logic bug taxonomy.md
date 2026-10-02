@@ -1,4 +1,6 @@
 ---
+name: ADR-019 Logic bug taxonomy
+description: "Decision: the seven logic-bug categories a finding may use."
 type: decision
 status: accepted
 tags: [decision]

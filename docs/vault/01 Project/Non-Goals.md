@@ -1,4 +1,6 @@
 ---
+name: Non-Goals
+description: "What v1 deliberately does not build: other languages, style comments, an MCP server, Prometheus and Grafana."
 type: project
 status: done
 tags: [project]

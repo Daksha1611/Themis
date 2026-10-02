@@ -1,4 +1,6 @@
 ---
+name: Success Metrics
+description: "How success is judged: comment precision is the headline metric; numeric targets wait for the baseline (Q25)."
 type: project
 status: done
 tags: [project]

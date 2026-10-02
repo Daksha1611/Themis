@@ -1,4 +1,6 @@
 ---
+name: Session Log
+description: "Dated log of every working session: done, next, blockers."
 type: progress
 status: in-progress
 tags: [progress]
@@ -58,3 +60,13 @@ related:
 **Done:** Q37b decided: CWE Top 25 (2024 edition, verified against MITRE's CWE view 1430; a 2025 edition exists but drops CWE-798 and CWE-400), Python-reachable subset of 11 + `security-other` ([[ADR-022 CWE Top 25 security taxonomy]]); ADR-009 superseded. Q54 fixed: categories listed in the prompt, validated in `Finding`; live check on the three test PRs returned only taxonomy categories (CWE-89, CWE-22, resource-leak, off-by-one-or-boundary, null-or-none-handling, error-handling). Test repo cleaned. Step 1: `evals/benchmark/verify_repos.py`; viable: click (65), anyio (67), fastapi fallback (58); not viable: httpx (0), marshmallow (26), rich (24), httpcore (2).
 **Next:** owner approves the repo list and size-filter scope; then Steps 2–8.
 **Blockers / questions:** Q20 (repo list), Q55 (arithmetic category), Q56 (size-filter scope).
+
+## 2026-10-02: Vault audit and hardening
+**Done:** owner approved the audit report (all nine recommendations). Fixed every finding: `name`/`description` frontmatter on all notes; per-type `status` meanings in the [[Glossary]] and corrected statuses; Docker.md frontmatter repaired; ADR-005 marked amended by ADR-021 and ADR-004 refined by ADR-015; component notes split into built versus planned; Storage, Eval Harness and the Architecture Overview agree on where eval results go (Q57); metric definitions completed; [[Open Questions]] reformatted with unique numbers (Q20, Q25, Q37 duplicates removed) and M3 blockers marked; Q49 decided for public diffs; canvas gained the two missing risks; `docs/flow.md` call graph covers every function in `app/`; README status corrected. Added [[00 Brief]], [[09 External Facts]] (re-verified live: three providers answered, OpenRouter 429; Groq and Mistral limits from headers; App permissions and a real diff fetch; library versions; no 2026 CWE edition), stack notes [[starlette]] and [[pytest-asyncio]], `scripts/check_vault.py` with 21 tests and a `vault-check` CI job, and new local project rules (Brief first, verify before trusting, 30-day re-verification).
+**Next:** owner decisions on Q20, Q56 and Q55, then M3 Step 2 (mining).
+**Blockers / questions:** Q20, Q55, Q56. OpenRouter's free model was rate-limited upstream today; re-check before long M3 runs.
+
+## 2026-10-02 (2): audit amendments reconciled
+**Done:** a second session had applied the audit fixes from "continue", without the owner's amendments. Reconciled with the actual approval: empty `version:` only while planned (checker and 7 notes); eval output split into case-level `results.jsonl` and run-level summaries in the eval database for the M7 gate, and the Q57 entry created for it withdrawn (an earlier entry in this log mentions it); public repositories only (README Limitations, Brief, Q49 retitled to the masking work); Eval Cost rewritten as a request budget with mitigations shared with [[Free Tier Throughput]]; Benchmark says three repos and requires raw counts; Benchmark Leakage records the window-start effect, the required mined-commit date distribution and the results-page caveat rule; checker exemptions encoded as rules (migrations dir, private leaf helpers); [[09 External Facts]] lists all 19 pinned versions. `decision.md` pre-work entry restored to its original text; completion entry corrected; the `app/main.py` comment and the CI job logged separately.
+**Next:** owner decides Q20, Q56 and Q55; then M3 Step 2.
+**Blockers / questions:** Q20, Q55, Q56 (block M3).

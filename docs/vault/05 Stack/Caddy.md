@@ -1,4 +1,6 @@
 ---
+name: Caddy
+description: "Caddy: TLS reverse proxy for the VPS deployment."
 type: tech
 status: planned
 tags: [tech]

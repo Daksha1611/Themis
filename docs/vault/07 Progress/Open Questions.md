@@ -1,4 +1,6 @@
 ---
+name: Open Questions
+description: "Every open and resolved project question, numbered Q1 onward."
 type: progress
 status: in-progress
 tags: [progress]
@@ -12,89 +14,86 @@ related:
 
 # Open Questions
 
-## Still open
-- **Q20. Benchmark repos.** Verification run (M3 Step 1); 3 of 7 viable. Final list awaiting owner decision ([[Benchmark]]).
-- **Q25. Numeric targets.** Deferred until baseline numbers exist ([[Success Metrics]]).
+Each question is one bullet starting `**Q<n>.**`, and every number appears once across both sections (`scripts/check_vault.py` checks this). Questions that block current work say so in bold.
 
+## Still open
+- **Q20. Benchmark repos. Blocks M3 Step 2.** Selection criteria and five candidates plus two fallbacks are recorded; the verification run (M3 Step 1, 2026-10-01) found 3 of 7 viable: `pallets/click`, `agronholm/anyio`, `fastapi/fastapi` (fallback). Final list awaits the owner's decision ([[Benchmark]]).
+- **Q25. Numeric targets.** The shape of success is recorded; numbers are deferred until baseline numbers exist ([[Success Metrics]]).
 - **Q47. TestClient migration.** Migrate from Starlette's `TestClient` (deprecated with httpx) to the newer async test approach before the test count grows further. `fastapi` and `starlette` are pinned until then.
 - **Q48. Large-PR handling.** Diffs are truncated at 100,000 characters: a stopgap. Chunking or file-level splitting is needed.
-- **Q49. Secrets in traced diffs.** Reviewed diffs (and the LLM prompt containing them) go to OpenRouter and Langfuse cloud unmasked. Decide on masking before reviewing real third-party code.
-
+- **Q49. Secret masking for private-repo support.** Build masking of secrets in diffs (and in the prompts, traces and thinking that contain them) before Themis reviews any private repository. **Private-repo support is out of scope for v1**: Themis is for public repositories only (README, Limitations). Decided 2026-10-02: sending *public* open-source diffs, including the M3 benchmark repos, to the free-tier providers and Langfuse cloud is acceptable without masking. Some providers' free-tier terms permit using submitted data to improve their products (Google's Gemini API free tier states this), which makes the public/private distinction load-bearing. Not blocking M3.
 - **Q52b. Stable webhook URL.** Quick-tunnel URLs change on every cloudflared restart, so the App's webhook URL must be updated each time. A named tunnel, or the VPS (ADR-018), removes this.
-
-- **Q55. No category for arithmetic errors.** ADR-019 has no slot for division by zero or overflow; in a live check the model filed both divide-by-zero bugs under `error-handling`. Benchmark labels must apply the same rule consistently, or the taxonomy needs an `arithmetic` category.
-- **Q56. Step 2 size filter scope.** Should the "≤3 files, ≤60 changed lines" limit count only package source files, or also tests and changelog? Counting everything roughly halves the yield.
+- **Q55. No category for arithmetic errors. Blocks M3 Step 3** (case labels). ADR-019 has no slot for division by zero or overflow; in a live check the model filed both divide-by-zero bugs under `error-handling`. Benchmark labels must apply the same rule consistently, or the taxonomy needs an `arithmetic` category.
+- **Q56. Step 2 size filter scope. Blocks M3 Step 2.** Should the "≤3 files, ≤60 changed lines" limit count only package source files, or also tests and changelog? Counting everything roughly halves the yield.
 
 ## Resolved
 
 ### Document conventions
-1. decision.md and flow.md live in `docs/`. Kept.
-2. `tags: [type]` without `#`. Kept.
-3. `related:` as a list of quoted wikilinks. Kept.
-4. Decision notes use `status: accepted | superseded`; status values per type are in the [[Glossary]].
-5. `00 Index` is `project`; Results README is `reliability`. Kept.
-6. Risk and stack notes use `planned`. Kept.
+- **Q1.** decision.md and flow.md live in `docs/`. Kept.
+- **Q2.** `tags: [type]` without `#`. Kept.
+- **Q3.** `related:` as a list of quoted wikilinks. Kept.
+- **Q4.** Decision notes use `status: accepted | superseded`; status values per type are in the [[Glossary]].
+- **Q5.** `00 Index` is `project`; Results README is `reliability`. Kept.
+- **Q6.** Risk and stack notes started as `planned`. Since 2026-10-02 their status follows the per-type meanings in the [[Glossary]]: for stack notes, whether the package is installed and in use; for risks, how far the mitigation is in place.
 
 ### Architecture
-7. Guardrails run twice: sanitize before the graph, validate after; never skip a review → [[Guardrails]]
-8. New component owns App auth, diff fetch, comment posting → [[GitHub Integration]]
-9. `app/storage/` with SQLAlchemy models and Alembic migrations → [[ADR-012 Alembic for schema migrations]]
-10. Tracing in `app/observability/`; drift in `evals/drift/` plus a scheduled workflow → [[Tracing]], [[Drift Monitoring]]
-11. Langfuse cloud, free tier → [[ADR-013 Langfuse cloud over self-hosting]]
-12. Index on install, incrementally per PR, manually on demand → [[ADR-014 Incremental repo indexing]]
-13. Local sentence-transformers embeddings; Qdrant native sparse vectors with RRF → [[ADR-015 Local embeddings and Qdrant native hybrid search]]
-14. Context Builder outputs a Pydantic `ReviewContext` → [[Context Builder]], [[Finding Schema]]
-15. `ReviewResult` fields defined → [[Finding Schema]]
-16. Severity enum; confidence 0.0–1.0 from the precision filter, never the LLM → [[ADR-016 Confidence comes from the precision filter, not the LLM]]
+- **Q7.** Guardrails run twice: sanitize before the graph, validate after; never skip a review → [[Guardrails]]
+- **Q8.** New component owns App auth, diff fetch, comment posting → [[GitHub Integration]]
+- **Q9.** `app/storage/` with SQLAlchemy models and Alembic migrations → [[ADR-012 Alembic for schema migrations]]
+- **Q10.** Tracing in `app/observability/`; drift in `evals/drift/` plus a scheduled workflow → [[Tracing]], [[Drift Monitoring]]
+- **Q11.** Langfuse cloud, free tier → [[ADR-013 Langfuse cloud over self-hosting]]
+- **Q12.** Index on install, incrementally per PR, manually on demand → [[ADR-014 Incremental repo indexing]]
+- **Q13.** Local sentence-transformers embeddings; Qdrant native sparse vectors with RRF → [[ADR-015 Local embeddings and Qdrant native hybrid search]]
+- **Q14.** Context Builder outputs a Pydantic `ReviewContext` → [[Context Builder]], [[Finding Schema]]
+- **Q15.** `ReviewResult` fields defined → [[Finding Schema]]
+- **Q16.** Severity enum; confidence 0.0–1.0 from the precision filter, never the LLM → [[ADR-016 Confidence comes from the precision filter, not the LLM]]
 
 ### Precision filter
-17. Threshold tuned by a precision-recall sweep, configurable; default ADR once real data exists → [[Precision Filter]]
-18. Compare `microsoft/codebert-base` and `deberta-v3-small` as an ablation row → [[Precision Filter]], [[Ablation Table]]
-19. Labels from dev-split runs only, enforced in code → [[ADR-017 Dev-split-only training data for the precision filter]]
+- **Q17.** Threshold tuned by a precision-recall sweep, configurable; default ADR once real data exists → [[Precision Filter]]
+- **Q18.** Compare `microsoft/codebert-base` and `deberta-v3-small` as an ablation row → [[Precision Filter]], [[Ablation Table]]
+- **Q19.** Labels from dev-split runs only, enforced in code → [[ADR-017 Dev-split-only training data for the precision filter]]
 
 ### Benchmark and metrics
-20. Selection criteria recorded; candidates recorded, final selection pending manual verification → [[Benchmark]]
-21. 60% dev / 40% holdout, stratified by repo and category → [[Benchmark]], [[ADR-007 dev-holdout benchmark split]]
-22. Clean PRs: files with no bug fix for 6–12 months (heuristic), size-matched → [[Benchmark]]
-23. Hit = within labeled range ±3 lines and correct category; exact-line accuracy secondary → [[Metrics]]
-24. Injection resistance via matched pairs → [[Metrics]]
-25. Shape of success recorded; **numbers still open** → [[Success Metrics]]
-26. Own risk note → [[Benchmark Leakage]]
+- **Q21.** 60% dev / 40% holdout, stratified by repo and category → [[Benchmark]], [[ADR-007 dev-holdout benchmark split]]
+- **Q22.** Clean PRs: files with no bug fix for 6–12 months (heuristic), size-matched → [[Benchmark]]
+- **Q23.** Hit = within labeled range ±3 lines and correct category; exact-line accuracy secondary → [[Metrics]]
+- **Q24.** Injection resistance via matched pairs → [[Metrics]]
+- **Q26.** Own risk note → [[Benchmark Leakage]]
 
 ### Reliability layer
-27. Gate compares against main's last run in a separate eval database; −3 pp precision / −5 pp recall → [[CI Quality Gate]]
-28. Eval gate on in-repo branches only (50-case dev subset); forks run unit tests; full dev nightly → [[CI Quality Gate]]
-29. Weekly drift on the fixed subset: models in use plus one cheaper, one stronger → [[Drift Monitoring]]
-30. Ablation on holdout once at the end, with dev numbers alongside → [[Ablation Table]]
-31. Results page deployed to GitHub Pages by an Actions build artifact from `evals/report.py` → [[Ablation Table]]
-32. ruff, mypy, pytest (+ pytest-asyncio), pytest-cov → [[CI Quality Gate]]
+- **Q27.** Gate compares against main's last run in a separate eval database; −3 pp precision / −5 pp recall → [[CI Quality Gate]]
+- **Q28.** Eval gate on in-repo branches only (50-case dev subset); forks run unit tests; full dev nightly → [[CI Quality Gate]]
+- **Q29.** Weekly drift on the fixed subset: models in use plus one cheaper, one stronger → [[Drift Monitoring]]
+- **Q30.** Ablation on holdout once at the end, with dev numbers alongside → [[Ablation Table]]
+- **Q31.** Results page deployed to GitHub Pages by an Actions build artifact from `evals/report.py` → [[Ablation Table]]
+- **Q32.** ruff, mypy, pytest (+ pytest-asyncio), pytest-cov → [[CI Quality Gate]]
 
 ### Operations
-33. Small paid VPS with Docker Compose and Caddy → [[ADR-018 Paid VPS over free tier hosting]]
-
-### M3 pre-work (resolved 2026-10-01)
-37. / 37b. Security taxonomy: CWE Top 25 (2024 edition), Python-reachable subset → [[ADR-022 CWE Top 25 security taxonomy]]
-54. Categories constrained: the prompt lists every allowed category; `Finding` rejects others (invalid → parse error). Live check on the test PRs returned only taxonomy categories.
-
-### Milestones (resolved 2026-09-30 and 2026-10-01)
-50. GitHub App now has Contents: Read-only (required for diff fetching; missing from the original spec) → [[GitHub Integration]]
-51. OpenRouter spending limit: no longer applicable. Free tiers only, four-provider cascade → [[ADR-021 Free-tier four-provider LLM cascade]]
-52. Webhook tunnel restarted and connected; GitHub deliveries reach the API (live test 2026-10-01). Stable-URL follow-up is Q52b.
-53. Machine clock fixed (`set-local-rtc 0`, `chronyc makestep`); skew vs GitHub 1 s; App JWT accepted.
-44. Alembic initialised in M2 pre-work. Bootstrap removed. Migration confirmed. → [[ADR-012 Alembic for schema migrations]]
-45. GitHub App registered (`themis-reviewer-daksha`), installed on `Daksha1611/themis-test-repo`; JWT and installation token verified against GitHub.
-46. Langfuse cloud (EU) keys set; `auth_check()` passes.
+- **Q33.** Small paid VPS with Docker Compose and Caddy → [[ADR-018 Paid VPS over free tier hosting]]
 
 ### Prior art (resolved 2026-09-28)
-34. OWASP Top 10 taxonomy → [[ADR-009 OWASP Top 10 security taxonomy]]
-35. Prometheus + Grafana → [[ADR-010 Prometheus and Grafana operational metrics]] (superseded for v1, see Q41)
-36. Outcome labels → [[ADR-011 Finding outcomes as precision-filter labels]]
+- **Q34.** OWASP Top 10 taxonomy → [[ADR-009 OWASP Top 10 security taxonomy]] (superseded by [[ADR-022 CWE Top 25 security taxonomy]])
+- **Q35.** Prometheus + Grafana → [[ADR-010 Prometheus and Grafana operational metrics]] (superseded for v1, see Q41)
+- **Q36.** Outcome labels → [[ADR-011 Finding outcomes as precision-filter labels]]
 
 ### Raised by ADR-009 to ADR-011
-37. OWASP Top 10 (2021) was pinned, then superseded by CWE Top 25 → [[ADR-022 CWE Top 25 security taxonomy]]
-38. Logic bugs get a seven-category taxonomy → [[ADR-019 Logic bug taxonomy]]
-39. `security-other` with a required subcategory; frequency tracked → [[Finding Schema]], [[Metrics]]
-40. Resolved: no longer applies in v1 (Prometheus deferred) → [[ADR-010 Prometheus and Grafana operational metrics]]
-41. Resolved: ADR-010 superseded for v1, deferred to post-v1 stretch goals → [[ADR-010 Prometheus and Grafana operational metrics]]
-42. Validated / dismissed signal definitions; raw signals kept separate from labels → [[ADR-011 Finding outcomes as precision-filter labels]]
-43. Outcome labels reframed as a pilot, not a data engine → [[ADR-011 Finding outcomes as precision-filter labels]]
+- **Q37.** OWASP edition: OWASP Top 10 (2021) was pinned, then the taxonomy was replaced by CWE Top 25 (Q37b) → [[ADR-022 CWE Top 25 security taxonomy]]
+- **Q38.** Logic bugs get a seven-category taxonomy → [[ADR-019 Logic bug taxonomy]]
+- **Q39.** `security-other` with a required subcategory; frequency tracked → [[Finding Schema]], [[Metrics]]
+- **Q40.** No longer applies in v1 (Prometheus deferred) → [[ADR-010 Prometheus and Grafana operational metrics]]
+- **Q41.** ADR-010 superseded for v1, deferred to post-v1 stretch goals → [[ADR-010 Prometheus and Grafana operational metrics]]
+- **Q42.** Validated / dismissed signal definitions; raw signals kept separate from labels → [[ADR-011 Finding outcomes as precision-filter labels]]
+- **Q43.** Outcome labels reframed as a pilot, not a data engine → [[ADR-011 Finding outcomes as precision-filter labels]]
+
+### Milestones (resolved 2026-09-30 and 2026-10-01)
+- **Q44.** Alembic initialised in M2 pre-work. Bootstrap removed. Migration confirmed → [[ADR-012 Alembic for schema migrations]]
+- **Q45.** GitHub App registered (`themis-reviewer-daksha`), installed on `Daksha1611/themis-test-repo`; JWT and installation token verified against GitHub.
+- **Q46.** Langfuse cloud (EU) keys set; `auth_check()` passes.
+- **Q50.** GitHub App now has Contents: Read-only (required for diff fetching; missing from the original spec) → [[GitHub Integration]]
+- **Q51.** OpenRouter spending limit: no longer applicable. Free tiers only, four-provider cascade → [[ADR-021 Free-tier four-provider LLM cascade]]
+- **Q52.** Webhook tunnel restarted and connected; GitHub deliveries reach the API (live test 2026-10-01). Stable-URL follow-up is Q52b.
+- **Q53.** Machine clock fixed (`set-local-rtc 0`, `chronyc makestep`); skew vs GitHub 1 s; App JWT accepted.
+
+### M3 pre-work (resolved 2026-10-01)
+- **Q37b.** Security taxonomy: CWE Top 25 (2024 edition), Python-reachable subset, replaces OWASP → [[ADR-022 CWE Top 25 security taxonomy]]
+- **Q54.** Categories constrained: the prompt lists every allowed category; `Finding` rejects others (invalid → parse error). Live check on the test PRs returned only taxonomy categories.

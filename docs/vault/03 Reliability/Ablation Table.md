@@ -1,4 +1,6 @@
 ---
+name: Ablation Table
+description: "Final deliverable: every metric as each component is added, run once on the holdout split."
 type: reliability
 status: planned
 tags: [reliability]

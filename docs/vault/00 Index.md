@@ -1,8 +1,12 @@
 ---
+name: 00 Index
+description: "Entry point of the vault: links to every note, grouped by section."
 type: project
 status: in-progress
 tags: [project]
 related:
+  - "[[00 Brief]]"
+  - "[[09 External Facts]]"
   - "[[Vision]]"
   - "[[Architecture Overview]]"
   - "[[Current Status]]"
@@ -13,7 +17,7 @@ related:
 
 > An AI code reviewer that weighs the evidence before it speaks.
 
-Start here: [[Current Status]] · [[Open Questions]] · [[Architecture Overview]] · [[Themis Map.canvas|Themis Map]] (visual map)
+Read first, every session: [[00 Brief]]. Then: [[Current Status]] · [[Open Questions]] · [[Architecture Overview]] · [[Themis Map.canvas|Themis Map]] (visual map)
 
 Outside the vault: `README.md` (repo overview), `docs/flow.md` (what the code does), `docs/decision.md` (why each change was made).
 
@@ -97,6 +101,8 @@ Outside the vault: `README.md` (repo overview), `docs/flow.md` (what the code do
 - [[mypy]]
 - [[pytest]]
 - [[pytest-cov]]
+- [[pytest-asyncio]]
+- [[starlette]]
 - [[Caddy]]
 - [[httpx]]
 - [[PyJWT]]
@@ -122,3 +128,6 @@ Outside the vault: `README.md` (repo overview), `docs/flow.md` (what the code do
 
 ## 08 Results
 - [[08 Results/README|Results README]]
+
+## 09 External Facts
+- [[09 External Facts]]: outside-world facts that expire, with verification dates

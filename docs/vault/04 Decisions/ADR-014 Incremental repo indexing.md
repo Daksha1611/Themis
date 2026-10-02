@@ -1,4 +1,6 @@
 ---
+name: ADR-014 Incremental repo indexing
+description: "Decision: index the repo on install, incrementally per PR, and manually on demand."
 type: decision
 status: accepted
 tags: [decision]

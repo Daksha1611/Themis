@@ -1,6 +1,8 @@
 ---
+name: Benchmark
+description: "Labeled benchmark of reverted bug-fix PRs and clean PRs: construction, splits, repo verification."
 type: reliability
-status: planned
+status: in-progress
 tags: [reliability]
 related:
   - "[[Eval Harness]]"
@@ -20,18 +22,19 @@ related:
 **Purpose:** a labeled set of PRs to measure review quality against.
 
 ## Construction
-- Mine bug-fix commits from ~5 mid-sized, well-tested Python repos
+- Mine bug-fix commits from **three** repos: the three that passed verification (`pallets/click`, `agronholm/anyio`, `fastapi/fastapi`). Five candidates and two fallbacks were verified; final confirmation is Q20 (see Repo verification below)
 - Revert the fix to create a "buggy PR", labeled with the file and line range of the bug
 - Label each case with its category: logic-bug taxonomy ([[ADR-019 Logic bug taxonomy]]) or CWE Top 25 ID ([[ADR-022 CWE Top 25 security taxonomy]])
 - Include clean PRs with no known bug to measure false positives
 - Target: 150–300 cases
+- **Three repos means thin category coverage.** Per-category recall must always be reported with raw counts (e.g. `3/7`), never as bare percentages ([[Metrics]])
 
 ## Repo selection criteria
 - Actively maintained, well-tested Python projects with clear bug-fix commit conventions
 - Mid-popularity preferred over famous repos, to reduce memorisation risk
 - Target shapes: a web framework/library, a data tool, a CLI tool, a parsing/serialisation library, a smaller async library
-- Commit range pinned to dates after the primary model's training cutoff
-- The reasoning is recorded when repos are chosen. **Candidates recorded below; final selection pending manual verification.**
+- Commit window 2025-04-01 → 2026-10-01 (18 months), preferring commits after mid-2025. No single training cutoff applies, since the cascade uses four different models; each case records its commit date so results can be split by it ([[Benchmark Leakage]])
+- The reasoning is recorded when repos are chosen. Verification done (table below); final confirmation pending (Q20).
 
 ## Clean PRs
 Merged PRs from the same repos whose touched files had no bug-fix commit for the following 6–12 months. **This is a heuristic, not proof** that a PR is bug-free. The size distribution of clean PRs matches the buggy ones, so the reviewer cannot learn "big diff means bug".
@@ -43,7 +46,7 @@ Merged PRs from the same repos whose touched files had no bug-fix commit for the
 - The precision filter trains on dev-split findings only ([[ADR-017 Dev-split-only training data for the precision filter]])
 - Outcome labels from benchmark repos must not leak into holdout ([[ADR-011 Finding outcomes as precision-filter labels]])
 
-**Planned code location:** `evals/benchmark/` (`mine_commits.py`, `build_cases.py`, `data/dev` and `data/holdout` as JSONL).
+**Code location:** `evals/benchmark/`. Built: `verify_repos.py` (Step 1). Planned: `mine_commits.py`, `build_cases.py`, `data/dev.jsonl` and `data/holdout.jsonl`.
 
 Consumed by the [[Eval Harness]]. Risks: [[Benchmark Leakage]], [[Label Noise]], [[Eval Cost]].
 

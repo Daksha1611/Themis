@@ -1,6 +1,8 @@
 ---
+name: Python
+description: "Python 3.12: the implementation language, and the only language v1 reviews."
 type: tech
-status: in-progress
+status: done
 tags: [tech]
 related:
   - "[[Webhook Service]]"

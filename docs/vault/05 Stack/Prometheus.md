@@ -1,4 +1,6 @@
 ---
+name: Prometheus
+description: "Prometheus: operational metrics collection, deferred to post-v1."
 type: tech
 status: planned
 tags: [tech]

@@ -1,4 +1,6 @@
 ---
+name: ADR-010 Prometheus and Grafana operational metrics
+description: "Superseded for v1: Prometheus and Grafana operational metrics, deferred to post-v1."
 type: decision
 status: superseded
 tags: [decision]

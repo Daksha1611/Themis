@@ -1,4 +1,6 @@
 ---
+name: Context Builder
+description: "Gives the reviewer the diff plus related repo code, using tree-sitter chunks and Qdrant hybrid search."
 type: component
 status: planned
 tags: [component]

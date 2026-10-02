@@ -1,4 +1,6 @@
 ---
+name: LangGraph
+description: "LangGraph: runs the multi-pass review graph."
 type: tech
 status: planned
 tags: [tech]

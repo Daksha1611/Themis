@@ -1,4 +1,6 @@
 ---
+name: Review Graph
+description: "Produces structured findings: a single baseline LLM pass today, a LangGraph bug pass and security pass later."
 type: component
 status: in-progress
 tags: [component]
@@ -29,6 +31,8 @@ related:
 **Inputs:** a sanitized `ReviewContext` from the [[Context Builder]], via [[Guardrails]].
 **Outputs:** findings in the [[Finding Schema]] **without** a confidence value ([[ADR-016 Confidence comes from the precision filter, not the LLM]]). They go to [[Guardrails]] for validation, then to the [[Precision Filter]].
 
-**Planned code location:** `app/graph/` (bug pass, security pass, merge nodes). **M2:** `app/graph/baseline.py` holds a single baseline pass (one LLM call over the raw diff, no LangGraph, no repo context), which produces the baseline row of the [[Ablation Table]].
+**Built (M2):** `app/graph/baseline.py` holds a single baseline pass: one LLM call over the raw diff, covering both logic bugs and security with every allowed category listed in the prompt; no LangGraph, no repo context, no guardrails. It produces the baseline row of the [[Ablation Table]] and is what the [[Eval Harness]] will call. Details: `docs/flow.md` section 4.
+
+**Planned code location:** `app/graph/` (bug pass, security pass, merge nodes).
 
 **Dependencies:** [[LangGraph]], [[LLM Client]], [[Finding Schema]]. Every node's input/output is recorded by [[Tracing]]. Decision: [[ADR-002 Bugs and security only]].

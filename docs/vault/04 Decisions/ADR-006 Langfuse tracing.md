@@ -1,4 +1,6 @@
 ---
+name: ADR-006 Langfuse tracing
+description: "Decision: Langfuse traces tokens, cost, latency and node inputs and outputs from day one."
 type: decision
 status: accepted
 tags: [decision]
