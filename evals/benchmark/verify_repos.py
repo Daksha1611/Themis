@@ -29,6 +29,14 @@ CANDIDATES = {
     "Textualize/rich": "rich/",
     "agronholm/anyio": "src/anyio/",  # the brief's "python-trio/anyio" does not exist on GitHub
 }
+# Q20 (decided 2026-10-02): the five repos the benchmark is built from.
+SELECTED = {
+    "pallets/click": "src/click/",
+    "agronholm/anyio": "src/anyio/",
+    "fastapi/fastapi": "fastapi/",
+    "marshmallow-code/marshmallow": "src/marshmallow/",
+    "Textualize/rich": "rich/",
+}
 FALLBACKS = {
     "encode/httpcore": "httpcore/",
     "fastapi/fastapi": "fastapi/",  # formerly tiangolo/fastapi

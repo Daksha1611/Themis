@@ -9,6 +9,7 @@ related:
   - "[[Benchmark]]"
   - "[[Context Builder]]"
   - "[[Guardrails]]"
+  - "[[ADR-023 Arithmetic-or-numeric logic category]]"
 ---
 
 # Glossary
@@ -24,6 +25,13 @@ Every note has `name` (its filename), a one-line `description`, `type`, `status`
 | risk | no mitigation in place | partly mitigated | mitigated |
 
 Decision notes use `accepted` \| `superseded` instead.
+
+## Finding category precedence rules
+Verbatim from `PRECEDENCE_RULES` in `app/taxonomy.py`, also used by the review prompt and the benchmark labelling rules ([[ADR-023 Arithmetic-or-numeric logic category]]):
+- Arithmetic operators (+ - * / // % **) used wrongly -> arithmetic-or-numeric. Comparisons at a range edge (< vs <=) -> off-by-one-or-boundary.
+- A computation that can divide by zero -> arithmetic-or-numeric. A ZeroDivisionError that is caught or handled wrongly -> error-handling.
+- Overflow is scoped to what Python can actually overflow: floats (inf/nan), fixed-width types (numpy, struct, ctypes), and size limits. Python ints do not overflow.
+- Float precision errors -> arithmetic-or-numeric.
 
 ## Terms
 

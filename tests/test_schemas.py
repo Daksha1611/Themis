@@ -42,5 +42,14 @@ def test_security_other_requires_subcategory() -> None:
 
 
 def test_taxonomy_sizes() -> None:
-    assert len(LOGIC_CATEGORIES) == 7  # ADR-019
+    assert len(LOGIC_CATEGORIES) == 8  # ADR-019 + ADR-023 (arithmetic-or-numeric)
     assert len(SECURITY_CATEGORIES) == 11  # ADR-022
+
+
+def test_prompt_carries_the_precedence_rules() -> None:
+    from app.taxonomy import PRECEDENCE_RULES, prompt_category_list
+
+    listing = prompt_category_list()
+    assert "arithmetic-or-numeric" in listing
+    for rule in PRECEDENCE_RULES:
+        assert rule in listing

@@ -1,0 +1,59 @@
+{
+  "window": [
+    "2025-04-01",
+    "2026-10-01"
+  ],
+  "repos": {
+    "pallets/click": {
+      "head": "06b2a678741131fd577ce170e23e5ca0aeba0309",
+      "filters": {
+        "non-merge commits in window": 446,
+        "bug-fix message": 109,
+        "package-scoped": 65,
+        "size \u22643 package files and \u226460 package lines": 55,
+        "subject not refactor/typo/docs/format/bump/version/release/revert": 47
+      }
+    },
+    "agronholm/anyio": {
+      "head": "1a43476df1fcc80ed6b0303c1898cb51c7ae4fa7",
+      "filters": {
+        "non-merge commits in window": 318,
+        "bug-fix message": 96,
+        "package-scoped": 67,
+        "size \u22643 package files and \u226460 package lines": 60,
+        "subject not refactor/typo/docs/format/bump/version/release/revert": 56
+      }
+    },
+    "fastapi/fastapi": {
+      "head": "33d411dbc3236275dd64d200bfe18d5d60a49b2e",
+      "filters": {
+        "non-merge commits in window": 2046,
+        "bug-fix message": 128,
+        "package-scoped": 58,
+        "size \u22643 package files and \u226460 package lines": 53,
+        "subject not refactor/typo/docs/format/bump/version/release/revert": 41
+      }
+    },
+    "marshmallow-code/marshmallow": {
+      "head": "1c63bdaf7fba217b8736e6eca8a1fcf377e41161",
+      "filters": {
+        "non-merge commits in window": 144,
+        "bug-fix message": 31,
+        "package-scoped": 26,
+        "size \u22643 package files and \u226460 package lines": 23,
+        "subject not refactor/typo/docs/format/bump/version/release/revert": 17
+      }
+    },
+    "Textualize/rich": {
+      "head": "9d8f9a372cc5916fd4781fec207ced7ddac2f08f",
+      "filters": {
+        "non-merge commits in window": 196,
+        "bug-fix message": 31,
+        "package-scoped": 24,
+        "size \u22643 package files and \u226460 package lines": 24,
+        "subject not refactor/typo/docs/format/bump/version/release/revert": 19
+      }
+    }
+  },
+  "total": 180
+}

@@ -75,6 +75,7 @@ Outside the vault: `README.md` (repo overview), `docs/flow.md` (what the code do
 - [[ADR-020 M1 runtime dependencies]]
 - [[ADR-021 Free-tier four-provider LLM cascade]]
 - [[ADR-022 CWE Top 25 security taxonomy]]
+- [[ADR-023 Arithmetic-or-numeric logic category]]
 
 ## 05 Stack
 - [[Python]]

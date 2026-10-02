@@ -10,6 +10,8 @@ related:
   - "[[Success Metrics]]"
   - "[[ADR-009 OWASP Top 10 security taxonomy]]"
   - "[[ADR-010 Prometheus and Grafana operational metrics]]"
+  - "[[ADR-023 Arithmetic-or-numeric logic category]]"
+  - "[[Label Noise]]"
 ---
 
 # Open Questions
@@ -17,14 +19,17 @@ related:
 Each question is one bullet starting `**Q<n>.**`, and every number appears once across both sections (`scripts/check_vault.py` checks this). Questions that block current work say so in bold.
 
 ## Still open
-- **Q20. Benchmark repos. Blocks M3 Step 2.** Selection criteria and five candidates plus two fallbacks are recorded; the verification run (M3 Step 1, 2026-10-01) found 3 of 7 viable: `pallets/click`, `agronholm/anyio`, `fastapi/fastapi` (fallback). Final list awaits the owner's decision ([[Benchmark]]).
 - **Q25. Numeric targets.** The shape of success is recorded; numbers are deferred until baseline numbers exist ([[Success Metrics]]).
 - **Q47. TestClient migration.** Migrate from Starlette's `TestClient` (deprecated with httpx) to the newer async test approach before the test count grows further. `fastapi` and `starlette` are pinned until then.
 - **Q48. Large-PR handling.** Diffs are truncated at 100,000 characters: a stopgap. Chunking or file-level splitting is needed.
 - **Q49. Secret masking for private-repo support.** Build masking of secrets in diffs (and in the prompts, traces and thinking that contain them) before Themis reviews any private repository. **Private-repo support is out of scope for v1**: Themis is for public repositories only (README, Limitations). Decided 2026-10-02: sending *public* open-source diffs, including the M3 benchmark repos, to the free-tier providers and Langfuse cloud is acceptable without masking. Some providers' free-tier terms permit using submitted data to improve their products (Google's Gemini API free tier states this), which makes the public/private distinction load-bearing. Not blocking M3.
 - **Q52b. Stable webhook URL.** Quick-tunnel URLs change on every cloudflared restart, so the App's webhook URL must be updated each time. A named tunnel, or the VPS (ADR-018), removes this.
-- **Q55. No category for arithmetic errors. Blocks M3 Step 3** (case labels). ADR-019 has no slot for division by zero or overflow; in a live check the model filed both divide-by-zero bugs under `error-handling`. Benchmark labels must apply the same rule consistently, or the taxonomy needs an `arithmetic` category.
-- **Q56. Step 2 size filter scope. Blocks M3 Step 2.** Should the "≤3 files, ≤60 changed lines" limit count only package source files, or also tests and changelog? Counting everything roughly halves the yield.
+
+- **Q58. Security benchmark track.** Mine vulnerability-fix commits from the PyPA advisory database / OSV for Python packages, as a separate security case set, because the M3 benchmark has too few security cases to measure security recall ([[Benchmark]], [[Metrics]]; the M6 security work: [[Review Graph]] security pass, [[ADR-022 CWE Top 25 security taxonomy]]). **Target: M6.**
+- **Q59. Regression-test validation.** Use each fix commit's regression test to confirm a case is genuine (the test fails on the reverted source and passes on the fix). Costly: requires each repo's environment at each commit. Candidate for a validated subset ([[Benchmark]], [[Label Noise]]). Not for M3.
+
+- **Q60. Too few clean cases. Blocks finishing M3 Step 3.** The Q22 rule (no bug fix to the touched *files* in the following 6 months) yields 25 clean cases against a ≈72 target (13% of 193, not 30%), and they skew small (median 4 changed lines vs 11 for buggy). These libraries' core files receive fixes constantly: in click, 33 otherwise-eligible commits drop to 3 under the rule. Options: narrow the rule to the touched *functions* or lines; take clean candidates from earlier than 2025-04-01 (more leakage risk, though for clean cases memorisation tends to *lower* false positives); accept fewer clean cases and report the false-positive rate with raw counts; or relax the 6-month horizon ([[Benchmark]]).
+- **Q61. 61% of buggy cases have no category label.** Keyword and code-shape rules labeled 66 of 168 (no signal 60, weak signal 29, tie 9, security signal without a specific CWE 4). Category-correct recall would rest on 66 cases; location-only recall uses all 168. Options: owner hand-labels the nulls; LLM-assisted pre-labeling with human verification (spends quota); or accept and report both ([[Benchmark]], [[Metrics]]).
 
 ## Resolved
 
@@ -93,6 +98,11 @@ Each question is one bullet starting `**Q<n>.**`, and every number appears once 
 - **Q51.** OpenRouter spending limit: no longer applicable. Free tiers only, four-provider cascade → [[ADR-021 Free-tier four-provider LLM cascade]]
 - **Q52.** Webhook tunnel restarted and connected; GitHub deliveries reach the API (live test 2026-10-01). Stable-URL follow-up is Q52b.
 - **Q53.** Machine clock fixed (`set-local-rtc 0`, `chronyc makestep`); skew vs GitHub 1 s; App JWT accepted.
+
+### M3 decisions (resolved 2026-10-02)
+- **Q20.** Benchmark repos: five, `pallets/click`, `agronholm/anyio`, `fastapi/fastapi`, `marshmallow-code/marshmallow`, `Textualize/rich`; httpx and httpcore dropped. Micro and macro recall both reported; security recall flagged as not statistically meaningful (Q58) → [[Benchmark]], [[Metrics]]
+- **Q55.** `arithmetic-or-numeric` added with shared precedence rules → [[ADR-023 Arithmetic-or-numeric logic category]]
+- **Q56.** Size filter counts package source only; the buggy PR reverts package source only → [[Benchmark]]
 
 ### M3 pre-work (resolved 2026-10-01)
 - **Q37b.** Security taxonomy: CWE Top 25 (2024 edition), Python-reachable subset, replaces OWASP → [[ADR-022 CWE Top 25 security taxonomy]]

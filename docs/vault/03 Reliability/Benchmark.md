@@ -15,6 +15,8 @@ related:
   - "[[Benchmark Leakage]]"
   - "[[Label Noise]]"
   - "[[Eval Cost]]"
+  - "[[ADR-023 Arithmetic-or-numeric logic category]]"
+  - "[[Glossary]]"
 ---
 
 # Benchmark
@@ -22,19 +24,36 @@ related:
 **Purpose:** a labeled set of PRs to measure review quality against.
 
 ## Construction
-- Mine bug-fix commits from **three** repos: the three that passed verification (`pallets/click`, `agronholm/anyio`, `fastapi/fastapi`). Five candidates and two fallbacks were verified; final confirmation is Q20 (see Repo verification below)
+- Mine bug-fix commits from **five repos** (Q20, decided 2026-10-02): `pallets/click`, `agronholm/anyio`, `fastapi/fastapi`, `marshmallow-code/marshmallow`, `Textualize/rich`. `encode/httpx` and `encode/httpcore` are dropped.
+  - **Why five:** the ≥40-commit bar was a per-repo viability heuristic; what matters is total case count and category diversity. On three repos, anyio's concurrency-heavy set would dominate overall recall. Marshmallow and rich add parsing/serialisation, rendering and type/contract cases (estimate before Step 3: ~195 buggy, ~280 total with clean).
 - Revert the fix to create a "buggy PR", labeled with the file and line range of the bug
 - Label each case with its category: logic-bug taxonomy ([[ADR-019 Logic bug taxonomy]]) or CWE Top 25 ID ([[ADR-022 CWE Top 25 security taxonomy]])
 - Include clean PRs with no known bug to measure false positives
 - Target: 150–300 cases
-- **Three repos means thin category coverage.** Per-category recall must always be reported with raw counts (e.g. `3/7`), never as bare percentages ([[Metrics]])
+- **Category coverage is uneven.** Per-category recall is always reported with raw counts (e.g. `3/7`), never as bare percentages, and both micro and macro recall are reported ([[Metrics]])
+- **Security coverage is too thin to measure:** a keyword pass found ~6 security-related candidates across all repos, so most of the 11 CWE categories will have 0–1 cases. M3 reports security recall with raw counts and states in every report that it is not statistically meaningful. A dedicated security case set is Q58 (target M6)
 
 ## Repo selection criteria
 - Actively maintained, well-tested Python projects with clear bug-fix commit conventions
 - Mid-popularity preferred over famous repos, to reduce memorisation risk
 - Target shapes: a web framework/library, a data tool, a CLI tool, a parsing/serialisation library, a smaller async library
 - Commit window 2025-04-01 → 2026-10-01 (18 months), preferring commits after mid-2025. No single training cutoff applies, since the cascade uses four different models; each case records its commit date so results can be split by it ([[Benchmark Leakage]])
-- The reasoning is recorded when repos are chosen. Verification done (table below); final confirmation pending (Q20).
+- Verification table below; repo choice decided by the owner (Q20, closed 2026-10-02).
+
+## Case construction rules (Q56, decided 2026-10-02)
+1. **Size filter counts package source only.** The ≤3 files / ≤60 changed lines limit counts only `.py` files in the package directory; tests, docs, changelogs and CI files are excluded from the count.
+2. **Revert package source only.** The buggy PR reverts only the package source changes of the fix commit, never test files, changelog entries or docs. Reverting them would delete a test named after the bug and a "Fixed …" line, handing the reviewer the answer and inflating recall.
+3. **Category labels** follow the precedence rules in the [[Glossary]] ([[ADR-023 Arithmetic-or-numeric logic category]]); unclear cases stay unlabeled (null) and count only toward location-only recall.
+
+## Built cases (M3 Steps 2–3, 2026-10-02): awaiting owner hand-check
+Built by `evals.benchmark.mine_commits` then `evals.benchmark.build_cases` (reports: `evals/benchmark/data/mining_report.json`, `build_report.json`).
+- **Mined:** 180 candidate fixes (click 47, anyio 56, fastapi 41, marshmallow 17, rich 19).
+- **Buggy cases:** 168 after discarding 12 non-behavioural fixes (6 annotation-only, 5 whitespace/comment/docstring, 1 rename).
+- **Clean cases:** 25, **far below the ~30% target** (≈72). The 6-month no-fix rule leaves almost no candidates in these repos' frequently fixed files (Q60).
+- **Total 193:** dev 117 / holdout 76.
+- **Null category labels:** 102 of 168 buggy (61%) (Q61).
+- **Labeled spans:** 113 of 168 buggy cases have more than one span (up to 23); a hit on any span counts.
+- **Hand-check sample:** 15 dev cases in `evals/benchmark/data/sample_for_review.md`. Label noise is unmeasured until the owner checks it.
 
 ## Clean PRs
 Merged PRs from the same repos whose touched files had no bug-fix commit for the following 6–12 months. **This is a heuristic, not proof** that a PR is bug-free. The size distribution of clean PRs matches the buggy ones, so the reviewer cannot learn "big diff means bug".
@@ -50,7 +69,7 @@ Merged PRs from the same repos whose touched files had no bug-fix commit for the
 
 Consumed by the [[Eval Harness]]. Risks: [[Benchmark Leakage]], [[Label Noise]], [[Eval Cost]].
 
-## Repo verification (Q20, M3 Step 1, 2026-10-01): pending owner decision
+## Repo verification (Q20, M3 Step 1, 2026-10-01): decided, five repos
 `python -m evals.benchmark.verify_repos --include-fallbacks` (raw data: `evals/benchmark/data/repo_verification.json`). Window 2025-04-01 → 2026-10-01 (18 months), non-merge commits on the default branch. **Package-scoped** = message matches a bug-fix pattern and every non-test, non-doc, non-CI file touched is `.py` under the package directory. Viable = ≥40 package-scoped.
 
 | Repo | Commits | Bug-fix msgs | Package-scoped | Package-only | Issue link | After 2025-07-01 | "Fixed" section | Viable | Est. after Step 2 filters* |

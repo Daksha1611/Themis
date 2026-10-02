@@ -12,7 +12,7 @@ related:
 
 # Current Status
 
-**Phase:** M3 in progress. Pre-work done; Step 1 (repo verification) done; **waiting for the owner to approve the repo list** before mining.
+**Phase:** M3 in progress. Q20/Q55/Q56 decided; Steps 2–3 built (193 cases). **Stopped before any eval run:** waiting for the owner's hand-check of the 15-case sample, and decisions on Q60 (too few clean cases) and Q61 (61% unlabeled).
 **Last updated:** 2026-10-02 (vault audit and hardening)
 
 New sessions start with [[00 Brief]].

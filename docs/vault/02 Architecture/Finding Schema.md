@@ -14,6 +14,7 @@ related:
   - "[[ADR-022 CWE Top 25 security taxonomy]]"
   - "[[ADR-016 Confidence comes from the precision filter, not the LLM]]"
   - "[[ADR-019 Logic bug taxonomy]]"
+  - "[[ADR-023 Arithmetic-or-numeric logic category]]"
 ---
 
 # Finding Schema
@@ -27,7 +28,7 @@ Defined in `app/schemas.py` (M2).
 |---|---|
 | file | path |
 | line_start, line_end | the line range of the problem (`line_end >= line_start`). A range, not a single line: bug-location matching compares against a labeled range ±3 lines (Q23) |
-| category | a logic-bug category ([[ADR-019 Logic bug taxonomy]]), a CWE ID from [[ADR-022 CWE Top 25 security taxonomy]], or `security-other`. **Validated:** any other value fails validation (and becomes a parse error); the allowed set is in `app/taxonomy.py` |
+| category | a logic-bug category ([[ADR-019 Logic bug taxonomy]], plus `arithmetic-or-numeric` from [[ADR-023 Arithmetic-or-numeric logic category]]; overlaps decided by the precedence rules in the [[Glossary]]), a CWE ID from [[ADR-022 CWE Top 25 security taxonomy]], or `security-other`. **Validated:** any other value fails validation (and becomes a parse error); the allowed set is in `app/taxonomy.py` |
 | subcategory | required free text when category is `security-other` |
 | severity | `critical` \| `high` \| `medium` \| `low` |
 | message | what is wrong, one sentence |

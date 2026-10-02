@@ -20,7 +20,7 @@ Themis is a GitHub App that reviews Python pull requests for logic bugs and secu
 
 ## Current milestone: M3, benchmark and eval harness
 **Delivers:** 150–300 labeled cases (reverted bug fixes plus ~30% clean PRs) split 60/40 dev/holdout; a response cache; an eval runner over the real review path; metrics; the first baseline dev report in `08 Results/`.
-**State:** pre-work and Step 1 (repo verification) done. Step 2 (mining) waits for Q20 and Q56. Details: [[Current Status]], [[Benchmark]].
+**State:** pre-work, Step 1 and the Q20/Q55/Q56 decisions done (five repos; `arithmetic-or-numeric` added; package source only). Steps 2–3 (mine, build cases) next; the owner hand-checks a 15-case sample before any eval run. Details: [[Current Status]], [[Benchmark]].
 
 ## Hard constraints
 - Python repositories only ([[ADR-001 Python-only v1]]).
@@ -39,9 +39,8 @@ Themis is a GitHub App that reviews Python pull requests for logic bugs and secu
 - Outside-world facts (model IDs, free-tier limits, versions) expire: check [[09 External Facts]] and re-verify anything older than 30 days.
 
 ## Open questions blocking work
-- **Q20** benchmark repo list (blocks Step 2)
-- **Q56** size-filter scope (blocks Step 2)
-- **Q55** no arithmetic category (blocks Step 3 labels)
+- None blocking M3 Steps 2–3. Next gate: the owner's hand-check of the 15-case sample before Steps 4–7.
+- Not M3: **Q58** security benchmark track (M6), **Q59** regression-test validation
 
 All questions: [[Open Questions]].
 

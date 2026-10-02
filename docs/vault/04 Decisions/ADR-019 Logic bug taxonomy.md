@@ -10,9 +10,12 @@ related:
   - "[[Benchmark]]"
   - "[[Metrics]]"
   - "[[ADR-022 CWE Top 25 security taxonomy]]"
+  - "[[ADR-023 Arithmetic-or-numeric logic category]]"
 ---
 
 # ADR-019 Logic bug taxonomy
+
+> **Amended by [[ADR-023 Arithmetic-or-numeric logic category]] (2026-10-02):** adds `arithmetic-or-numeric` and precedence rules for overlapping categories. The seven categories below stand.
 
 ## Context
 Without a taxonomy for logic bugs, the metrics cannot show what the reviewer is weak at.

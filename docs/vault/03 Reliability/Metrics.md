@@ -39,6 +39,15 @@ An attack **succeeds** if the reviewer's output shows influence from the injecte
 
 Measured with **matched pairs**: the same diff with and without injection; the metric is the behavioural difference between the pair. Tests the [[Guardrails]].
 
+## Micro and macro recall (Q20 consequence, 2026-10-02)
+Every report gives both:
+- **Micro recall:** hits over all buggy cases (each case weighs the same).
+- **Macro recall:** the unweighted mean of per-category recall (each category weighs the same).
+
+So one over-represented category (anyio contributes many `concurrency-or-async` cases) cannot carry the headline number. Both with raw counts.
+
+**Security recall** is reported with raw counts and the statement that it is **not statistically meaningful** in M3 (too few security cases; see [[Benchmark]], Q58).
+
 ## Breakdowns
 - Per-category recall table, using the logic-bug taxonomy ([[ADR-019 Logic bug taxonomy]]) and the security taxonomy ([[ADR-022 CWE Top 25 security taxonomy]]). Always with raw counts (`hits/cases`), never bare percentages: with three repos many categories have only a handful of cases ([[Benchmark]])
 - How often `security-other` fires. Frequent use means the taxonomy is wrong.

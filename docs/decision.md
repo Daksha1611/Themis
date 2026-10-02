@@ -876,3 +876,106 @@ The checker's rules could reject a valid new convention; the fix is to change th
 
 ### How this affects other components
 CI only.
+
+---
+
+## M3: decisions on Q20, Q55, Q56; Steps 2–3 (mine commits, build cases): pre-work
+**Date**: 2026-10-02
+**File(s) affected**:
+- Code: `app/taxonomy.py` (new category, shared precedence rules), `tests/test_schemas.py`, `tests/test_baseline.py`, `evals/benchmark/verify_repos.py` (shared repo list and constants), `evals/benchmark/mine_commits.py` (create), `evals/benchmark/build_cases.py` (create), `evals/benchmark/labeling.py` (create), `tests/test_benchmark.py` (create)
+- Data (created): `evals/benchmark/data/candidates.jsonl`, `evals/benchmark/data/dev.jsonl`, `evals/benchmark/data/holdout.jsonl`, `evals/benchmark/data/build_report.json`, `evals/benchmark/data/sample_for_review.md`
+- Vault: `04 Decisions/ADR-023 Arithmetic-or-numeric logic category.md` (create); ADR-019 (banner); Glossary, Finding Schema, Benchmark, Metrics, Benchmark Leakage, Open Questions (Q20, Q55, Q56 closed; Q58, Q59 added), 00 Index, 00 Brief, Current Status, Session Log
+- `docs/flow.md` only if `app/` gains functions (call graph)
+
+### What I am changing
+**Owner decisions:**
+1. **Q20:** five repos: `pallets/click`, `agronholm/anyio`, `fastapi/fastapi`, `marshmallow-code/marshmallow`, `Textualize/rich`. Drop `encode/httpx` and `encode/httpcore`.
+2. **Q55:** add `arithmetic-or-numeric` (ADR-023, amending ADR-019), with precedence rules shared verbatim by the taxonomy module (and so the prompt), the Glossary, and the Step 3 labelling rules.
+3. **Q56:** the size filter counts package source only; the buggy PR reverts package source only (never tests, changelogs or docs).
+
+**Step 2, `mine_commits.py`:** for each repo, walk non-merge commits in the fixed window 2025-04-01 → 2026-10-01 and apply these filters in order:
+- bug-fix message;
+- package-scoped (at least one package `.py` file; every other file is a test, doc or CI file);
+- ≤3 package source files and ≤60 changed package source lines;
+- the subject line does not suggest a refactor, typo, docs, formatting, dependency or version bump, release or revert.
+
+It emits `candidates.jsonl` and counts survivors per filter per repo.
+
+**Step 3, `build_cases.py`:**
+- **Buggy case:** `git diff <fix> <parent> -- <package source files>`, i.e. the fix reversed and presented as the proposed change. Its labels are the line spans the fix touched, expressed in the buggy (new) side's line numbers.
+- **Cosmetic discard:** dropped when the package source ASTs before and after the fix are identical after removing docstrings (whitespace and comments) or differ only by a consistent one-to-one identifier renaming.
+- **Category:** inferred by keyword and code-shape rules that apply the taxonomy's precedence rules; null when no single category clearly wins.
+- **Clean case:** a non-bug-fix commit in the same repos, dated at least 6 months before the window end. Its package source files received no package-scoped bug-fix commit in the following 6 months, and it isn't cosmetic. Clean cases are sampled to match the buggy size distribution, at ~30% of the total; the diff is the commit's package source only.
+- **Splits:** 60/40, stratified by repo × category (clean and null as their own strata). Case ID = first 16 hex characters of SHA-256 of `repo:sha`.
+- **Review sample:** 15 cases drawn from the **dev** split only.
+
+### Why I am making this change
+Owner decisions on the three questions blocking M3, and the M3 brief Steps 2–3. The ≥40-commit bar was a per-repo heuristic; what matters is total case count and category diversity, and on three repos anyio's concurrency-heavy set would dominate overall recall.
+
+### Alternatives I considered
+1. Label categories with an LLM.
+2. Take the review sample from all cases.
+3. Show tests in clean-case diffs but not in buggy ones.
+4. Use the window end relative to "today".
+
+### Reasons I rejected each alternative
+1. It spends free-tier quota and makes labels depend on the same kind of model being measured (circular); keyword and shape rules are reproducible and their uncertainty is visible as null labels.
+2. Hand-checking holdout cases would expose holdout content; label noise estimated on dev applies to the whole set.
+3. Diff shape would then reveal the class (tests present means clean). Both kinds show package source only.
+4. Mining must be reproducible; the window is fixed at 2025-04-01 → 2026-10-01 and each repo's HEAD SHA is recorded.
+
+### Trade-offs I am accepting
+- Keyword-based categories will leave many cases unlabeled; those still count for location-only recall.
+- "No bug fix in the following 6 months" is a heuristic, not proof that a clean case is bug-free.
+- Small strata (one case) all go to dev, so rare categories may be missing from the holdout.
+
+### What could go wrong
+- Label spans for deletion-only reverts (the fix added lines, so the revert only removes them) have no new-side line; such spans use the line at the deletion point.
+- Fix commits that mix a bug fix with unrelated edits produce wide labels; the ≤60-line filter limits this, and the 15-case review measures it.
+- Clones advance as repos receive commits; commits inside the fixed window are stable.
+
+### How this affects other components
+- **Finding Schema / Review Graph:** one more logic category, so the prompt lists 8 logic categories.
+- **Benchmark / Metrics:** case data, micro and macro recall, raw counts.
+- No runtime path changes besides the taxonomy.
+
+---
+
+## M3 Steps 2–3: results and departures
+**Date**: 2026-10-02
+**File(s) affected**: as in the Steps 2–3 pre-work entry, plus `tests/test_benchmark.py`; `evals/benchmark/data/mining_report.json`; vault: Benchmark, Benchmark Leakage, Open Questions (Q60, Q61), Current Status, Session Log
+
+### What I am changing
+Recording what Steps 2–3 produced:
+- **Mining:** 180 candidates. Survivors after each filter, per repo: click 446→109→65→55→47; anyio 318→96→67→60→56; fastapi 2046→128→58→53→41; marshmallow 144→31→26→23→17; rich 196→31→24→24→19.
+- **Buggy cases:** 168, after discarding 12 non-behavioural fixes (6 annotation-only, 5 whitespace/comment/docstring, 1 consistent rename).
+- **Clean cases:** 25. **Total 193:** dev 117, holdout 76.
+- **Category labels:** 102 of 168 buggy cases have none.
+
+**Departures from the pre-work plan:**
+1. The cosmetic discard also covers **annotation-only** changes. Type hints do not change runtime behaviour, so such a fix is not a bug the reviewer could detect.
+2. Clean candidates use the same "package-scoped", size and subject filters as buggy candidates, so the two classes look alike.
+
+### Why I am making this change
+M3 brief Steps 2–3; the owner asked to stop here before any free-tier quota is spent.
+
+### Alternatives I considered
+1. Relax my own clean-candidate filters (subject wording, side files) to reach the clean target.
+2. Change the Q22 6-month rule to a function-level rule myself.
+
+### Reasons I rejected each alternative
+1. It adds only about 11 cases outside rich (66 in total, 37 of them from rich), skewing the clean set towards one repo.
+2. Q22 is an owner decision; the shortfall is recorded as Q60 with options.
+
+### Trade-offs I am accepting
+Until Q60 is decided, clean cases are 13% of the set instead of ~30%, and smaller than the buggy cases.
+
+### What could go wrong
+A spot check found label noise the hand-check must measure:
+- a feature commit ("Add follow_symlinks argument …") that matched the bug-fix pattern through its body;
+- a typing-only fix ("fix typing") that is a behavioural AST change but not a runtime bug;
+- wide labels (113 of 168 buggy cases have several spans, up to 23).
+
+### How this affects other components
+- **Benchmark:** first real case set.
+- **Metrics:** category-correct recall rests on 66 labeled cases until Q61 is decided.

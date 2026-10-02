@@ -1,0 +1,158 @@
+{
+  "window": [
+    "2025-04-01",
+    "2026-10-01"
+  ],
+  "total": 193,
+  "by_kind": {
+    "buggy": 168,
+    "clean": 25
+  },
+  "by_split": {
+    "dev": 117,
+    "holdout": 76
+  },
+  "by_kind_and_split": {
+    "buggy/dev": 102,
+    "buggy/holdout": 66,
+    "clean/dev": 15,
+    "clean/holdout": 10
+  },
+  "by_repo": {
+    "Textualize/rich/buggy": 16,
+    "Textualize/rich/clean": 7,
+    "agronholm/anyio/buggy": 54,
+    "agronholm/anyio/clean": 6,
+    "fastapi/fastapi/buggy": 40,
+    "fastapi/fastapi/clean": 7,
+    "marshmallow-code/marshmallow/buggy": 16,
+    "marshmallow-code/marshmallow/clean": 2,
+    "pallets/click/buggy": 42,
+    "pallets/click/clean": 3
+  },
+  "by_category": {
+    "arithmetic-or-numeric": 2,
+    "clean": 25,
+    "concurrency-or-async": 24,
+    "control-flow": 3,
+    "error-handling": 4,
+    "null": 102,
+    "null-or-none-handling": 5,
+    "off-by-one-or-boundary": 3,
+    "resource-leak": 1,
+    "type-or-contract": 24
+  },
+  "category_by_split": {
+    "arithmetic-or-numeric/dev": 2,
+    "clean/dev": 15,
+    "clean/holdout": 10,
+    "concurrency-or-async/dev": 14,
+    "concurrency-or-async/holdout": 10,
+    "control-flow/dev": 2,
+    "control-flow/holdout": 1,
+    "error-handling/dev": 2,
+    "error-handling/holdout": 2,
+    "null-or-none-handling/dev": 3,
+    "null-or-none-handling/holdout": 2,
+    "null/dev": 61,
+    "null/holdout": 41,
+    "off-by-one-or-boundary/dev": 3,
+    "resource-leak/dev": 1,
+    "type-or-contract/dev": 14,
+    "type-or-contract/holdout": 10
+  },
+  "size_buckets": {
+    "buggy": {
+      "1-5": 60,
+      "6-15": 51,
+      "16-30": 33,
+      "31-60": 24
+    },
+    "clean": {
+      "1-5": 14,
+      "6-15": 8,
+      "16-30": 3,
+      "31-60": 0
+    }
+  },
+  "size_lines_median": {
+    "buggy": 11,
+    "clean": 4
+  },
+  "buggy_dates_by_quarter": {
+    "pallets/click": {
+      "2025-Q2": 4,
+      "2025-Q3": 7,
+      "2025-Q4": 2,
+      "2026-Q1": 1,
+      "2026-Q2": 23,
+      "2026-Q3": 5
+    },
+    "agronholm/anyio": {
+      "2025-Q2": 3,
+      "2025-Q3": 2,
+      "2025-Q4": 4,
+      "2026-Q1": 8,
+      "2026-Q2": 11,
+      "2026-Q3": 26
+    },
+    "fastapi/fastapi": {
+      "2025-Q2": 2,
+      "2025-Q3": 4,
+      "2025-Q4": 20,
+      "2026-Q1": 5,
+      "2026-Q2": 2,
+      "2026-Q3": 7
+    },
+    "marshmallow-code/marshmallow": {
+      "2025-Q2": 1,
+      "2025-Q4": 3,
+      "2026-Q1": 9,
+      "2026-Q2": 2,
+      "2026-Q3": 1
+    },
+    "Textualize/rich": {
+      "2025-Q2": 4,
+      "2025-Q4": 2,
+      "2026-Q1": 9,
+      "2026-Q2": 1
+    }
+  },
+  "buggy_after_mid_2025": {
+    "pallets/click": "38/42",
+    "agronholm/anyio": "51/54",
+    "fastapi/fastapi": "38/40",
+    "marshmallow-code/marshmallow": "15/16",
+    "Textualize/rich": "12/16"
+  },
+  "discards": {
+    "annotation": 6,
+    "cosmetic": 5,
+    "rename": 1,
+    "clean: cosmetic": 7
+  },
+  "null_category_buggy": 102,
+  "clean_shortfall": {
+    "pallets/click": {
+      "wanted": 18,
+      "got": 3,
+      "pool": 3
+    },
+    "agronholm/anyio": {
+      "wanted": 23,
+      "got": 6,
+      "pool": 6
+    },
+    "fastapi/fastapi": {
+      "wanted": 17,
+      "got": 7,
+      "pool": 8
+    },
+    "marshmallow-code/marshmallow": {
+      "wanted": 7,
+      "got": 2,
+      "pool": 5
+    }
+  },
+  "sample": "evals/benchmark/data/sample_for_review.md"
+}

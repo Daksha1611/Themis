@@ -9,7 +9,24 @@ LOGIC_CATEGORIES: dict[str, str] = {
     "resource-leak": "files, sockets, connections, or locks not released",
     "type-or-contract": "wrong type, wrong return value, or a broken function contract",
     "control-flow": "wrong condition, branch, early return, or loop logic",
+    # ADR-023
+    "arithmetic-or-numeric": (
+        "wrong arithmetic, division by zero, float precision, or overflow of floats, "
+        "fixed-width types or size limits"
+    ),
 }
+
+# ADR-023: how overlapping categories are decided. Shared verbatim by the review prompt, the
+# Glossary and the benchmark labelling rules, so labels and model use the same definitions.
+PRECEDENCE_RULES: tuple[str, ...] = (
+    "Arithmetic operators (+ - * / // % **) used wrongly -> arithmetic-or-numeric. "
+    "Comparisons at a range edge (< vs <=) -> off-by-one-or-boundary.",
+    "A computation that can divide by zero -> arithmetic-or-numeric. "
+    "A ZeroDivisionError that is caught or handled wrongly -> error-handling.",
+    "Overflow is scoped to what Python can actually overflow: floats (inf/nan), fixed-width "
+    "types (numpy, struct, ctypes), and size limits. Python ints do not overflow.",
+    "Float precision errors -> arithmetic-or-numeric.",
+)
 
 # ADR-022: the Python-reachable subset of the CWE Top 25 (2024 edition), verified against
 # MITRE's CWE view 1430 (CWE 4.20).
@@ -44,4 +61,6 @@ def prompt_category_list() -> str:
     lines.append(
         f'  {SECURITY_OTHER}: any other security issue; also set "subcategory" to a short name'
     )
+    lines.append("When two categories could apply:")
+    lines += [f"  - {rule}" for rule in PRECEDENCE_RULES]
     return "\n".join(lines)
