@@ -45,18 +45,45 @@ related:
 2. **Revert package source only.** The buggy PR reverts only the package source changes of the fix commit, never test files, changelog entries or docs. Reverting them would delete a test named after the bug and a "Fixed …" line, handing the reviewer the answer and inflating recall.
 3. **Category labels** follow the precedence rules in the [[Glossary]] ([[ADR-023 Arithmetic-or-numeric logic category]]); unclear cases stay unlabeled (null) and count only toward location-only recall.
 
-## Built cases (M3 Steps 2–3, 2026-10-02): awaiting owner hand-check
-Built by `evals.benchmark.mine_commits` then `evals.benchmark.build_cases` (reports: `evals/benchmark/data/mining_report.json`, `build_report.json`).
-- **Mined:** 180 candidate fixes (click 47, anyio 56, fastapi 41, marshmallow 17, rich 19).
-- **Buggy cases:** 168 after discarding 12 non-behavioural fixes (6 annotation-only, 5 whitespace/comment/docstring, 1 rename).
-- **Clean cases:** 25, **far below the ~30% target** (≈72). The 6-month no-fix rule leaves almost no candidates in these repos' frequently fixed files (Q60).
-- **Total 193:** dev 117 / holdout 76.
-- **Null category labels:** 102 of 168 buggy (61%) (Q61).
-- **Labeled spans:** 113 of 168 buggy cases have more than one span (up to 23); a hit on any span counts.
-- **Hand-check sample:** 15 dev cases in `evals/benchmark/data/sample_for_review.md`. Label noise is unmeasured until the owner checks it.
+## Built cases (M3 Steps 2–3, rebuilt 2026-10-03 with the SZZ clean rule)
+Built by `evals.benchmark.mine_commits` then `evals.benchmark.build_cases` (reports: `evals/benchmark/data/mining_report.json`, `build_report.json`). **238 cases: 168 buggy + 70 clean (29% clean); dev 143 / holdout 95.**
 
-## Clean PRs
-Merged PRs from the same repos whose touched files had no bug-fix commit for the following 6–12 months. **This is a heuristic, not proof** that a PR is bug-free. The size distribution of clean PRs matches the buggy ones, so the reviewer cannot learn "big diff means bug".
+| Repo | Buggy dev / holdout | Clean dev / holdout |
+|---|---|---|
+| pallets/click | 25 / 17 | 10 / 6 |
+| agronholm/anyio | 33 / 21 | 8 / 6 |
+| fastapi/fastapi | 25 / 15 | 11 / 8 |
+| marshmallow-code/marshmallow | 9 / 7 | 2 / 2 |
+| Textualize/rich | 10 / 6 | 10 / 7 |
+
+| Changed lines | Buggy | Clean | Clean target |
+|---|---|---|---|
+| 1-5 | 60 | 26 | 26 |
+| 6-15 | 51 | 22 | 22 |
+| 16-30 | 33 | 14 | 14 |
+| 31-60 | 24 | 8 | 10 |
+| **Median** | **11** | **10** | |
+
+- 12 buggy candidates discarded as non-behavioural (6 annotation-only, 5 whitespace/comment/docstring, 1 rename); 24 clean candidates likewise. Clean shortfall: only the 31–60 bucket (8 of 10).
+- **Ranges per buggy case** (count of cases): 1: 55 | 2: 38 | 3: 32 | 4: 14 | 5: 9 | 6: 6 | 7: 5 | 8: 3 | 10: 2 | 12: 1 | 13: 1 | 14: 1 | 23: 1. A hit on any range is *lenient* recall; *strict* recall uses the human-marked primary range ([[Metrics]]).
+- Heuristic category labels: 102 of 168 buggy cases have none; human labels replace them (below).
+- Commit-message trailers naming co-authors or assistants (`Co-authored-by:`, `Assisted-by:`) are stripped when mining.
+
+## Clean PRs (Q60, decided 2026-10-03)
+A clean case is a non-fix commit **none of whose added or modified lines was changed by a later bug-fix commit within 6 months**. This uses the approach of the **SZZ algorithm** (Śliwerski, Zimmermann and Zeller, "When do changes induce fixes?", MSR 2005): for each bug-fix commit, `git blame` its removed lines at its parent to find the commits that introduced them; a blamed commit is not clean. Implemented in `evals/benchmark/szz.py`. (It replaced an earlier per-file rule that left only 25 clean cases, because these libraries' core files receive fixes constantly.)
+- Clean candidates pass the same filters as buggy ones: package source only, ≤3 files / ≤60 lines, the same subject filter, and a behavioural change (no cosmetic-only, typing-only or rename-only diffs).
+- Sampled per size bucket to match the buggy distribution, ~30% clean overall; a bucket that is still short is accepted and reported.
+- SZZ's known limits apply: a fix that only adds lines blames nothing, and a line changed again before the fix is attributed to the later change. **The rule is a heuristic, not proof** that a case is bug-free.
+- The false-positive rate is always reported per size bucket, so a size shortcut is detectable ([[Metrics]]).
+
+## Human labels (Q61, decided 2026-10-03)
+- Category labels come from **human labelling**, not an LLM: LLM labels would make category-correct recall measure LLM-to-LLM agreement.
+- Tool: `python -m evals.benchmark.label --split dev` (resumable; writes `evals/benchmark/data/labels_human.jsonl`). For each buggy case it records validity (or a drop reason: feature, typing-only, refactor, not-a-bug, other), the category, and the **primary range** (the actual bug); for clean cases, "looks clean" or "suspicious" with a note. The holdout split is refused unless `--freeze` is passed: holdout is labelled only after prompt tuning is frozen.
+- **Splits are frozen.** Dropped cases are removed; no case ever moves between dev and holdout.
+- Human labels override heuristic labels; heuristic labels are kept for comparison.
+- **Label noise** = the fraction of dev cases the owner drops, reported with the count ([[Label Noise]]).
+- **Single-annotator limitation:** one person labels every case; there is no inter-annotator agreement measure.
+- Until the holdout is labelled: location recall uses all cases; category-correct recall uses human-labelled cases only.
 
 ## Splits ([[ADR-007 dev-holdout benchmark split]])
 - **60% dev** (for tuning) / **40% holdout** (run only at milestones)

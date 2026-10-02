@@ -117,3 +117,29 @@ def test_file_classification_and_size_buckets() -> None:
     assert not is_package_source("tests/test_core.py", "src/click/")
     assert is_support_file("CHANGES.md") and is_support_file("tests/test_x.py")
     assert [size_bucket(n) for n in (1, 5, 6, 30, 60)] == [0, 0, 1, 2, 3]
+
+
+def test_szz_line_helpers() -> None:
+    from evals.benchmark.szz import added_lines, removed_ranges
+
+    diff = (
+        "diff --git a/p.py b/p.py\n--- a/p.py\n+++ b/p.py\n"
+        "@@ -3,2 +3,2 @@\n-a\n-b\n+A\n+B\n@@ -10,0 +11,1 @@\n+new\n"
+    )
+    assert removed_ranges(diff) == {"p.py": [(3, 4)]}  # pure addition at line 11: nothing to blame
+    assert added_lines(diff) == {"p.py": {3, 4, 11}}
+
+
+def test_frozen_cases_never_move() -> None:
+    cases = [_case(i, "control-flow") for i in range(10)]
+    frozen = {f"{i:016x}": "holdout" for i in range(5)}  # pretend the first five were frozen
+    assign_splits(cases, frozen)
+    assert all(c.split == "holdout" for c in cases[:5])
+    assert sum(c.split == "dev" for c in cases) == 5  # new cases fill dev towards the target
+
+
+def test_commit_trailers_are_stripped() -> None:
+    from evals.benchmark.mine_commits import clean_message
+
+    message = "Fix x\n\nBody.\n\nCo-authored-by: Someone <a@b>\nAssisted-by: Tool:model\n"
+    assert clean_message(message) == "Fix x\n\nBody."

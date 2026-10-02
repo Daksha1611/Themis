@@ -17,4 +17,6 @@ related:
 - Hand-check a sample
 - Report the estimated noise rate
 
+**Measured (M3):** the human labelling pass (`evals/benchmark/label.py`) records a drop reason for every dev case that is not a genuine bug fix; label noise = dropped / labelled dev cases, reported with the count ([[Benchmark]]). Single annotator.
+
 **Affects:** [[Benchmark]], [[Metrics]]

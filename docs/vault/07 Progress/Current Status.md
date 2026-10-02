@@ -12,7 +12,7 @@ related:
 
 # Current Status
 
-**Phase:** M3 in progress. Q20/Q55/Q56 decided; Steps 2–3 built (193 cases). **Stopped before any eval run:** waiting for the owner's hand-check of the 15-case sample, and decisions on Q60 (too few clean cases) and Q61 (61% unlabeled).
+**Phase:** M3 in progress. Steps 2–3 built (238 cases; SZZ clean rule; frozen splits). **Waiting for the owner's dev labelling pass** before Steps 4–7.
 **Last updated:** 2026-10-02 (vault audit and hardening)
 
 New sessions start with [[00 Brief]].

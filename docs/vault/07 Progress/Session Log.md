@@ -75,3 +75,8 @@ related:
 **Done:** committed and pushed the vault audit (CI green, including `vault-check`). Recorded the owner's decisions: Q20 five repos; Q55 `arithmetic-or-numeric` ([[ADR-023 Arithmetic-or-numeric logic category]]) with precedence rules shared by `app/taxonomy.py` (prompt), the [[Glossary]] and the labelling rules; Q56 package source only for size and revert. Added Q58 (security track, M6) and Q59 (regression-test validation). Step 2 mined 180 candidates; Step 3 built 168 buggy + 25 clean = 193 cases (dev 117, holdout 76), 15-case dev sample written. 107 tests pass; vault check passes.
 **Next:** owner hand-checks `evals/benchmark/data/sample_for_review.md`; decides Q60 and Q61; then Steps 4–7.
 **Blockers / questions:** Q60 (clean shortfall), Q61 (null labels), and the hand-check.
+
+## 2026-10-03: Q60, Q61 and follow-ups
+**Done:** committed and pushed Steps 2–3 (CI green). Recorded decisions: Q60 SZZ-style clean rule (70 clean cases, sizes matched; only the 31–60 bucket short, 8/10); Q61 human labels on dev with `evals/benchmark/label.py` (the 15-case sample file is replaced by the labelling pass); strict vs lenient recall, chance baseline, FP per size bucket, macro floor ≥5 ([[Metrics]]); ADR-023 clause for index and length arithmetic. Splits frozen: no existing case moved. Mining now strips `Co-authored-by:` / `Assisted-by:` trailers: upstream AI-assistant trailers had reached tracked data in the previous commit. 119 tests pass; vault check passes.
+**Next:** owner labels dev cases; then Steps 4–7.
+**Blockers / questions:** whether to rewrite history to remove the trailers from the earlier pushed commit (owner decision).

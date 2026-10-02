@@ -20,7 +20,7 @@ Themis is a GitHub App that reviews Python pull requests for logic bugs and secu
 
 ## Current milestone: M3, benchmark and eval harness
 **Delivers:** 150–300 labeled cases (reverted bug fixes plus ~30% clean PRs) split 60/40 dev/holdout; a response cache; an eval runner over the real review path; metrics; the first baseline dev report in `08 Results/`.
-**State:** pre-work, Step 1 and the Q20/Q55/Q56 decisions done (five repos; `arithmetic-or-numeric` added; package source only). Steps 2–3 (mine, build cases) next; the owner hand-checks a 15-case sample before any eval run. Details: [[Current Status]], [[Benchmark]].
+**State:** Steps 2–3 built: 238 cases (168 buggy, 70 clean; dev 143 / holdout 95), SZZ clean rule. **Next gate:** the owner's hand-labelling pass on dev (`python -m evals.benchmark.label --split dev`) before Steps 4–7. Details: [[Current Status]], [[Benchmark]].
 
 ## Hard constraints
 - Python repositories only ([[ADR-001 Python-only v1]]).
@@ -34,12 +34,13 @@ Themis is a GitHub App that reviews Python pull requests for logic bugs and secu
 - `confidence` comes from the precision filter, never the LLM. The LLM's own number is `raw_llm_confidence`: stored, never used to filter, never shown ([[ADR-016 Confidence comes from the precision filter, not the LLM]]).
 - The precision filter trains on dev-split cases only, never holdout ([[ADR-017 Dev-split-only training data for the precision filter]]).
 - The holdout split is run only at milestones ([[ADR-007 dev-holdout benchmark split]]). The M3 runner must refuse it without `--i-know-this-is-holdout`.
+- Splits are frozen: no case ever moves between dev and holdout; holdout is labelled only after prompt tuning is frozen.
 - `08 Results/` holds numbers from real runs only ([[08 Results/README|Results README]]).
 - The vault, `docs/flow.md` and the code must agree. `scripts/check_vault.py` fails CI when they drift.
 - Outside-world facts (model IDs, free-tier limits, versions) expire: check [[09 External Facts]] and re-verify anything older than 30 days.
 
 ## Open questions blocking work
-- None blocking M3 Steps 2–3. Next gate: the owner's hand-check of the 15-case sample before Steps 4–7.
+- None open. Next gate: the owner's dev labelling pass before Steps 4–7 (cache, runner, metrics, baseline run).
 - Not M3: **Q58** security benchmark track (M6), **Q59** regression-test validation
 
 All questions: [[Open Questions]].

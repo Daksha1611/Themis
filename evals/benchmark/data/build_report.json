@@ -3,36 +3,46 @@
     "2025-04-01",
     "2026-10-01"
   ],
-  "total": 193,
+  "total": 238,
   "by_kind": {
     "buggy": 168,
-    "clean": 25
+    "clean": 70
   },
   "by_split": {
-    "dev": 117,
-    "holdout": 76
+    "dev": 143,
+    "holdout": 95
   },
   "by_kind_and_split": {
     "buggy/dev": 102,
     "buggy/holdout": 66,
-    "clean/dev": 15,
-    "clean/holdout": 10
+    "clean/dev": 41,
+    "clean/holdout": 29
   },
   "by_repo": {
-    "Textualize/rich/buggy": 16,
-    "Textualize/rich/clean": 7,
-    "agronholm/anyio/buggy": 54,
-    "agronholm/anyio/clean": 6,
-    "fastapi/fastapi/buggy": 40,
-    "fastapi/fastapi/clean": 7,
-    "marshmallow-code/marshmallow/buggy": 16,
-    "marshmallow-code/marshmallow/clean": 2,
-    "pallets/click/buggy": 42,
-    "pallets/click/clean": 3
+    "Textualize/rich/buggy/dev": 10,
+    "Textualize/rich/buggy/holdout": 6,
+    "Textualize/rich/clean/dev": 10,
+    "Textualize/rich/clean/holdout": 7,
+    "agronholm/anyio/buggy/dev": 33,
+    "agronholm/anyio/buggy/holdout": 21,
+    "agronholm/anyio/clean/dev": 8,
+    "agronholm/anyio/clean/holdout": 6,
+    "fastapi/fastapi/buggy/dev": 25,
+    "fastapi/fastapi/buggy/holdout": 15,
+    "fastapi/fastapi/clean/dev": 11,
+    "fastapi/fastapi/clean/holdout": 8,
+    "marshmallow-code/marshmallow/buggy/dev": 9,
+    "marshmallow-code/marshmallow/buggy/holdout": 7,
+    "marshmallow-code/marshmallow/clean/dev": 2,
+    "marshmallow-code/marshmallow/clean/holdout": 2,
+    "pallets/click/buggy/dev": 25,
+    "pallets/click/buggy/holdout": 17,
+    "pallets/click/clean/dev": 10,
+    "pallets/click/clean/holdout": 6
   },
   "by_category": {
     "arithmetic-or-numeric": 2,
-    "clean": 25,
+    "clean": 70,
     "concurrency-or-async": 24,
     "control-flow": 3,
     "error-handling": 4,
@@ -42,25 +52,6 @@
     "resource-leak": 1,
     "type-or-contract": 24
   },
-  "category_by_split": {
-    "arithmetic-or-numeric/dev": 2,
-    "clean/dev": 15,
-    "clean/holdout": 10,
-    "concurrency-or-async/dev": 14,
-    "concurrency-or-async/holdout": 10,
-    "control-flow/dev": 2,
-    "control-flow/holdout": 1,
-    "error-handling/dev": 2,
-    "error-handling/holdout": 2,
-    "null-or-none-handling/dev": 3,
-    "null-or-none-handling/holdout": 2,
-    "null/dev": 61,
-    "null/holdout": 41,
-    "off-by-one-or-boundary/dev": 3,
-    "resource-leak/dev": 1,
-    "type-or-contract/dev": 14,
-    "type-or-contract/holdout": 10
-  },
   "size_buckets": {
     "buggy": {
       "1-5": 60,
@@ -69,15 +60,90 @@
       "31-60": 24
     },
     "clean": {
-      "1-5": 14,
-      "6-15": 8,
-      "16-30": 3,
-      "31-60": 0
+      "1-5": 26,
+      "6-15": 22,
+      "16-30": 14,
+      "31-60": 8
     }
   },
   "size_lines_median": {
     "buggy": 11,
-    "clean": 4
+    "clean": 10
+  },
+  "ranges_per_buggy_case": {
+    "1": 55,
+    "2": 38,
+    "3": 32,
+    "4": 14,
+    "5": 9,
+    "6": 6,
+    "7": 5,
+    "8": 3,
+    "10": 2,
+    "12": 1,
+    "13": 1,
+    "14": 1,
+    "23": 1
+  },
+  "clean_targets_by_bucket": {
+    "1-5": 26,
+    "6-15": 22,
+    "16-30": 14,
+    "31-60": 10
+  },
+  "clean_shortfall": {
+    "31-60": {
+      "target": 10,
+      "got": 8
+    }
+  },
+  "clean_pool_funnel": {
+    "pallets/click": {
+      "fixes skipped: no parent in the clone": 2,
+      "commits in window": 446,
+      "dated \u2264 window end \u2212 6 months": 250,
+      "not a bug-fix message": 200,
+      "subject filter": 138,
+      "package-scoped": 35,
+      "size \u22643 files / \u226460 lines": 33,
+      "no line blamed by a fix within 6 months": 30
+    },
+    "agronholm/anyio": {
+      "commits in window": 318,
+      "dated \u2264 window end \u2212 6 months": 154,
+      "not a bug-fix message": 118,
+      "subject filter": 51,
+      "package-scoped": 32,
+      "size \u22643 files / \u226460 lines": 19,
+      "no line blamed by a fix within 6 months": 17
+    },
+    "fastapi/fastapi": {
+      "commits in window": 2046,
+      "dated \u2264 window end \u2212 6 months": 1331,
+      "not a bug-fix message": 1233,
+      "subject filter": 303,
+      "package-scoped": 32,
+      "size \u22643 files / \u226460 lines": 27,
+      "no line blamed by a fix within 6 months": 26
+    },
+    "marshmallow-code/marshmallow": {
+      "commits in window": 142,
+      "dated \u2264 window end \u2212 6 months": 90,
+      "not a bug-fix message": 65,
+      "subject filter": 22,
+      "package-scoped": 9,
+      "size \u22643 files / \u226460 lines": 9,
+      "no line blamed by a fix within 6 months": 8
+    },
+    "Textualize/rich": {
+      "commits in window": 196,
+      "dated \u2264 window end \u2212 6 months": 160,
+      "not a bug-fix message": 135,
+      "subject filter": 94,
+      "package-scoped": 48,
+      "size \u22643 files / \u226460 lines": 44,
+      "no line blamed by a fix within 6 months": 40
+    }
   },
   "buggy_dates_by_quarter": {
     "pallets/click": {
@@ -129,30 +195,7 @@
     "annotation": 6,
     "cosmetic": 5,
     "rename": 1,
-    "clean: cosmetic": 7
+    "clean: cosmetic, typing-only or rename-only": 2
   },
-  "null_category_buggy": 102,
-  "clean_shortfall": {
-    "pallets/click": {
-      "wanted": 18,
-      "got": 3,
-      "pool": 3
-    },
-    "agronholm/anyio": {
-      "wanted": 23,
-      "got": 6,
-      "pool": 6
-    },
-    "fastapi/fastapi": {
-      "wanted": 17,
-      "got": 7,
-      "pool": 8
-    },
-    "marshmallow-code/marshmallow": {
-      "wanted": 7,
-      "got": 2,
-      "pool": 5
-    }
-  },
-  "sample": "evals/benchmark/data/sample_for_review.md"
+  "null_category_buggy": 102
 }

@@ -37,7 +37,7 @@
     "marshmallow-code/marshmallow": {
       "head": "1c63bdaf7fba217b8736e6eca8a1fcf377e41161",
       "filters": {
-        "non-merge commits in window": 144,
+        "non-merge commits in window": 142,
         "bug-fix message": 31,
         "package-scoped": 26,
         "size \u22643 package files and \u226460 package lines": 23,

@@ -48,6 +48,14 @@ So one over-represented category (anyio contributes many `concurrency-or-async` 
 
 **Security recall** is reported with raw counts and the statement that it is **not statistically meaningful** in M3 (too few security cases; see [[Benchmark]], Q58).
 
+## Strict and lenient recall, chance baseline (decided 2026-10-03; computed in Step 6)
+- **Lenient recall:** a finding hits *any* labelled range (±3 lines, Q23).
+- **Strict recall:** a finding hits the human-marked **primary range**. Many cases have several ranges (up to 23), so lenient recall alone would overstate detection.
+- **Chance baseline**, computed with no LLM calls: a trivial reviewer that flags the first changed line of every hunk with the most common category. Its location and category recall are reported next to the real reviewer's. If it scores high, the metric is too lenient, and that must be visible.
+- **Macro recall floor:** macro recall includes only categories with **≥5 labelled cases**; smaller categories are listed separately with raw counts.
+- **False-positive rate per size bucket** (1–5, 6–15, 16–30, 31–60 changed lines), always, so a "big diff means bug" shortcut is detectable.
+- Category-correct recall uses human labels only; until the holdout is labelled, it covers human-labelled dev cases only, while location recall covers all cases.
+
 ## Breakdowns
 - Per-category recall table, using the logic-bug taxonomy ([[ADR-019 Logic bug taxonomy]]) and the security taxonomy ([[ADR-022 CWE Top 25 security taxonomy]]). Always with raw counts (`hits/cases`), never bare percentages: with three repos many categories have only a handful of cases ([[Benchmark]])
 - How often `security-other` fires. Frequent use means the taxonomy is wrong.

@@ -28,8 +28,6 @@ Each question is one bullet starting `**Q<n>.**`, and every number appears once 
 - **Q58. Security benchmark track.** Mine vulnerability-fix commits from the PyPA advisory database / OSV for Python packages, as a separate security case set, because the M3 benchmark has too few security cases to measure security recall ([[Benchmark]], [[Metrics]]; the M6 security work: [[Review Graph]] security pass, [[ADR-022 CWE Top 25 security taxonomy]]). **Target: M6.**
 - **Q59. Regression-test validation.** Use each fix commit's regression test to confirm a case is genuine (the test fails on the reverted source and passes on the fix). Costly: requires each repo's environment at each commit. Candidate for a validated subset ([[Benchmark]], [[Label Noise]]). Not for M3.
 
-- **Q60. Too few clean cases. Blocks finishing M3 Step 3.** The Q22 rule (no bug fix to the touched *files* in the following 6 months) yields 25 clean cases against a ≈72 target (13% of 193, not 30%), and they skew small (median 4 changed lines vs 11 for buggy). These libraries' core files receive fixes constantly: in click, 33 otherwise-eligible commits drop to 3 under the rule. Options: narrow the rule to the touched *functions* or lines; take clean candidates from earlier than 2025-04-01 (more leakage risk, though for clean cases memorisation tends to *lower* false positives); accept fewer clean cases and report the false-positive rate with raw counts; or relax the 6-month horizon ([[Benchmark]]).
-- **Q61. 61% of buggy cases have no category label.** Keyword and code-shape rules labeled 66 of 168 (no signal 60, weak signal 29, tie 9, security signal without a specific CWE 4). Category-correct recall would rest on 66 cases; location-only recall uses all 168. Options: owner hand-labels the nulls; LLM-assisted pre-labeling with human verification (spends quota); or accept and report both ([[Benchmark]], [[Metrics]]).
 
 ## Resolved
 
@@ -98,6 +96,10 @@ Each question is one bullet starting `**Q<n>.**`, and every number appears once 
 - **Q51.** OpenRouter spending limit: no longer applicable. Free tiers only, four-provider cascade → [[ADR-021 Free-tier four-provider LLM cascade]]
 - **Q52.** Webhook tunnel restarted and connected; GitHub deliveries reach the API (live test 2026-10-01). Stable-URL follow-up is Q52b.
 - **Q53.** Machine clock fixed (`set-local-rtc 0`, `chronyc makestep`); skew vs GitHub 1 s; App JWT accepted.
+
+### M3 decisions (resolved 2026-10-03)
+- **Q60.** Clean cases: SZZ-style line-level rule, same filters as buggy, size-matched per bucket; FP rate per size bucket → [[Benchmark]], [[Metrics]]
+- **Q61.** Category labels by hand on dev (labelling tool; holdout only after tuning is frozen); frozen splits; label noise = dropped share → [[Benchmark]]
 
 ### M3 decisions (resolved 2026-10-02)
 - **Q20.** Benchmark repos: five, `pallets/click`, `agronholm/anyio`, `fastapi/fastapi`, `marshmallow-code/marshmallow`, `Textualize/rich`; httpx and httpcore dropped. Micro and macro recall both reported; security recall flagged as not statistically meaningful (Q58) → [[Benchmark]], [[Metrics]]

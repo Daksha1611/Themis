@@ -979,3 +979,85 @@ A spot check found label noise the hand-check must measure:
 ### How this affects other components
 - **Benchmark:** first real case set.
 - **Metrics:** category-correct recall rests on 66 labeled cases until Q61 is decided.
+
+---
+
+## M3: decisions on Q60, Q61, wide labels, macro floor, ADR-023 clause: pre-work
+**Date**: 2026-10-03
+**File(s) affected**:
+- Code: `app/taxonomy.py` (new precedence rule), `evals/benchmark/mine_commits.py` (strip trailers), `evals/benchmark/build_cases.py` (SZZ clean rule, frozen splits, no sample file), `evals/benchmark/szz.py` (create), `evals/benchmark/label.py` (create), `tests/test_benchmark.py`, `tests/test_label.py` (create), `tests/test_schemas.py`
+- Data: `evals/benchmark/data/candidates.jsonl`, `dev.jsonl`, `holdout.jsonl`, `build_report.json`, `mining_report.json` (regenerated); `sample_for_review.md` (deleted: the labelling pass replaces it)
+- Vault: ADR-023, Glossary, Benchmark, Metrics, Open Questions (Q60, Q61 closed), 00 Brief, Current Status, Session Log
+
+### What I am changing
+1. **Q60, SZZ-style clean rule:** a commit is clean if none of the lines it added or modified were changed by a later bug-fix commit within 6 months. For every later bug-fix commit, `git blame` its removed lines at its parent (as the SZZ algorithm does) to find the commits that introduced them; a clean candidate is excluded if it is among them. Clean candidates pass the same filters as buggy ones (package source only, ≤3 files / ≤60 lines, behavioural change). They are sampled per size bucket to match the buggy distribution, ~30% clean overall; any bucket shortfall is accepted and reported.
+2. **Frozen splits:** every case already in `dev.jsonl` / `holdout.jsonl` keeps its split. New cases join each repo × category stratum in case-ID order, filling towards 60/40 without moving existing members.
+3. **Q61, `label.py`:** a resumable terminal tool for human labels on dev cases. It refuses holdout without `--freeze`, writes `labels_human.jsonl` after every case, can go back one case, and makes no LLM calls.
+4. **ADR-023 clause:** index and length arithmetic (`len(x) - 1`, range bounds, slice ends) → `off-by-one-or-boundary`; `arithmetic-or-numeric` covers computed values, not positions. It goes into `PRECEDENCE_RULES`, so the prompt, the Glossary and the labelling tool's help all show it.
+5. **Metrics (recorded now, built in Step 6):** strict recall (the human-marked primary range) beside lenient recall (any range); a chance baseline with no LLM calls; false-positive rate per size bucket; macro recall only over categories with ≥5 labeled cases.
+6. **Commit-trailer stripping:** mined commit messages drop `Co-authored-by:` and `Assisted-by:` trailer lines. Upstream messages carried AI-assistant trailers into tracked data files; the trailers carry no case information.
+
+### Why I am making this change
+Owner decisions on Q60 and Q61 and on the follow-ups from the Steps 2–3 report. Item 6 comes from the no-mention rule: the previous commit's data files contained such trailers verbatim.
+
+### Alternatives I considered
+1. Re-run `assign_splits` on the full case set.
+2. Single-keypress input (raw terminal mode) for the labelling tool.
+3. Blame every candidate's lines forward instead of blaming the fixes.
+
+### Reasons I rejected each alternative
+1. Adding clean cases would shift positions inside strata and move existing cases between dev and holdout; splits are frozen.
+2. Line input (`y`, then Enter) works in every terminal, is easy to test with scripted input, and needs no extra code paths for terminal restore.
+3. Blaming each fix once (~100 fixes per repo) is the standard SZZ direction and is much cheaper than tracking every candidate line forward.
+
+### Trade-offs I am accepting
+- SZZ inherits its known limits: fixes that only add lines blame nothing, and blame stops at the shallow-clone boundary (2025-03-01), which is before every candidate.
+- Line-based input costs one Enter per answer.
+
+### What could go wrong
+- The SZZ rule may still leave some size buckets short; reported as a shortfall.
+- `git blame` over many ranges is slow on fastapi's history; acceptable for a one-off build.
+
+### How this affects other components
+- **Review Graph:** the prompt gains the ADR-023 clause.
+- **Benchmark / Metrics:** new clean set; human labels; new metric definitions.
+
+---
+
+## M3: Q60, Q61 and follow-ups: completion
+**Date**: 2026-10-03
+**File(s) affected**: as in the pre-work entry above, plus `docs/vault/06 Risks/Label Noise.md`; `evals/benchmark/data/sample_for_review.md` deleted
+
+### What I am changing
+Results:
+- **SZZ clean rule:** 70 clean cases (target 72), so 238 cases in total (168 buggy, 70 clean, 29% clean), dev 143 / holdout 95.
+- **Size match:** clean per bucket is 26 / 22 / 14 / 8 against targets 26 / 22 / 14 / 10, so only the 31–60-line bucket is short. Median changed lines: buggy 11, clean 10 (it was 4 under the per-file rule).
+- **Frozen splits held:** the build refuses to run if any existing case would change split, or if the buggy set changed, and neither happened.
+- **Labelling tool:** built and tested; the holdout split is refused without `--freeze`.
+- **Commit trailers:** stripped from mined messages; the data files now contain no AI-assistant trailers.
+
+Details found while building:
+1. Two click bug-fix commits sit at the shallow-clone boundary (no parent in the clone), so SZZ cannot blame them. They are skipped and counted in the funnel.
+2. My first trailer-stripping edit silently did not apply (a text replacement that matched nothing), and the re-mined data still contained the trailers. The stripping is now a named, tested function, `clean_message()`, also applied to frozen cases loaded from the old files.
+3. In the previous commit (`2415208`), the no-mention check printed its match count but did not gate the commit, so data files with upstream AI-assistant co-author trailers were pushed. From now on the commit runs only if the staged additions contain no such mention.
+
+### Why I am making this change
+Owner decisions on Q60 and Q61 and the follow-ups.
+
+### Alternatives I considered
+Rewrite the pushed commit `2415208` to remove the trailers from history.
+
+### Reasons I rejected each alternative
+It needs a force-push to a public repository's main branch; that is the owner's decision, not taken here.
+
+### Trade-offs I am accepting
+The trailers remain in the history of commit `2415208` until the owner decides.
+
+### What could go wrong
+- SZZ attribution can miss bugs (fixes that only add lines; lines changed again before the fix).
+- The labelling pass depends on a single annotator.
+
+### How this affects other components
+- **Benchmark:** final M3 case set pending labels.
+- **Metrics:** definitions for Step 6.
+- **Review Graph:** the prompt carries the new ADR-023 clause.

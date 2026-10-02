@@ -22,11 +22,14 @@ ADR-019 had no category for arithmetic errors. In a live check (2026-10-01) the 
 ## Decision
 Add the logic category **`arithmetic-or-numeric`**: wrong arithmetic, division by zero, float precision, and overflow where Python can overflow.
 
-**Precedence rules**, applied identically in three places: `app/taxonomy.py` (`PRECEDENCE_RULES`, and so the review prompt), the [[Glossary]], and the benchmark labelling rules (`evals/benchmark/labeling.py`):
+**Precedence rules**, applied identically in three places: `app/taxonomy.py` (`PRECEDENCE_RULES`, and so the review prompt), the [[Glossary]], the benchmark labelling rules (`evals/benchmark/labeling.py`) and the human labelling tool's help text (`evals/benchmark/label.py`):
 - Arithmetic operators (+ - * / // % **) used wrongly -> arithmetic-or-numeric. Comparisons at a range edge (< vs <=) -> off-by-one-or-boundary.
 - A computation that can divide by zero -> arithmetic-or-numeric. A ZeroDivisionError that is caught or handled wrongly -> error-handling.
 - Overflow is scoped to what Python can actually overflow: floats (inf/nan), fixed-width types (numpy, struct, ctypes), and size limits. Python ints do not overflow.
 - Float precision errors -> arithmetic-or-numeric.
+- Index and length arithmetic (len(x) - 1, range bounds, slice ends) -> off-by-one-or-boundary. arithmetic-or-numeric covers computed values, not positions.
+
+**Clause added 2026-10-03:** index and length arithmetic (`len(x) - 1`, range bounds, slice ends) → `off-by-one-or-boundary`; `arithmetic-or-numeric` covers computed values, not positions. Without it, the first rule literally covered `len(x) - 1`.
 
 ## Alternatives considered
 - Keep seven categories and file divide-by-zero under `error-handling`: hides arithmetic mistakes inside a category about exception handling.

@@ -32,6 +32,7 @@ Verbatim from `PRECEDENCE_RULES` in `app/taxonomy.py`, also used by the review p
 - A computation that can divide by zero -> arithmetic-or-numeric. A ZeroDivisionError that is caught or handled wrongly -> error-handling.
 - Overflow is scoped to what Python can actually overflow: floats (inf/nan), fixed-width types (numpy, struct, ctypes), and size limits. Python ints do not overflow.
 - Float precision errors -> arithmetic-or-numeric.
+- Index and length arithmetic (len(x) - 1, range bounds, slice ends) -> off-by-one-or-boundary. arithmetic-or-numeric covers computed values, not positions.
 
 ## Terms
 

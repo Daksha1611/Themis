@@ -26,6 +26,8 @@ PRECEDENCE_RULES: tuple[str, ...] = (
     "Overflow is scoped to what Python can actually overflow: floats (inf/nan), fixed-width "
     "types (numpy, struct, ctypes), and size limits. Python ints do not overflow.",
     "Float precision errors -> arithmetic-or-numeric.",
+    "Index and length arithmetic (len(x) - 1, range bounds, slice ends) -> "
+    "off-by-one-or-boundary. arithmetic-or-numeric covers computed values, not positions.",
 )
 
 # ADR-022: the Python-reachable subset of the CWE Top 25 (2024 edition), verified against

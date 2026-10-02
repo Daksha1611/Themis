@@ -36,6 +36,9 @@ EXCLUDED_SUBJECT = re.compile(
     re.IGNORECASE,
 )
 DATA = Path("evals/benchmark/data")
+# Commit-message trailers that name co-authors or assistants: no case information, and AI
+# assistant names must not reach tracked files.
+TRAILER = re.compile(r"^\s*(co-authored-by|assisted-by)\s*:.*$\n?", re.IGNORECASE | re.MULTILINE)
 FILTERS = (
     "non-merge commits in window",
     "bug-fix message",
@@ -43,6 +46,11 @@ FILTERS = (
     "size ≤3 package files and ≤60 package lines",
     "subject not refactor/typo/docs/format/bump/version/release/revert",
 )
+
+
+def clean_message(message: str) -> str:
+    """The commit message without co-author / assistant trailer lines."""
+    return TRAILER.sub("", message).strip()
 
 
 @dataclass
@@ -113,7 +121,7 @@ def read_commits(repo: str, package_dir: str, start: date, end: date) -> list[Co
                 parent=parents.split()[0] if parents else "",
                 date=day,
                 subject=subject.strip(),
-                message=message.strip(),
+                message=clean_message(message),
                 files=files,
                 package_dir=package_dir,
             )
