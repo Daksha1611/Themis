@@ -116,3 +116,15 @@ related:
 
 **Next:** M3 Steps 4–7.
 **Blockers / questions:** none.
+
+## 2026-10-03 (5): M3 Steps 4–6 built; stopped at the dry run
+**Done:**
+- Verification-file wording fixed: the verdicts are the owner's; the agent entered the ticks.
+- [[ADR-024 Eval runs pin a single provider and model]] written and implemented (`PinnedLLM`; the worker still uses the cascade).
+- Response cache, runner and metrics built, with 36 tests (174 pass). `docs/flow.md` section 9 and the call graph written.
+- Every eval case gets a neutral PR title, because the real commit subject would reveal the bug.
+- Dry run: 121 cases, prompts 125,635 tokens (63% of the daily budget), largest request 3,751.
+- Past `gpt-oss-120b` completions in Langfuse average ~822 tokens, so the run is expected to need about two days. Per the brief, no LLM call was made.
+
+**Next:** owner decides Q64; then Step 7 (`evals/report.py`, baseline run, cache-only rerun).
+**Blockers / questions:** Q64.

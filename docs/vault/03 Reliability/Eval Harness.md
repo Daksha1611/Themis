@@ -2,7 +2,7 @@
 name: Eval Harness
 description: "Offline replay of the benchmark through the real review path, with a response cache."
 type: reliability
-status: planned
+status: in-progress
 tags: [reliability]
 related:
   - "[[Benchmark]]"
@@ -32,6 +32,26 @@ related:
   - `results.jsonl` is written incrementally (checkpointed), so an interrupted run resumes.
 - `evals/report.py` generates the public results page, deployed to GitHub Pages by GitHub Actions as a build artifact ([[Ablation Table]])
 
-**Planned code location:** `evals/runner.py`, `evals/metrics.py`, `evals/report.py`.
+## Built (M3 Steps 4–6, 2026-10-03)
+- **Runner:** `python -m evals.runner --split dev [--limit N] [--resume] [--no-cache] [--cache-only] [--dry-run] [--i-know-this-is-holdout]` (`evals/runner.py`).
+  - Calls `run_baseline_review` with one pinned provider and model, cascade disabled ([[ADR-024 Eval runs pin a single provider and model]]).
+  - Every case gets the same neutral PR title (`EVAL_PR_TITLE`). The real commit subject ("Fix X") would describe the bug to the reviewer.
+- **Scored set:** kept buggy cases plus all clean cases. Dropped cases are never sent. Dev: 80 + 41 = 121.
+- **Output:** `evals/results/<split>-<UTC time>-<sha7>/`, holding `run.json` (config, git SHA), `results.jsonl` (one record per case, written as each completes) and `summary.json` (all metrics, schema version 1, ready for the M7 eval database). The eval database itself is M7.
+- **Cache** (`evals/cache.py`): SQLite `evals/.cache/responses.db`, git-ignored.
+  - Key: SHA-256 of provider, model, full prompt messages, temperature and max_tokens.
+  - Stores the full `LLMResponse`, reasoning included, plus the original call's latency.
+  - `--cache-only` fails on the first miss (exit 4) without calling anything.
+- **Pacing and limits:**
+  - a 60-second token window keeps estimated tokens (prompt + `max_tokens`) under Groq's 8K/minute;
+  - per-minute 429s back off (the provider's "try again in" hint, else exponential) and retry the same model;
+  - a daily 429 checkpoints and exits 3 (`--resume` continues);
+  - 413 or context-length errors are recorded as `failed: provider-limit`.
+- **Dry run** (`--dry-run`): builds every prompt and reports per-case token estimates (LiteLLM `token_counter`, tiktoken `cl100k_base`: an estimate), the largest request, the total, and fit against the per-request ceiling and the daily budget. It calls nothing.
+- **Holdout guard:** `--split holdout` prints a warning and refuses without `--i-know-this-is-holdout`.
+
+**Not built yet:** `evals/report.py` (Step 7), the baseline run itself, and threshold sweeps and injection pairs (later milestones).
+
+**Code location:** `evals/runner.py`, `evals/cache.py`, `evals/metrics.py`; planned `evals/report.py`.
 
 Risks: [[Benchmark Leakage]], [[Eval Cost]].

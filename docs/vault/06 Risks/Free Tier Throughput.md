@@ -28,4 +28,11 @@ related:
 - **Batched first run:** the first full benchmark run may be spread across several days to stay within daily caps
 - **Four-provider cascade:** when one provider's budget is spent, the next answers ([[ADR-021 Free-tier four-provider LLM cascade]]). In place
 
+## Measured: dev dry run (2026-10-03)
+`python -m evals.runner --split dev --dry-run`, 121 scored cases, pinned `groq` / `openai/gpt-oss-120b` ([[ADR-024 Eval runs pin a single provider and model]]). Token estimates use tiktoken `cl100k_base`, not the model's own tokenizer.
+- Prompts: max 1,703 tokens, total 125,635, which is **63% of Groq's 200K tokens/day**.
+- Largest request (prompt + `max_tokens` 2,048): 3,751, under the 8K/minute ceiling, so every case fits.
+- **Completions decide the day.** The run fits one day only if responses average at most 615 completion tokens. With every response at full `max_tokens`, the total would be 373,443 (187%).
+- Eight earlier production `gpt-oss-120b` generations (Langfuse, read-only) averaged **822 completion tokens** (range 93–1,257). That puts the expected total near 225K, so the dev run most likely spans **two days** via `--resume`.
+
 **Affects:** [[Benchmark]], [[Eval Harness]], [[CI Quality Gate]], [[LLM Client]]

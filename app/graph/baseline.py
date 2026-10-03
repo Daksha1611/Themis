@@ -8,7 +8,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ValidationError
 
 from app.github.diff import commentable_lines
-from app.llm import LLMResponse, complete
+from app.llm import LLMResponse, PinnedLLM, complete
 from app.schemas import Finding
 from app.taxonomy import prompt_category_list
 
@@ -51,6 +51,11 @@ class BaselineResult(BaseModel):
     findings: list[Finding]
     llm_response: LLMResponse | None
     parse_errors: list[str]
+    # Set when the review raised: the exception's type, HTTP status and provider message. The
+    # eval runner uses them to tell rate limits and request-size limits from other failures.
+    error_type: str | None = None
+    error_status: int | None = None
+    error_detail: str = ""
 
 
 def build_messages(diff: str, pr_metadata: dict[str, Any]) -> list[dict[str, str]]:
@@ -117,13 +122,18 @@ def normalize_paths(findings: list[Finding], diff: str) -> list[Finding]:
     return normalized
 
 
-async def run_baseline_review(diff: str, pr_metadata: dict[str, Any]) -> BaselineResult:
-    """Never raises: every failure comes back as status="failed" so the caller decides."""
+async def run_baseline_review(
+    diff: str, pr_metadata: dict[str, Any], llm: PinnedLLM | None = None
+) -> BaselineResult:
+    """Never raises: every failure comes back as status="failed" so the caller decides.
+
+    `llm` pins one provider and model (eval runs, ADR-024); the default is the production
+    cascade."""
     try:
         if not diff.strip():
             return BaselineResult(status="success", findings=[], llm_response=None, parse_errors=[])
 
-        response = await complete(build_messages(diff, pr_metadata))
+        response = await complete(build_messages(diff, pr_metadata), pinned=llm)
         findings, errors, parsed = parse_findings(response.content)
         findings = normalize_paths(findings, diff)
         if errors:
@@ -145,4 +155,7 @@ async def run_baseline_review(diff: str, pr_metadata: dict[str, Any]) -> Baselin
             findings=[],
             llm_response=None,
             parse_errors=[f"{type(exc).__name__}: {exc}"],
+            error_type=type(exc).__name__,
+            error_status=getattr(exc, "status_code", None),
+            error_detail=getattr(exc, "detail", "") or str(exc),
         )

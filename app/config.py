@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     )
     llm_max_tokens: int = 2048
     llm_temperature: float = 0.0
+    # Eval runs pin one provider and model, cascade disabled (ADR-024). Default: the production
+    # primary, so the baseline measures what production actually runs.
+    eval_provider: str = "groq"
+    eval_model: str = "openai/gpt-oss-120b"
 
     @field_validator("github_private_key", mode="before")
     @classmethod

@@ -12,7 +12,7 @@ related:
 
 # Current Status
 
-**Phase:** M3 in progress. Steps 2–3 built (238 cases; SZZ clean rule; frozen splits). The dev split is labelled (Step 3b; [[label-report-dev-2026-10-03]]). The owner verified a stratified 25-case sample: 25/25 agreement on every field. **Next: Steps 4–7.**
+**Phase:** M3 in progress. Steps 2–3 built (238 cases; SZZ clean rule; frozen splits). The dev split is labelled (Step 3b; [[label-report-dev-2026-10-03]]). The owner verified a stratified 25-case sample: 25/25 agreement on every field. Steps 4–6 are built (cache, runner, metrics; ADR-024 pins one model). **Stopped at the dry run:** the dev run does not fit one day of Groq's free tier (Q64, owner decision).
 **Last updated:** 2026-10-03 (dev-split labels)
 
 New sessions start with [[00 Brief]].
@@ -59,6 +59,16 @@ New sessions start with [[00 Brief]].
 
 - Owner verification recorded: 25/25 agreement on validity, category and primary range (95% Wilson lower bound 86.7%); borderline cases 3/3. The verdicts are the owner's, given after reviewing all 28 cases; the agent entered the ticks at the owner's instruction. The label report gained section 9.
 
+**Done (M3 Steps 4–6, 2026-10-03)**
+- [[ADR-024 Eval runs pin a single provider and model]]: `PinnedLLM` in `app/llm.py`; one attempt on the pinned model, never the cascade; production unchanged.
+- `evals/cache.py` (SQLite response cache), `evals/runner.py` (scored set of 121, pacing, backoff, resume, holdout guard, dry run, `--cache-only`) and `evals/metrics.py` (three tiers × two modes, macro floor, precision, FP by size and repo with the noise floor, chance baseline, Wilson intervals).
+- 36 new tests, 174 in all; `docs/flow.md` section 9 written.
+- **Dry run:**
+  - 121 cases; prompts 125,635 tokens (63% of 200K/day); the largest request is 3,751 of 8,000, so every case fits.
+  - The run fits one day only if completions average ≤615 tokens; past `gpt-oss-120b` completions average ~822. The expected total (~225K) is over one day, so per the brief **no LLM call was made** (Q64).
+- `evals/report.py` and the baseline run wait for Q64.
+
 **Next**
-- M3 Steps 4–7: response cache, eval runner, metrics, baseline dev report.
+- Owner decides Q64 (two-day run, lower `max_tokens`, or another model).
+- Then M3 Step 7 (baseline run, `--cache-only` reproducibility check, `evals/report.py`): response cache, eval runner, metrics, baseline dev report.
 - Q47 (TestClient), Q48 (large PRs), Q49 (secrets in traces), Q52b (stable webhook URL).

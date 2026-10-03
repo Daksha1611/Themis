@@ -1307,3 +1307,119 @@ The 20 dropped cases outside the borderline set were not sampled.
 ### How this affects other components
 - **Benchmark:** the label-quality statement is complete.
 - **Steps 4–7:** unblocked.
+
+---
+
+## M3 Steps 4–8: cache, runner, metrics, baseline run (ADR-024): pre-work
+**Date**: 2026-10-03
+**File(s) affected**:
+- Created:
+  - `docs/vault/04 Decisions/ADR-024 Eval runs pin a single provider and model.md`
+  - `evals/cache.py`, `evals/runner.py`, `evals/metrics.py`, `evals/report.py`
+  - tests for each
+  - `evals/results/<run_id>/` (results.jsonl, summary.json, run.json)
+  - `docs/vault/08 Results/baseline-dev-<date>.md`
+- Edited:
+  - code: `app/llm.py`, `app/graph/baseline.py`, `app/config.py`, `.gitignore`
+  - docs: `docs/flow.md` (section 9, call graph); Metrics, Eval Harness, Benchmark, LLM Client, Free Tier Throughput, Open Questions; Current Status, Session Log, 00 Brief, 00 Index
+  - `evals/benchmark/data/verification_sample.md` (verdict wording, owner's pre-step)
+
+### What I am changing
+**ADR-024:**
+- `Settings` gains `eval_provider` / `eval_model`, defaulting to `groq` / `openai/gpt-oss-120b`.
+- `app/llm.py` gains `PinnedLLM`:
+  - fields: provider, model, and an optional cache implementing a small `ResponseCache` protocol (`key`, `get`, `put`);
+  - `complete(..., pinned=)`: with `pinned` set, one attempt on that model, never the cascade.
+  - The provider's error message is carried on `LLMError.detail`, so the runner can tell a per-minute limit from a daily one.
+- `LLMResponse` gains `reasoning` (the model's thinking, needed in M5).
+- `run_baseline_review(diff, pr_metadata, llm=None)` passes `llm` through. `BaselineResult` gains `error_type`, `error_status` and `error_detail`, so the runner can classify failures without a second code path. The worker is unchanged.
+
+**Step 4, cache** (`evals/cache.py`):
+- SQLite, `evals/.cache/responses.db`.
+- Key: SHA-256 over provider, model, the full prompt messages, temperature and max_tokens.
+- Stores the full `LLMResponse` as JSON.
+- `--cache-only` mode raises `CacheMiss` on a miss, before any provider call.
+
+**Step 5, runner** (`evals/runner.py`):
+- **Scored set:** kept buggy plus all clean.
+- **Pacing:** a sliding 60-second token window with an estimated request size of prompt + `max_tokens`, kept under 8,000 tokens/minute.
+- **Rate limits:** 429 responses get exponential backoff, honouring `retry-after`. A daily limit (provider message mentions "per day", TPD or RPD), or repeated per-minute failures, checkpoints and exits with code 3; `--resume` continues.
+- **Provider limits:** 413, or a provider message about request size or context length, means `failed: provider-limit`.
+- **`--dry-run`:** builds every prompt with `build_messages()` (the review path's own function) and estimates tokens with LiteLLM's `token_counter` (a local tokenizer, no network). The estimate is calibrated against actual `prompt_tokens` after the run.
+- **Run directory:** `evals/results/<run_id>/` holds `run.json` (config and git SHA), `results.jsonl` (incremental) and `summary.json`.
+
+**Step 6, metrics** (`evals/metrics.py`):
+- **Location match:** a finding in the same file whose line range overlaps the labelled range widened by ±3 lines (Q23); exact-line matching uses no margin. This settles the overlap-or-containment point Metrics left open. Overlap was chosen because a finding pointing at any part of the buggy code should count, and the chance baseline's one-line findings get the same rule.
+- **Recall:** three tiers × two modes. Failed cases count as misses, and the failure counts are reported.
+- **Other metrics:** micro and macro recall (floor ≥5, with per-category counts), precision (strict and lenient, location-only and category-correct), and false positives on clean cases (overall, per size bucket, per repo, with the noise floor). Every rate carries a Wilson 95% interval and k/n.
+- **Chance baseline:** first changed line of each hunk, as `type-or-contract`.
+
+**Step 7:** the run, a `--cache-only` rerun, and `evals/report.py` writing the vault report. Committed only if the dry run shows it fits one day's budget; otherwise stop and report.
+
+### Why I am making this change
+Owner brief for M3 Steps 4–8 and the ADR-024 decision.
+
+### Alternatives I considered
+1. Put the cache inside `app/` behind a setting.
+2. Retry rate limits inside `complete()`.
+
+### Reasons I rejected each alternative
+1. The cache is an eval concern. The app only defines the protocol, so production never touches SQLite.
+2. Pacing and budget decisions need run-level state (token window, checkpoint), which belongs to the runner. `complete()` in pinned mode stays a single attempt.
+
+### Trade-offs I am accepting
+- Token estimates use a local tokenizer that may differ from the model's own. The dry run states the method and the report compares the estimate with actual counts.
+
+### What could go wrong
+- Groq's daily budget (200K tokens) may not cover 121 cases plus reasoning output in one day. The dry run decides.
+- Groq may count the requested `max_tokens` toward its per-minute limit. Pacing assumes it does (prompt + `max_tokens`).
+
+### How this affects other components
+- **LLM Client:** a pinned single-model mode, with production unchanged.
+- **Eval Harness, Metrics:** built.
+- **Free Tier Throughput:** first measured run.
+
+---
+
+## M3 Steps 4–6 built; stopped at the dry run
+**Date**: 2026-10-03
+**File(s) affected**:
+- As in the pre-work entry above, except `evals/report.py`, `evals/results/` and the baseline report (not created: Step 7 did not start).
+- Also edited: `docs/vault/06 Risks/Free Tier Throughput.md`, `docs/vault/02 Architecture/LLM Client.md`; created `tests/test_eval_harness.py`.
+
+### What I am changing
+**Built:** ADR-024 (pinned mode), `evals/cache.py`, `evals/runner.py`, `evals/metrics.py`, 36 tests (174 in all), `docs/flow.md` section 9 and the call-graph rows.
+
+**Dry run** (`python -m evals.runner --split dev --dry-run`; tiktoken `cl100k_base` estimates):
+- 121 scored cases (80 kept buggy, 41 clean).
+- Prompt tokens: max 1,703, total 125,635 (63% of Groq's 200K/day).
+- Largest request: 3,751, against the 8,000 ceiling (prompt + `max_tokens` 2,048). Every case fits.
+- Daily budget: the run fits one day only if completions average ≤615 tokens. Worst case (full `max_tokens` every time): 373,443 (187%).
+- Eight earlier production `gpt-oss-120b` generations in Langfuse (read-only API) averaged 822 completion tokens (93–1,257), so the expected total is about 225K.
+
+**Per the brief, I stopped after the dry run. No LLM call was made.** Q64 asks the owner how to proceed.
+
+**Departures from the brief:**
+1. **Neutral PR title for every eval case.** The production prompt includes the PR title, and each case's real commit subject (for example "🐛 Fix …") would tell the reviewer what the bug is, and would separate buggy from clean cases by title. The diff is unchanged.
+2. **Run-ID clash fixed.** Two runs started in the same second (a run, then its `--cache-only` rerun) got the same ID; a numeric suffix now separates them. A test caught it.
+3. **Latency kept from the original call.** The cache stores each call's latency, so a `--cache-only` rerun reproduces the same latency metrics instead of near-zero ones.
+
+### Why I am making this change
+The owner's brief requires stopping when the run does not fit one day's budget.
+
+### Alternatives I considered
+Start the run anyway and let `--resume` carry it into a second day.
+
+### Reasons I rejected each alternative
+The brief says to stop and report. A two-day run is one of the Q64 options, for the owner to choose.
+
+### Trade-offs I am accepting
+`evals/report.py` is not written yet. It will be written against a real `summary.json` once Step 7 starts.
+
+### What could go wrong
+- The `cl100k_base` estimates differ from gpt-oss's own tokenizer. The runner records estimated and actual prompt tokens per case, so the first real run calibrates them.
+
+### How this affects other components
+- **Eval Harness, Metrics:** built; status in-progress.
+- **Free Tier Throughput:** dry run measured.
+- **Open Questions:** Q63 (run-to-run variance), Q64 (run budget, blocking Step 7).

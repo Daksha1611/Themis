@@ -109,6 +109,8 @@ A clean case is a non-fix commit **none of whose added or modified lines was cha
   - **How the verdicts were recorded:** the verdicts are the project owner's, given after reviewing all 28 cases. The ticks were entered by the agent at the owner's instruction. There are no per-case notes.
   - **Not verified:** the 20 dropped cases outside the borderline set.
 
+**Scored set for eval runs:** kept buggy cases plus all clean cases; dropped cases are never sent to a model. Dev: 80 + 41 = 121 ([[Eval Harness]]).
+
 ## Splits ([[ADR-007 dev-holdout benchmark split]])
 - **60% dev** (for tuning) / **40% holdout** (run only at milestones)
 - Stratified by repo and bug category, so both splits carry the same mix

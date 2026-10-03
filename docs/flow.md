@@ -164,7 +164,33 @@ Traces produced:
 - `update_run(session, run_id, updates)` ! UPDATE; not called in M2.
 
 ## 9. Eval harness flow
-`[NOT YET BUILT]`
+Built in M3 Steps 4–6; the report step (`evals/report.py`, Step 7) is not built yet. Offline: no webhook, queue or GitHub calls.
+
+- **Entry:** `python -m evals.runner --split dev [...]` → `main(argv)` → `parse_args()` → `run(args)`.
+- **Holdout guard:** `--split holdout` prints `HOLDOUT_WARNING` and returns 2 unless `--i-know-this-is-holdout`.
+- **Scored set:** `scored_cases(split, load_labels(LABELS))` reads `evals/benchmark/data/<split>.jsonl`. It keeps the clean cases and every buggy case whose latest label record is valid (or unlabelled); dropped cases never reach a provider.
+- **Dry run:** `dry_run(cases, max_tokens)` → `build_messages(diff, eval_metadata(case))`, the review path's own prompt builder, with the neutral `EVAL_PR_TITLE` → `estimate_tokens()` (LiteLLM `token_counter`, tiktoken `cl100k_base`). It prints per-case estimates and checks the per-request ceiling and the daily budget. Returns 2 when the run does not fit. No calls.
+- **Run setup:**
+  - `ResponseCache(CACHE_PATH, cache_only)`: SQLite `evals/.cache/responses.db`.
+  - `PinnedLLM(eval_provider, eval_model, cache)` (ADR-024).
+  - The run directory `evals/results/<split>-<UTC time>-<sha7>/` gets `run.json` (config, `git_state()` SHA and dirty flag). `--resume` uses `latest_open_run(split)` (no `summary.json` yet) and skips `done_ids()`.
+- **Per case,** `Runner.run_case(case)`:
+  1. `build_messages()` → `ResponseCache.key()` → `ResponseCache.contains()` (a miss in `--cache-only` mode raises `CacheOnlyMiss`, exit 4).
+  2. For an uncached case: `TokenWindow.reserve(estimate + max_tokens)` keeps estimated tokens in any 60 s under `TOKENS_PER_MINUTE`.
+  3. `run_baseline_review(diff, metadata, pinned)` → `complete(messages, pinned=...)` → `_complete_pinned()`: `ResponseCache.get()`; on a miss, one `_call()` on the pinned model, then `ResponseCache.put()`. A failure raises `LLMError` with status and detail, and `run_baseline_review` returns it as `BaselineResult.error_*`.
+  4. `classify(result)`:
+     - per-minute 429 → `backoff_seconds()` (the provider's "try again in" hint, else exponential) and retry, up to `MAX_RATE_RETRIES`;
+     - daily 429, or too many retries → `BudgetExhausted` (checkpoint, exit 3);
+     - 413 or a context-length message → `failed:provider-limit`;
+     - 5xx → retry up to `MAX_ERROR_RETRIES`;
+     - otherwise `success` / `partial` / `failed:parse` / `failed:provider-error`.
+  5. Latency: measured on a live call and stored with `ResponseCache.set_latency()`; a cache hit reports the original latency via `ResponseCache.latency()`.
+  6. The record is appended to `results.jsonl` and flushed.
+- **End of run:** when every scored case has a record, `write_summary(run_dir, cases, labels)` → `summarize()`:
+  - `evaluate()` for the reviewer, and again for `chance_findings()` (first changed line of each hunk via `first_changed_lines()`, filed under `most_common_category()`);
+  - `operational()` for cost, latency, failures, tokens, cache use and pinned-model share;
+  - the result is written to `summary.json` (schema version 1, loadable into the M7 eval database).
+- **Metric helpers:** `hits()` (same file, ranges overlap after widening the label by ±3 lines), `tier_spans()` (lenient, strict, primary), `case_hit()`, `size_bucket()`, `wilson()`, `rate()`, `p95()`.
 
 ## 10. Call graph index
 
@@ -207,7 +233,9 @@ Traces produced:
 | run_baseline_review() | build_messages() | prompt_category_list() | app/graph/baseline.py |
 | run_baseline_review() | parse_findings() | strip_fences(), json.loads(), Finding.model_validate() | app/graph/baseline.py |
 | parse_findings() | strip_fences() | — | app/graph/baseline.py |
-| run_baseline_review() | complete() | get_settings(), Settings.api_key_for(), observe(), _call(), update() | app/llm.py |
+| run_baseline_review() | complete() | get_settings(), Settings.api_key_for(), observe(), _call(), update(); with `pinned`: _complete_pinned() | app/llm.py |
+| complete() | _complete_pinned() | ResponseCache.key(), ResponseCache.get(), Settings.api_key_for(), observe(), _call(), update(), ResponseCache.put() | app/llm.py |
+| _complete_pinned() | ResponseCache.key() / ResponseCache.get() / ResponseCache.put() | protocol; implemented by `evals.cache.ResponseCache` | app/llm.py |
 | complete() | _call() | observe(), litellm.acompletion(), _cost(), update() | app/llm.py |
 | _call() | _cost() | litellm.completion_cost() | app/llm.py |
 | complete() | Settings.api_key_for() | getattr(), os.environ.get() | app/config.py |
@@ -223,3 +251,20 @@ Traces produced:
 | observe(), init_tracing(), shutdown_tracing() | get_langfuse() | Langfuse() | app/observability/tracing.py |
 | lifespan(), startup() | init_tracing() | get_langfuse() | app/observability/tracing.py |
 | lifespan(), shutdown() | shutdown_tracing() | get_langfuse(), Langfuse.shutdown() | app/observability/tracing.py |
+| `python -m evals.runner` | main() | parse_args(), run() | evals/runner.py |
+| main() | run() | get_settings(), load_labels(), scored_cases(), dry_run(), ResponseCache(), PinnedLLM(), latest_open_run(), git_state(), done_ids(), Runner.run_case(), write_summary() | evals/runner.py |
+| run() | scored_cases() | json.loads() | evals/runner.py |
+| dry_run(), Runner.run_case() | eval_metadata() | — | evals/runner.py |
+| dry_run(), Runner.run_case() | estimate_tokens() | litellm.token_counter() | evals/runner.py |
+| run() | dry_run() | build_messages(), estimate_tokens() | evals/runner.py |
+| run() | Runner.run_case() | build_messages(), ResponseCache.key(), ResponseCache.contains(), TokenWindow.reserve(), run_baseline_review(), classify(), backoff_seconds(), ResponseCache.latency(), ResponseCache.set_latency() | evals/runner.py |
+| _complete_pinned(), Runner.run_case() | ResponseCache.key() | hashlib.sha256() | evals/cache.py |
+| _complete_pinned() | ResponseCache.get() | sqlite3 SELECT | evals/cache.py |
+| _complete_pinned() | ResponseCache.put() | sqlite3 INSERT | evals/cache.py |
+| Runner.run_case() | ResponseCache.contains() | sqlite3 SELECT | evals/cache.py |
+| run() | write_summary() | summarize() | evals/metrics.py |
+| write_summary() | summarize() | evaluate(), chance_findings(), most_common_category(), operational() | evals/metrics.py |
+| evaluate() | case_hit() | hits() | evals/metrics.py |
+| evaluate() | tier_spans() | — | evals/metrics.py |
+| evaluate(), operational() | rate() | wilson() | evals/metrics.py |
+| chance_findings() | first_changed_lines() | — | evals/metrics.py |

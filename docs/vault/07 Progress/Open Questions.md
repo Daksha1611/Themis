@@ -19,6 +19,13 @@ related:
 Each question is one bullet starting `**Q<n>.**`, and every number appears once across both sections (`scripts/check_vault.py` checks this). Questions that block current work say so in bold.
 
 ## Still open
+- **Q64. Baseline run budget. Blocks M3 Step 7.** The dev dry run does not fit one day of Groq's free tier: prompts alone use 63% of 200K tokens, and past completions average ~822 tokens, putting the expected total near 225K ([[Free Tier Throughput]]). Options:
+  - run across two days with `--resume`, all on the pinned model;
+  - lower `max_tokens`, which changes the prompt config and so the cache key, and may truncate reasoning;
+  - accept another pinned model.
+
+  Owner decision.
+- **Q63. Run-to-run variance.** Re-run the dev split with the cache disabled to measure variance between identical runs. Costs a full day's quota ([[Metrics]], [[Eval Harness]]).
 - **Q25. Numeric targets.** The shape of success is recorded; numbers are deferred until baseline numbers exist ([[Success Metrics]]).
 - **Q47. TestClient migration.** Migrate from Starlette's `TestClient` (deprecated with httpx) to the newer async test approach before the test count grows further. `fastapi` and `starlette` are pinned until then.
 - **Q48. Large-PR handling.** Diffs are truncated at 100,000 characters: a stopgap. Chunking or file-level splitting is needed.

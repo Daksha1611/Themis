@@ -30,7 +30,9 @@ related:
 **Inputs:** prompts from the [[Review Graph]].
 **Outputs:** model responses back to the [[Review Graph]].
 
-**Code location:** `app/llm.py`. `complete(messages, max_tokens=None, temperature=None) → LLMResponse` (content, `provider`, model, prompt/completion/total tokens, `cost_usd`).
+**Code location:** `app/llm.py`. `complete(messages, max_tokens=None, temperature=None, pinned=None) → LLMResponse` (content, `provider`, model, prompt/completion/total tokens, `cost_usd`, and `reasoning`: the model's thinking when the provider returns it).
+
+**Pinned mode** ([[ADR-024 Eval runs pin a single provider and model]]): with `pinned=PinnedLLM(provider, model, cache)`, `complete()` makes exactly one attempt on that model and never falls through to the cascade. A failure raises `LLMError` carrying the HTTP status and the provider's message (`detail`). An optional response cache (the `ResponseCache` protocol, implemented by `evals/cache.py`) is consulted first; a hit makes no call. Eval runs only; production keeps the cascade. Configuration: `EVAL_PROVIDER`, `EVAL_MODEL` (default `groq` / `openai/gpt-oss-120b`).
 
 **Provider cascade** ([[ADR-021 Free-tier four-provider LLM cascade]]): free tiers only. Tries `LLM_PROVIDER_CASCADE` in order (default [[Groq]] → [[Gemini]] → [[Mistral]] → [[OpenRouter]]). Per provider: model from `LLM_MODELS`, key from `<PROVIDER>_API_KEY`; an empty key skips the provider without a call; any provider error moves on to the next. `LLMError` only when every provider has failed, naming each and why. The fallback path is logged at DEBUG. Providers are configuration, never code.
 
@@ -40,4 +42,4 @@ related:
 
 **Cost:** `cost_usd` is LiteLLM's list-price estimate (actual free-tier spend is $0); 0.0 where LiteLLM has no price.
 
-**Dependencies:** [[LiteLLM]]; providers [[Groq]], [[Gemini]], [[Mistral]], [[OpenRouter]]. Decisions: [[ADR-005 LiteLLM via OpenRouter]] (amended by ADR-021), [[ADR-021 Free-tier four-provider LLM cascade]]. Planned: the [[Eval Harness]] caches LLM calls (M3); [[Drift Monitoring]] compares providers and model versions through it. Risks: [[Eval Cost]], [[Free Tier Throughput]].
+**Dependencies:** [[LiteLLM]]; providers [[Groq]], [[Gemini]], [[Mistral]], [[OpenRouter]]. Decisions: [[ADR-005 LiteLLM via OpenRouter]] (amended by ADR-021), [[ADR-021 Free-tier four-provider LLM cascade]]. The [[Eval Harness]] calls it in pinned mode with a response cache ([[ADR-024 Eval runs pin a single provider and model]]); [[Drift Monitoring]] compares providers and model versions through it. Risks: [[Eval Cost]], [[Free Tier Throughput]].

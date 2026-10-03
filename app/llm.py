@@ -2,6 +2,9 @@
 
 Providers, their order and their models are configuration (`LLM_PROVIDER_CASCADE`,
 `LLM_MODELS`, `<PROVIDER>_API_KEY`), never code.
+
+Eval runs pass a `PinnedLLM` instead: one provider and model, one attempt, never the cascade
+(ADR-024), optionally behind a response cache supplied by the caller.
 """
 
 import os
@@ -11,7 +14,8 @@ import os
 os.environ.setdefault("LITELLM_LOCAL_MODEL_COST_MAP", "True")
 
 import logging  # noqa: E402
-from typing import Any  # noqa: E402
+from dataclasses import dataclass  # noqa: E402
+from typing import Any, Protocol  # noqa: E402
 
 import litellm  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
@@ -24,17 +28,19 @@ litellm.suppress_debug_info = True
 
 
 class LLMError(Exception):
-    """Every provider in the cascade failed. Carries the last provider's HTTP status if any."""
+    """Every provider tried failed. Carries the last provider's HTTP status and error message."""
 
-    def __init__(self, message: str, status_code: int | None = None) -> None:
+    def __init__(self, message: str, status_code: int | None = None, detail: str = "") -> None:
         super().__init__(message)
         self.status_code = status_code
+        self.detail = detail
 
 
 class _ProviderFailed(Exception):
-    def __init__(self, reason: str, status_code: int | None) -> None:
+    def __init__(self, reason: str, status_code: int | None, detail: str = "") -> None:
         super().__init__(reason)
         self.status_code = status_code
+        self.detail = detail
 
 
 class LLMResponse(BaseModel):
@@ -46,17 +52,49 @@ class LLMResponse(BaseModel):
     total_tokens: int
     # LiteLLM's list-price estimate; actual free-tier spend is $0 (ADR-021).
     cost_usd: float
+    # The model's thinking, when the provider returns it (reasoning models).
+    reasoning: str | None = None
+
+
+class ResponseCache(Protocol):
+    """A response store keyed by the full request (eval runs, ADR-024). Implemented in evals/."""
+
+    def key(
+        self,
+        provider: str,
+        model: str,
+        messages: list[dict[str, str]],
+        temperature: float,
+        max_tokens: int,
+    ) -> str: ...
+
+    def get(self, key: str) -> LLMResponse | None: ...
+
+    def put(self, key: str, response: LLMResponse) -> None: ...
+
+
+@dataclass(frozen=True)
+class PinnedLLM:
+    """One provider and model, with no cascade (ADR-024); optionally behind a response cache."""
+
+    provider: str
+    model: str
+    cache: ResponseCache | None = None
 
 
 async def complete(
     messages: list[dict[str, str]],
     max_tokens: int | None = None,
     temperature: float | None = None,
+    pinned: PinnedLLM | None = None,
 ) -> LLMResponse:
-    """One chat completion from the first provider in the cascade that succeeds."""
+    """One chat completion from the first provider in the cascade that succeeds, or, with
+    `pinned`, from the pinned model alone (one attempt, no fall-through)."""
     settings = get_settings()
     max_tokens = max_tokens if max_tokens is not None else settings.llm_max_tokens
     temperature = temperature if temperature is not None else settings.llm_temperature
+    if pinned is not None:
+        return await _complete_pinned(pinned, messages, max_tokens, temperature)
     attempts: list[str] = []
     last_status: int | None = None
 
@@ -87,6 +125,41 @@ async def complete(
 
         update(span, output={"provider": None, "attempts": attempts})
         raise LLMError("all LLM providers failed: " + "; ".join(attempts), last_status)
+
+
+async def _complete_pinned(
+    pinned: PinnedLLM,
+    messages: list[dict[str, str]],
+    max_tokens: int,
+    temperature: float,
+) -> LLMResponse:
+    """The pinned model only. A cache hit never calls the provider; a failure is raised, never
+    routed to another provider (ADR-024)."""
+    cache = pinned.cache
+    key = (
+        cache.key(pinned.provider, pinned.model, messages, temperature, max_tokens)
+        if cache is not None
+        else ""
+    )
+    if cache is not None and (hit := cache.get(key)) is not None:
+        return hit
+    api_key = get_settings().api_key_for(pinned.provider)
+    if not api_key:
+        raise LLMError(f"{pinned.provider}: no API key for the pinned provider")
+    with observe("llm.complete", input={"pinned": f"{pinned.provider}/{pinned.model}"}) as span:
+        try:
+            response = await _call(
+                pinned.provider, pinned.model, api_key, messages, max_tokens, temperature
+            )
+        except _ProviderFailed as exc:
+            update(span, output={"provider": pinned.provider, "error": str(exc)})
+            raise LLMError(
+                f"{pinned.provider}/{pinned.model}: {exc}", exc.status_code, exc.detail
+            ) from exc
+        update(span, output={"provider": pinned.provider, "model": response.model})
+    if cache is not None:
+        cache.put(key, response)
+    return response
 
 
 async def _call(
@@ -120,12 +193,20 @@ async def _call(
             # retired models (404), oversized requests, outages (ADR-021, Free Tier Throughput).
             status = getattr(exc, "status_code", None)
             status = status if isinstance(status, int) else None
-            raise _ProviderFailed(f"{type(exc).__name__} (status {status})", status) from exc
+            raise _ProviderFailed(
+                f"{type(exc).__name__} (status {status})", status, str(exc)[:1000]
+            ) from exc
 
         content = raw.choices[0].message.content or ""
         if not content.strip():
             raise _ProviderFailed("empty response", None)
         usage = raw.usage
+        # Reasoning models think before answering; Langfuse's best practices say to capture it.
+        # LiteLLM exposes it as `reasoning_content` for most providers but `reasoning` for Groq.
+        message = raw.choices[0].message
+        reasoning = getattr(message, "reasoning_content", None) or getattr(
+            message, "reasoning", None
+        )
         result = LLMResponse(
             content=content,
             provider=provider,
@@ -134,12 +215,7 @@ async def _call(
             completion_tokens=usage.completion_tokens,
             total_tokens=usage.total_tokens,
             cost_usd=_cost(raw, provider, model),
-        )
-        # Reasoning models think before answering; Langfuse's best practices say to capture it.
-        # LiteLLM exposes it as `reasoning_content` for most providers but `reasoning` for Groq.
-        message = raw.choices[0].message
-        reasoning = getattr(message, "reasoning_content", None) or getattr(
-            message, "reasoning", None
+            reasoning=reasoning if isinstance(reasoning, str) else None,
         )
         details = getattr(usage, "completion_tokens_details", None)
         reasoning_tokens = getattr(details, "reasoning_tokens", None)

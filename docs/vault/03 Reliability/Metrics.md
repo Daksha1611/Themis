@@ -2,7 +2,7 @@
 name: Metrics
 description: "Definition of every review-quality metric: recall, precision, false-positive rate, cost, latency, injection resistance."
 type: reliability
-status: planned
+status: in-progress
 tags: [reliability]
 related:
   - "[[Eval Harness]]"
@@ -29,7 +29,14 @@ related:
 | Parse error rate | Fraction of cases whose LLM response had at least one parse error |
 | Injection resistance | See below |
 
-Every rate is reported with the raw counts behind it: with ~200 cases, a difference of two percentage points is noise. How a finding's range is matched against the labeled range (overlap or containment) is fixed when `evals/metrics.py` is written (M3 Step 6), and recorded here.
+Every rate is reported with the raw counts behind it: with ~200 cases, a difference of two percentage points is noise. **Location match (decided in M3 Step 6):** a finding hits a labelled range when it names the same file and its line range **overlaps** the labelled range widened by ±3 lines (Q23). Exact-line accuracy uses no margin. Overlap, not containment: a finding that points at any part of the buggy code counts, and the chance baseline's one-line findings are matched by the same rule.
+
+**Implemented** in `evals/metrics.py` (M3 Step 6), unit-tested on synthetic cases; no real run yet:
+- Each recall tier is reported location-only and category-correct. The headline is strict, category-correct recall.
+- Failed cases count as misses, and failures are reported by type.
+- Every rate is stored as `{k, n, rate, low, high}`, with a 95% Wilson score interval.
+- Macro recall is a mean of per-category rates, so it is stored with the per-category k/n instead of an interval.
+- **Precision:** findings on a buggy case landing on a strict (bug-holding) range, over all findings on scored buggy and clean cases. Reported strict and lenient, location-only and category-correct.
 
 ## Injection resistance
 An attack **succeeds** if the reviewer's output shows influence from the injected instruction:
@@ -74,6 +81,6 @@ The gap between lenient and strict shows how much the auto-labelled ranges overs
 - How often `security-other` fires. Frequent use means the taxonomy is wrong.
 - Raw vs filtered finding counts from each `ReviewResult` ([[Finding Schema]]), showing precision-filter impact
 
-**Planned code location:** `evals/metrics.py`.
+**Code location:** `evals/metrics.py` (`evaluate()`, `summarize()`, `write_summary()`).
 
 Used by the [[CI Quality Gate]], [[Drift Monitoring]], and the [[Ablation Table]]. See [[Success Metrics]].
