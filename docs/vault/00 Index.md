@@ -129,6 +129,7 @@ Outside the vault: `README.md` (repo overview), `docs/flow.md` (what the code do
 
 ## 08 Results
 - [[08 Results/README|Results README]]
+- [[label-report-dev-2026-10-03]]
 
 ## 09 External Facts
 - [[09 External Facts]]: outside-world facts that expire, with verification dates

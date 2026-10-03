@@ -1088,3 +1088,97 @@ Nothing at runtime.
 
 ### How this affects other components
 - **Metrics:** false-positive rate per repo (Step 6).
+
+---
+
+## M3 Step 3b: dev-split labelling, grounded in upstream evidence: pre-work
+**Date**: 2026-10-03
+**File(s) affected**:
+- Created: `evals/benchmark/fetch_evidence.py` (read-only GitHub fetch), `evals/benchmark/write_labels.py` (writes label records in the labelling tool's schema), `evals/benchmark/label_report.py`, `evals/benchmark/data/labels_human.jsonl`, `docs/vault/08 Results/label-report-dev-2026-10-03.md`
+- Edited: `.gitignore` (`evals/.cache/` already ignored; evidence is cached there), `docs/vault/03 Reliability/Benchmark.md`, `docs/vault/07 Progress/Open Questions.md` (Q61 amendment), Current Status, Session Log, 00 Brief
+
+### What I am changing
+**Q61 amended (owner, 2026-10-03):** the owner cannot hand-label the dev split. The development assistant (an LLM, and not one of the four reviewer models) labels it instead, under two conditions: every judgement must follow reading the upstream evidence for the case, and the owner's labelling rules (drop reasons, category precedence, primary range) apply as written.
+
+**Evidence per dev case**, fetched read-only from GitHub and cached under `evals/.cache/evidence/` (git-ignored):
+- the pull request the commit came from (`GET /repos/{repo}/commits/{sha}/pulls`), with its description, conversation, review comments and reviews, including bot comments;
+- every issue it links to ("Fixes #N"), with its description and comments.
+
+**Records** are written to `labels_human.jsonl` in the labelling tool's schema, plus `labeller` ("assistant, evidence-grounded") and `evidence` (the URLs read). No GitHub writes of any kind: no comments, reviews, reactions or commits upstream. No LLM API calls, and the holdout split is not touched.
+
+### Why I am making this change
+The owner asked for it, and asked that labels follow a real understanding of each case, using the upstream PRs and their comments.
+
+### Alternatives I considered
+1. Label from the diff and commit message alone.
+2. Use one of the cascade reviewer models to label.
+
+### Reasons I rejected each alternative
+1. Many fixes need the issue report to know what behaviour was wrong; without it, labels are guesses.
+2. The reviewer models are the ones being measured; labels from them would make category-correct recall measure self-agreement.
+
+### Trade-offs I am accepting
+- **Limitation, stated in Benchmark.md:** the labels are LLM-made, grounded in human-written upstream evidence, not independent human labels.
+- Category-correct recall therefore measures agreement between the reviewer and an evidence-grounded labeller from a different model family.
+- There is still a single annotator.
+
+### What could go wrong
+- Upstream discussions can be ambiguous; such cases are dropped `o` with a note rather than guessed.
+- A commit pushed directly, with no PR, has only its issue (if any) as evidence; this is noted per case.
+
+### How this affects other components
+- **Benchmark:** human-labels section amended.
+- **Metrics:** category-correct recall rests on these labels.
+
+---
+
+## M3 Step 3b: dev-split labels, label report: completion
+**Date**: 2026-10-03
+**File(s) affected**:
+- As in the pre-work entry above.
+- Also edited: `docs/vault/03 Reliability/Metrics.md`, `docs/vault/06 Risks/Label Noise.md`, `docs/vault/08 Results/README.md`, `docs/vault/00 Index.md`.
+- Created: `tests/test_label_report.py`.
+
+### What I am changing
+**Results** (full report: `docs/vault/08 Results/label-report-dev-2026-10-03.md`):
+- All 143 dev cases labelled. Buggy: 80 of 102 kept, 22 dropped (2 feature, 8 typing-only, 1 refactor, 2 not-a-bug, 9 other, 7 of which are `external-compat`). Clean: 3 of 41 suspicious.
+- Label noise: 21.6% upper bound (every drop reason); 12.7% excluding `o`.
+- Macro-eligible categories (≥5 kept): type-or-contract 34, control-flow 17, concurrency-or-async 9, error-handling 7.
+- Security: 2 kept cases, CWE-20 and CWE-400. The CWE-400 case is GHSA-5p39-cfhj-2xmp / CVE-2026-64847.
+- Heuristic category on kept cases: agreed 20, overrode 13, null 47.
+
+**Departures from the pre-work entry:**
+1. **Contested primary ranges.** Each kept record also stores `primary_contested_with`: the other ranges that hold the same bug just as much (its other half, or the same mistake on a parallel code path). The brief's report asks for clear vs contested ranges, and inferring that from note wording would be unreliable. Clear in 48 of 80 kept cases, contested in 32. New open question Q62: does a finding on a contested range count as a strict hit? Decide before Step 6.
+2. **Evidence sources beyond PRs and issues**, all read-only:
+   - the local upstream clones, for three cases (a changelog, and two code checks at a commit);
+   - one GitHub security advisory, via a GET request.
+3. **Issue links written as full URLs.** `fetch_evidence.py` now recognises same-repo issue links written as full URLs, and the 23 affected cases were re-fetched.
+4. **Re-check and corrections.** After the session break, the first 8 cases were re-checked with no change. Corrections were appended as new records (the latest record counts):
+   - one category, for consistency: a dropped keyword argument is `type-or-contract`;
+   - one primary range, moved to where the maintainer's review comment put the bug;
+   - two notes: one unverified claim removed, one compat note brought to the `external-compat` prefix.
+5. **Suspicious clean case that is likely buggy.** Clean case `3fe0fe03cd5c9e75` (click) introduced the eager `default=True` → `flag_value` substitution behind issues #3111 and #3121. SZZ missed it because the fixes changed code that had been moved, so blame did not reach this commit. It stays a clean case, marked suspicious, as the rules say.
+
+### Why I am making this change
+The owner asked for an evidence-grounded labelling pass on the dev split, with a label report.
+
+### Alternatives I considered
+- Leave out the contested-range field and report coverage from the notes.
+- Drop the likely-buggy clean case.
+
+### Reasons I rejected each alternative
+- The note wording is not a reliable signal, and Step 6 needs the ranges anyway.
+- The rules say suspicious clean cases stay clean, with a note.
+
+### Trade-offs I am accepting
+- The labels are LLM-made from human-written evidence, with a single annotator. This is stated in Benchmark and in the report.
+- `o` was used for every compat-only fix, including compat with older supported versions (pytest ≤ 6.1.2, Python 3.8). Those are environment issues the reviewer cannot see from the diff.
+
+### What could go wrong
+- Category choices between `type-or-contract` and `control-flow` are the least certain; the alternative category is in each note.
+- One kept case, `2109faa46125df3d`, is arguably not-a-bug: the maintainer had chosen the old behaviour deliberately before agreeing to change it.
+
+### How this affects other components
+- **Benchmark:** the dev labels exist; the labels section is rewritten for the Q61 amendment.
+- **Metrics:** strict recall depends on Q62. Category-correct recall uses the kept dev cases.
+- **Label Noise:** measured.

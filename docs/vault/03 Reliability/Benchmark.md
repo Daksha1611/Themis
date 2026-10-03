@@ -65,8 +65,8 @@ Built by `evals.benchmark.mine_commits` then `evals.benchmark.build_cases` (repo
 | **Median** | **11** | **10** | |
 
 - 12 buggy candidates discarded as non-behavioural (6 annotation-only, 5 whitespace/comment/docstring, 1 rename); 24 clean candidates likewise. Clean shortfall: only the 31–60 bucket (8 of 10).
-- **Ranges per buggy case** (count of cases): 1: 55 | 2: 38 | 3: 32 | 4: 14 | 5: 9 | 6: 6 | 7: 5 | 8: 3 | 10: 2 | 12: 1 | 13: 1 | 14: 1 | 23: 1. A hit on any range is *lenient* recall; *strict* recall uses the human-marked primary range ([[Metrics]]).
-- Heuristic category labels: 102 of 168 buggy cases have none; human labels replace them (below).
+- **Ranges per buggy case** (count of cases): 1: 55 | 2: 38 | 3: 32 | 4: 14 | 5: 9 | 6: 6 | 7: 5 | 8: 3 | 10: 2 | 12: 1 | 13: 1 | 14: 1 | 23: 1. A hit on any range is *lenient* recall; *strict* recall uses the labelled primary range ([[Metrics]]).
+- Heuristic category labels: 102 of 168 buggy cases have none; the labelling pass replaces them (below).
 - Commit-message trailers naming co-authors or assistants (`Co-authored-by:`, `Assisted-by:`) are stripped when mining.
 
 ## Clean PRs (Q60, decided 2026-10-03)
@@ -76,14 +76,32 @@ A clean case is a non-fix commit **none of whose added or modified lines was cha
 - SZZ's known limits apply: a fix that only adds lines blames nothing, and a line changed again before the fix is attributed to the later change. **The rule is a heuristic, not proof** that a case is bug-free.
 - The false-positive rate is always reported per size bucket, so a size shortcut is detectable ([[Metrics]]).
 
-## Human labels (Q61, decided 2026-10-03)
-- Category labels come from **human labelling**, not an LLM: LLM labels would make category-correct recall measure LLM-to-LLM agreement.
-- Tool: `python -m evals.benchmark.label --split dev` (resumable; writes `evals/benchmark/data/labels_human.jsonl`). For each buggy case it records validity (or a drop reason: feature, typing-only, refactor, not-a-bug, other), the category, and the **primary range** (the actual bug); for clean cases, "looks clean" or "suspicious" with a note. The holdout split is refused unless `--freeze` is passed: holdout is labelled only after prompt tuning is frozen.
-- **Splits are frozen.** Dropped cases are removed; no case ever moves between dev and holdout.
-- Human labels override heuristic labels; heuristic labels are kept for comparison.
-- **Label noise** = the fraction of dev cases the owner drops, reported with the count ([[Label Noise]]).
-- **Single-annotator limitation:** one person labels every case; there is no inter-annotator agreement measure.
-- Until the holdout is labelled: location recall uses all cases; category-correct recall uses human-labelled cases only.
+## Labels (Q61, decided 2026-10-03; amended the same day)
+- Category labels never come from a reviewer model: labels from the models being measured would make category-correct recall measure self-agreement.
+- **Q61 amendment (owner, 2026-10-03):** the owner could not hand-label the dev split, so the development assistant labelled it. This assistant is an LLM, from a different model family than the four cascade reviewers. Every judgement followed a reading of the case's upstream evidence:
+  - the pull request the fix came from: its description, conversation, review comments and reviews, bot comments included;
+  - the issues the PR links to.
+
+  The evidence was fetched read-only by `evals/benchmark/fetch_evidence.py` (GET requests only; nothing was posted upstream) and cached in `evals/.cache/evidence/` (git-ignored). The owner's labelling rules (drop reasons, category precedence, primary range) applied as written.
+- **Limitation:** these are LLM-made labels, grounded in human-written upstream evidence; they are not independent human labels. Category-correct recall therefore measures agreement between a reviewer and an evidence-grounded labeller from a different model family. There is a single annotator and no inter-annotator agreement.
+- **Records:** `evals/benchmark/data/labels_human.jsonl`, append-only; the latest record per case counts.
+  - Buggy record: validity, or a drop reason (feature, typing-only, refactor, not-a-bug, other); the category; the **primary range** (the actual bug); `primary_contested_with`, the other ranges that hold the same bug just as much.
+  - Clean record: "looks clean" or "suspicious", with a note.
+  - Every record names its `labeller` and the `evidence` URLs read.
+- **Writers:** `evals/benchmark/write_labels.py` wrote these records. The interactive tool, `python -m evals.benchmark.label --split dev`, writes the same schema.
+- **Holdout:** labelled only after prompt tuning is frozen; `--split holdout` is refused without `--freeze`. Not labelled yet.
+- **Splits are frozen.** Dropped cases stay in the label file with their reason and are left out of the metrics. No case ever moves between dev and holdout.
+- Labels override heuristic labels; heuristic labels are kept for comparison.
+- **Label noise** = the dropped share of buggy dev cases, reported with the count. Every drop reason counts toward the upper bound ([[Label Noise]]).
+- **Before the holdout is labelled:**
+  - location recall uses all holdout cases and the kept dev cases;
+  - category-correct recall uses labelled cases only.
+- **Dev labels (2026-10-03):**
+  - buggy: 80 of 102 kept, 22 dropped;
+  - primary range: clear in 48 of the 80 kept cases, contested in 32 (Q62);
+  - clean: 3 of 41 marked suspicious.
+
+  Full report: [[label-report-dev-2026-10-03]].
 
 ## Splits ([[ADR-007 dev-holdout benchmark split]])
 - **60% dev** (for tuning) / **40% holdout** (run only at milestones)

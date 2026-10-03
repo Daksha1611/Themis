@@ -12,8 +12,8 @@ related:
 
 # Current Status
 
-**Phase:** M3 in progress. Steps 2–3 built (238 cases; SZZ clean rule; frozen splits). **Waiting for the owner's dev labelling pass** before Steps 4–7.
-**Last updated:** 2026-10-02 (vault audit and hardening)
+**Phase:** M3 in progress. Steps 2–3 built (238 cases; SZZ clean rule; frozen splits). The dev split is labelled (Step 3b; [[label-report-dev-2026-10-03]]). **Next: Steps 4–7**, after the owner reviews the label report.
+**Last updated:** 2026-10-03 (dev-split labels)
 
 New sessions start with [[00 Brief]].
 
@@ -40,7 +40,15 @@ New sessions start with [[00 Brief]].
 - `scripts/check_vault.py` with 21 tests; `vault-check` CI job. 94 tests in all
 - OpenRouter's free model returned 429 (upstream rate limit) on 2026-10-02; the other three providers answered
 
+**Done (M3 Step 3b: dev-split labels, 2026-10-03)**
+- Q61 amended: the development assistant labelled all 143 dev cases after reading each case's upstream PR and issue threads, bot comments included. Read-only: GET requests only, nothing posted upstream. Limitation stated in [[Benchmark]].
+- Buggy: 80 of 102 kept, 22 dropped (2 feature, 8 typing-only, 1 refactor, 2 not-a-bug, 9 other, 7 of them `external-compat`).
+- Clean: 3 of 41 marked suspicious. One looks like the origin of two later click bugs; SZZ missed it.
+- Macro-eligible categories (≥5 kept): type-or-contract 34, control-flow 17, concurrency-or-async 9, error-handling 7.
+- Primary range clear in 48 of 80 kept cases; contested in 32 (Q62).
+- New code: `fetch_evidence.py`, `write_labels.py`, `label_report.py`; 9 new tests, 128 in all.
+
 **Next**
-- Owner decision: final repo list (Q20), size-filter scope (Q56), arithmetic category (Q55)
-- Then M3 Steps 2–8: mine, build cases, cache, runner, metrics, baseline dev report
-- Q47 (TestClient), Q48 (large PRs), Q49 (secrets in traces), Q52b (stable webhook URL)
+- The owner reviews [[label-report-dev-2026-10-03]].
+- Then M3 Steps 4–7: response cache, eval runner, metrics (decide Q62 first), baseline dev report.
+- Q47 (TestClient), Q48 (large PRs), Q49 (secrets in traces), Q52b (stable webhook URL).

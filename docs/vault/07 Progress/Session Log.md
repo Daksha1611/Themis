@@ -80,3 +80,16 @@ related:
 **Done:** committed and pushed Steps 2–3 (CI green). Recorded decisions: Q60 SZZ-style clean rule (70 clean cases, sizes matched; only the 31–60 bucket short, 8/10); Q61 human labels on dev with `evals/benchmark/label.py` (the 15-case sample file is replaced by the labelling pass); strict vs lenient recall, chance baseline, FP per size bucket, macro floor ≥5 ([[Metrics]]); ADR-023 clause for index and length arithmetic. Splits frozen: no existing case moved. Mining now strips `Co-authored-by:` / `Assisted-by:` trailers: upstream AI-assistant trailers had reached tracked data in the previous commit. 119 tests pass; vault check passes.
 **Next:** owner labels dev cases; then Steps 4–7.
 **Blockers / questions:** whether to rewrite history to remove the trailers from the earlier pushed commit (owner decision).
+
+## 2026-10-03 (2): dev-split labels (M3 Step 3b)
+**Done:**
+- The owner could not hand-label the dev split, so the development assistant labelled all 143 dev cases (Q61 amended).
+- Every judgement followed a reading of the case's upstream evidence: the PR, its conversation, review comments and reviews (bot comments included), and the linked issues. The evidence was fetched read-only (GET only, nothing posted upstream) by `evals/benchmark/fetch_evidence.py`. Three cases also needed the local upstream clones, and one needed its GitHub security advisory.
+- Buggy: 80 of 102 kept, 22 dropped. Clean: 3 of 41 marked suspicious.
+- Each kept case records its primary range and any contested ranges. Q62 is new: how strict recall treats contested ranges.
+- Re-checked the first 8 cases after the session break; no changes.
+- `write_labels.py` and `label_report.py` added, with 9 tests (128 pass).
+- Label report: [[label-report-dev-2026-10-03]]. [[Benchmark]], [[Metrics]], [[Label Noise]], [[Open Questions]] and the Results README updated.
+
+**Next:** the owner reviews the label report; then Steps 4–7.
+**Blockers / questions:** Q62 (strict recall with contested ranges) before Step 6.

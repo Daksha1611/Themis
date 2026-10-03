@@ -50,12 +50,12 @@ So one over-represented category (anyio contributes many `concurrency-or-async` 
 
 ## Strict and lenient recall, chance baseline (decided 2026-10-03; computed in Step 6)
 - **Lenient recall:** a finding hits *any* labelled range (±3 lines, Q23).
-- **Strict recall:** a finding hits the human-marked **primary range**. Many cases have several ranges (up to 23), so lenient recall alone would overstate detection.
+- **Strict recall:** a finding hits the labelled **primary range** ([[Benchmark]]; contested ranges: Q62). Many cases have several ranges (up to 23), so lenient recall alone would overstate detection.
 - **Chance baseline**, computed with no LLM calls: a trivial reviewer that flags the first changed line of every hunk with the most common category. Its location and category recall are reported next to the real reviewer's. If it scores high, the metric is too lenient, and that must be visible.
 - **Macro recall floor:** macro recall includes only categories with **≥5 labelled cases**; smaller categories are listed separately with raw counts.
 - **False-positive rate per size bucket** (1–5, 6–15, 16–30, 31–60 changed lines), always, so a "big diff means bug" shortcut is detectable.
 - **False-positive rate per repo**, always, alongside the size-bucket breakdown. Clean cases are unevenly spread (`Textualize/rich` supplies 17 clean against 16 buggy, a much larger clean share than other repos), so a per-repo difference in reviewer behaviour could otherwise move the overall rate unnoticed.
-- Category-correct recall uses human labels only; until the holdout is labelled, it covers human-labelled dev cases only, while location recall covers all cases.
+- Category-correct recall uses labelled cases only. Until the holdout is labelled, it covers the kept dev cases, while location recall covers all holdout cases and the kept dev cases. The dev labels are evidence-grounded LLM labels, not human labels (Q61 amendment, [[Benchmark]]).
 
 ## Breakdowns
 - Per-category recall table, using the logic-bug taxonomy ([[ADR-019 Logic bug taxonomy]]) and the security taxonomy ([[ADR-022 CWE Top 25 security taxonomy]]). Always with raw counts (`hits/cases`), never bare percentages: with three repos many categories have only a handful of cases ([[Benchmark]])
