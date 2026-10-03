@@ -42,7 +42,7 @@ New sessions start with [[00 Brief]].
 
 **Done (M3 Step 3b: dev-split labels, 2026-10-03)**
 - Q61 amended: the development assistant labelled all 143 dev cases after reading each case's upstream PR and issue threads, bot comments included. Read-only: GET requests only, nothing posted upstream. Limitation stated in [[Benchmark]].
-- Buggy: 80 of 102 kept, 22 dropped (2 feature, 8 typing-only, 1 refactor, 2 not-a-bug, 9 other, 7 of them `external-compat`).
+- Buggy: 80 of 102 kept, 22 dropped (2 feature, 8 typing-only, 1 refactor, 2 not-a-bug, 9 other, 8 of them `external-compat`).
 - Clean: 3 of 41 marked suspicious. One looks like the origin of two later click bugs; SZZ missed it.
 - Macro-eligible categories (≥5 kept): type-or-contract 34, control-flow 17, concurrency-or-async 9, error-handling 7.
 - Primary range clear in 48 of 80 kept cases; contested in 32 (Q62).

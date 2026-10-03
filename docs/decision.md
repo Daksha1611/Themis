@@ -1141,7 +1141,7 @@ The owner asked for it, and asked that labels follow a real understanding of eac
 
 ### What I am changing
 **Results** (full report: `docs/vault/08 Results/label-report-dev-2026-10-03.md`):
-- All 143 dev cases labelled. Buggy: 80 of 102 kept, 22 dropped (2 feature, 8 typing-only, 1 refactor, 2 not-a-bug, 9 other, 7 of which are `external-compat`). Clean: 3 of 41 suspicious.
+- All 143 dev cases labelled. Buggy: 80 of 102 kept, 22 dropped (2 feature, 8 typing-only, 1 refactor, 2 not-a-bug, 9 other, 8 of which are `external-compat`). Clean: 3 of 41 suspicious.
 - Label noise: 21.6% upper bound (every drop reason); 12.7% excluding `o`.
 - Macro-eligible categories (≥5 kept): type-or-contract 34, control-flow 17, concurrency-or-async 9, error-handling 7.
 - Security: 2 kept cases, CWE-20 and CWE-400. The CWE-400 case is GHSA-5p39-cfhj-2xmp / CVE-2026-64847.
