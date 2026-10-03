@@ -19,12 +19,6 @@ related:
 Each question is one bullet starting `**Q<n>.**`, and every number appears once across both sections (`scripts/check_vault.py` checks this). Questions that block current work say so in bold.
 
 ## Still open
-- **Q64. Baseline run budget. Blocks M3 Step 7.** The dev dry run does not fit one day of Groq's free tier: prompts alone use 63% of 200K tokens, and past completions average ~822 tokens, putting the expected total near 225K ([[Free Tier Throughput]]). Options:
-  - run across two days with `--resume`, all on the pinned model;
-  - lower `max_tokens`, which changes the prompt config and so the cache key, and may truncate reasoning;
-  - accept another pinned model.
-
-  Owner decision.
 - **Q63. Run-to-run variance.** Re-run the dev split with the cache disabled to measure variance between identical runs. Costs a full day's quota ([[Metrics]], [[Eval Harness]]).
 - **Q25. Numeric targets.** The shape of success is recorded; numbers are deferred until baseline numbers exist ([[Success Metrics]]).
 - **Q47. TestClient migration.** Migrate from Starlette's `TestClient` (deprecated with httpx) to the newer async test approach before the test count grows further. `fastapi` and `starlette` are pinned until then.
@@ -108,6 +102,7 @@ Each question is one bullet starting `**Q<n>.**`, and every number appears once 
 - **Q60.** Clean cases: SZZ-style line-level rule, same filters as buggy, size-matched per bucket; FP rate per size bucket → [[Benchmark]], [[Metrics]]
 - **Q61.** Category labels by hand on dev (labelling tool; holdout only after tuning is frozen); frozen splits; label noise = dropped share → [[Benchmark]]. **Amended 2026-10-03:** the owner could not hand-label, so the development assistant labelled the dev split after reading each case's upstream PR and issue threads (read-only). The limitation is stated in [[Benchmark]]; report: [[label-report-dev-2026-10-03]]
 - **Q62.** Strict recall = a finding on any range recorded as holding the bug (primary plus contested ranges); three tiers reported (lenient, strict, primary-only); the chance baseline is scored on all three → [[Metrics]]
+- **Q64.** Baseline run budget: the dev run spans two days with `--resume`, all on the pinned model, configuration unchanged. Cases run in a shuffled order with a recorded seed; the summary records the cases per session and day, and whether the model identifier stayed identical → [[Eval Harness]], [[Free Tier Throughput]]
 
 ### M3 decisions (resolved 2026-10-02)
 - **Q20.** Benchmark repos: five, `pallets/click`, `agronholm/anyio`, `fastapi/fastapi`, `marshmallow-code/marshmallow`, `Textualize/rich`; httpx and httpcore dropped. Micro and macro recall both reported; security recall flagged as not statistically meaningful (Q58) → [[Benchmark]], [[Metrics]]

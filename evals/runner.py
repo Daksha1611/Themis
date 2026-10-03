@@ -15,6 +15,7 @@ Exit codes: 0 done, 2 refused (holdout guard, or the dry run says the run does n
 import argparse
 import asyncio
 import json
+import random
 import re
 import subprocess
 import sys
@@ -33,6 +34,9 @@ from evals.benchmark.label import DATA, LABELS, load_labels
 from evals.cache import DEFAULT_PATH, ResponseCache
 
 RESULTS = Path("evals/results")
+# Run order is shuffled with a recorded seed so a day boundary (Q64: the daily budget splits the
+# run) cannot line up with a repo, category or buggy/clean grouping.
+ORDER_SEED = 20261003
 CACHE_PATH = DEFAULT_PATH
 # Every eval case gets the same neutral title. The real commit subject ("Fix X") would tell the
 # reviewer what the bug is, and buggy and clean cases would be told apart by their titles.
@@ -81,6 +85,13 @@ def scored_cases(split: str, labels: dict[str, dict[str, Any]]) -> list[dict[str
         ),
         key=lambda c: c["case_id"],
     )
+
+
+def run_order(cases: list[dict[str, Any]], seed: int) -> list[dict[str, Any]]:
+    """Cases in a reproducible shuffled order (sorted by case ID first, then shuffled)."""
+    ordered = sorted(cases, key=lambda c: c["case_id"])
+    random.Random(seed).shuffle(ordered)  # noqa: S311 (reproducible order, not security)
+    return ordered
 
 
 def estimate_tokens(messages: list[dict[str, str]]) -> int:
@@ -267,6 +278,10 @@ class Runner:
         }
 
 
+def now_iso() -> str:
+    return datetime.now(UTC).isoformat(timespec="seconds")
+
+
 def git_state() -> tuple[str, bool]:
     sha = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True)
     dirty = subprocess.run(
@@ -321,7 +336,7 @@ async def run(args: argparse.Namespace) -> int:
             return 2
     settings = get_settings()
     labels = load_labels(LABELS)
-    cases = scored_cases(args.split, labels)[: args.limit]
+    cases = run_order(scored_cases(args.split, labels), ORDER_SEED)[: args.limit]
     if args.dry_run:
         return 0 if dry_run(cases, settings.llm_max_tokens) else 2
 
@@ -352,14 +367,21 @@ async def run(args: argparse.Namespace) -> int:
             "limit": args.limit,
             "cache_mode": "off" if args.no_cache else "only" if args.cache_only else "on",
             "scored_cases": len(cases),
+            "order_seed": ORDER_SEED,
+            "sessions": [],
         }
         (run_dir / "run.json").write_text(json.dumps(meta, indent=1) + "\n")
     meta = json.loads((run_dir / "run.json").read_text())
     if (meta["provider"], meta["model"]) != (pinned.provider, pinned.model):
         print(f"Refusing to resume {run_dir}: it pins {meta['provider']}/{meta['model']}.")
         return 2
-    cases = scored_cases(args.split, labels)[: meta["limit"]]
+    cases = run_order(scored_cases(args.split, labels), meta["order_seed"])[: meta["limit"]]
     done = done_ids(run_dir)
+    session = len(meta["sessions"]) + 1
+    meta["sessions"].append(
+        {"session": session, "started_at": now_iso(), "already_done": len(done)}
+    )
+    (run_dir / "run.json").write_text(json.dumps(meta, indent=1) + "\n")
     runner = Runner(
         pinned,
         cache,
@@ -374,7 +396,14 @@ async def run(args: argparse.Namespace) -> int:
             if case["case_id"] in done:
                 continue
             try:
+                case_started = now_iso()
                 record = await runner.run_case(case)
+                record = {
+                    **record,
+                    "session": session,
+                    "started_at": case_started,
+                    "finished_at": now_iso(),
+                }
             except BudgetExhausted as exc:
                 print(f"Stopped: rate-limit budget exhausted ({exc}). Resume with --resume.")
                 code = 3
@@ -387,6 +416,15 @@ async def run(args: argparse.Namespace) -> int:
             out.flush()
             done.add(case["case_id"])
             print(f"{len(done)}/{len(cases)} {case['case_id']} {record['status']}", flush=True)
+    meta["sessions"][-1].update(
+        {
+            "ended_at": now_iso(),
+            "stop": {0: "complete", 3: "rate-limit budget", 4: "cache-only miss"}.get(code, code),
+            "done_after": len(done),
+            "provider_calls": runner.provider_calls,
+        }
+    )
+    (run_dir / "run.json").write_text(json.dumps(meta, indent=1) + "\n")
     if cache is not None:
         rate = cache.hit_rate
         print(

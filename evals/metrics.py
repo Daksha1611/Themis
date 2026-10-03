@@ -303,6 +303,29 @@ def operational(records: Iterable[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def schedule(meta: dict[str, Any], records: list[dict[str, Any]]) -> dict[str, Any]:
+    """Which cases ran in which runner session and on which UTC date, and whether the provider
+    returned the same model identifier throughout (Q64: the run spans days)."""
+    by_session: dict[str, list[str]] = defaultdict(list)
+    by_day: dict[str, list[str]] = defaultdict(list)
+    models: dict[str, Counter[str]] = defaultdict(Counter)
+    for r in records:
+        session = str(r.get("session", 1))
+        by_session[session].append(r["case_id"])
+        day = (r.get("started_at") or "")[:10] or "unknown"
+        by_day[day].append(r["case_id"])
+        if r["model"] is not None:
+            models[session][f"{r['provider']}/{r['model']}"] += 1
+    identifiers = {m for counts in models.values() for m in counts}
+    return {
+        "sessions": meta.get("sessions", []),
+        "cases_by_session": dict(sorted(by_session.items())),
+        "cases_by_utc_day": dict(sorted(by_day.items())),
+        "models_by_session": {k: dict(v) for k, v in sorted(models.items())},
+        "model_identical_across_sessions": len(identifiers) <= 1,
+    }
+
+
 def load_results(run_dir: Path) -> list[dict[str, Any]]:
     path = run_dir / "results.jsonl"
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
@@ -333,6 +356,8 @@ def summarize(
         "reviewer": reviewer,
         "chance_baseline": {"category": top, **chance},
         "operational": operational(records.values()),
+        "order_seed": meta.get("order_seed"),
+        "schedule": schedule(meta, list(records.values())),
     }
 
 

@@ -1423,3 +1423,45 @@ The brief says to stop and report. A two-day run is one of the Q64 options, for 
 - **Eval Harness, Metrics:** built; status in-progress.
 - **Free Tier Throughput:** dry run measured.
 - **Open Questions:** Q63 (run-to-run variance), Q64 (run budget, blocking Step 7).
+
+---
+
+## M3 Step 7: Q64 two-day baseline run, case shuffle, model check, leak scan: pre-work
+**Date**: 2026-10-03
+**File(s) affected**:
+- Created: `evals/benchmark/leak_scan.py`, `evals/report.py`, tests, `evals/results/<run_id>/`, `docs/vault/08 Results/baseline-dev-<date>.md`
+- Edited: `evals/runner.py`, `evals/metrics.py`; Eval Harness, Benchmark, Open Questions (Q64 closed), Free Tier Throughput; Current Status, Session Log, 00 Brief
+
+### What I am changing
+Owner decisions, 2026-10-03:
+1. **Q64: option 1.** The dev baseline runs over two days with `--resume`, all on the pinned model, configuration unchanged. No workaround for the daily limit.
+2. **Shuffled order.** Cases run in an order shuffled with a fixed seed recorded in `run.json`, so a day boundary cannot line up with a repo, category or buggy/clean grouping. A resumed run rebuilds the same order from the recorded seed.
+   - Each record gets `started_at`, `finished_at` and the `session` (runner invocation) it ran in.
+   - `summary.json` lists the cases per session and per UTC date.
+3. **Model consistency.** Each record keeps the model identifier the provider returned. The summary reports the identifiers per session and whether they were identical across sessions; a difference goes into the report's Caveats.
+4. **Leak scan, no LLM calls.** `evals/benchmark/leak_scan.py` scans the `-` lines of every scored eval diff (the fix's own lines, which the reviewer sees as removed) for:
+   - issue or PR references (`#\d+`, GitHub URLs);
+   - the words fix, bug, workaround, regression, hack, "see issue".
+
+   It reports counts and case IDs. No case is changed; the owner decides after seeing the numbers.
+5. **Neutral PR title,** recorded as a known difference between eval and production. Eval cases get one neutral PR title to prevent label leakage, so the eval measures diff-only review. Production passes the real title, so production performance may differ.
+
+### Why I am making this change
+Owner decisions on Q64 and additions before the baseline run.
+
+### Alternatives I considered
+Record days by local date only.
+
+### Reasons I rejected each alternative
+Groq's daily budget is not tied to a calendar day, so the runner session is the meaningful unit. Both the session and the UTC date are recorded.
+
+### Trade-offs I am accepting
+The run's order differs from case-ID order. The order is reproducible from the seed.
+
+### What could go wrong
+- The daily stop may fall mid-way through Groq's window. The runner stops on the first daily-limit response and does not retry, per the owner's instruction.
+- Langfuse receives the eval traces, which is acceptable for public diffs (Q49).
+
+### How this affects other components
+- **Eval Harness:** the run order and provenance fields.
+- **Benchmark:** the leak-scan result is recorded.

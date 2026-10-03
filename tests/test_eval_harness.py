@@ -476,3 +476,59 @@ def test_operational_reports_pinned_share_and_failures() -> None:
 def test_asyncio_mode_is_auto() -> None:
     # the async tests above run under pytest-asyncio's auto mode
     assert asyncio.iscoroutinefunction(test_pinned_cache_hit_makes_no_call)
+
+
+# --- Q64 additions: shuffled order, sessions, model consistency, leak scan -----------------
+
+
+def test_run_order_is_a_reproducible_shuffle() -> None:
+    cases = [{"case_id": f"{i:02d}"} for i in range(20)]
+    first = runner.run_order(cases, 7)
+    assert first == runner.run_order(list(reversed(cases)), 7)  # independent of input order
+    assert sorted(c["case_id"] for c in first) == [c["case_id"] for c in cases]
+    assert first != cases and first != runner.run_order(cases, 8)
+
+
+def test_resumed_run_records_sessions_days_and_model_identity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fake: Callable[..., FakeLiteLLM]
+) -> None:
+    results = bench(tmp_path, monkeypatch)
+    day = litellm_exceptions.RateLimitError("tokens per day (TPD)", "groq", "m")
+    outcomes: list[Exception | str] = [FINDING, day]
+
+    class OneThenLimit(FakeLiteLLM):
+        async def __call__(self, **kwargs: Any) -> Any:
+            self.outcomes = {"groq": outcomes[min(len(self.calls), 1)]}
+            return await super().__call__(**kwargs)
+
+    monkeypatch.setattr(llm.litellm, "acompletion", OneThenLimit({}))
+    assert runner.main(["--split", "dev"]) == 3
+    fake({"groq": FINDING})
+    assert runner.main(["--split", "dev", "--resume"]) == 0
+    run_dir = next(results.iterdir())
+    records = [json.loads(line) for line in (run_dir / "results.jsonl").read_text().splitlines()]
+    assert [r["session"] for r in records] == [1, 2, 2]
+    assert all(r["started_at"] <= r["finished_at"] for r in records)
+    meta = json.loads((run_dir / "run.json").read_text())
+    assert [s["stop"] for s in meta["sessions"]] == ["rate-limit budget", "complete"]
+    assert meta["order_seed"] == runner.ORDER_SEED
+    schedule = json.loads((run_dir / "summary.json").read_text())["schedule"]
+    assert {k: len(v) for k, v in schedule["cases_by_session"].items()} == {"1": 1, "2": 2}
+    assert schedule["model_identical_across_sessions"] is True
+
+
+def test_schedule_flags_a_model_change_between_sessions() -> None:
+    base = {"provider": "groq", "started_at": "2026-10-03T10:00:00+00:00"}
+    records = [
+        {**base, "case_id": "a", "session": 1, "model": "openai/gpt-oss-120b"},
+        {**base, "case_id": "b", "session": 2, "model": "openai/gpt-oss-120b-v2"},
+    ]
+    assert metrics.schedule({}, records)["model_identical_across_sessions"] is False
+
+
+def test_leak_scan_reads_only_removed_lines() -> None:
+    from evals.benchmark.leak_scan import scan
+
+    diff = "--- a/x.py\n+++ b/x.py\n@@ -1,2 +1,2 @@\n-# fixes #12, see issue\n+# bug here\n"
+    found = scan([{"case_id": "a", "kind": "buggy", "diff": diff}])
+    assert set(found) == {"issue/PR reference (#N)", "fix", "see issue"}  # "bug" is on a + line

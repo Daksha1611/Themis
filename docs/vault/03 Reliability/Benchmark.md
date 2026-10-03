@@ -109,6 +109,19 @@ A clean case is a non-fix commit **none of whose added or modified lines was cha
   - **How the verdicts were recorded:** the verdicts are the project owner's, given after reviewing all 28 cases. The ticks were entered by the agent at the owner's instruction. There are no per-case notes.
   - **Not verified:** the 20 dropped cases outside the borderline set.
 
+**Leak scan (2026-10-03, `python -m evals.benchmark.leak_scan --split dev`, no LLM calls).** It scans the `-` lines of every scored diff: in a buggy case these are the fix's own lines, which the reviewer sees as removed. It looks for issue or PR references, GitHub URLs, and the words fix, bug, workaround, regression, hack, "see issue".
+- **Cases with any match:** buggy 9 of 80, clean 2 of 41.
+- **By pattern:**
+  - `#N` references: 2 buggy;
+  - GitHub URLs: 4 buggy, 2 clean;
+  - fix: 2 buggy;
+  - workaround: 2 buggy;
+  - "see issue": 2 buggy;
+  - bug, regression, hack: none.
+- **Affected buggy cases:** `472aeb4f89993281`, `4f9af0ec1c05847f`, `0696a0d863b0b8fe`, `1febecd36c0d6c24`, `2e327bebc7bbf91b`, `a3e5f5b90622d8e2`, `446f5800db554d12`, `13af3bc86e736afc`, `2106f137b8772e1c`.
+- **Affected clean cases:** `480ba4bc4eff750a`, `60ce72ccf8b5f05e`.
+- Mostly comments citing the issue the fix addressed. No case was changed; the owner decides after seeing the numbers.
+
 **Scored set for eval runs:** kept buggy cases plus all clean cases; dropped cases are never sent to a model. Dev: 80 + 41 = 121 ([[Eval Harness]]).
 
 ## Splits ([[ADR-007 dev-holdout benchmark split]])

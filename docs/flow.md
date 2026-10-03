@@ -168,6 +168,7 @@ Built in M3 Steps 4–6; the report step (`evals/report.py`, Step 7) is not buil
 
 - **Entry:** `python -m evals.runner --split dev [...]` → `main(argv)` → `parse_args()` → `run(args)`.
 - **Holdout guard:** `--split holdout` prints `HOLDOUT_WARNING` and returns 2 unless `--i-know-this-is-holdout`.
+- **Order:** `run_order(cases, ORDER_SEED)`, a seeded shuffle; the seed and each runner session are recorded in `run.json`, and each record carries `session`, `started_at`, `finished_at`. `summarize()` adds `schedule()`: cases per session and per UTC day, and model identifiers per session.
 - **Scored set:** `scored_cases(split, load_labels(LABELS))` reads `evals/benchmark/data/<split>.jsonl`. It keeps the clean cases and every buggy case whose latest label record is valid (or unlabelled); dropped cases never reach a provider.
 - **Dry run:** `dry_run(cases, max_tokens)` → `build_messages(diff, eval_metadata(case))`, the review path's own prompt builder, with the neutral `EVAL_PR_TITLE` → `estimate_tokens()` (LiteLLM `token_counter`, tiktoken `cl100k_base`). It prints per-case estimates and checks the per-request ceiling and the daily budget. Returns 2 when the run does not fit. No calls.
 - **Run setup:**
@@ -254,6 +255,8 @@ Built in M3 Steps 4–6; the report step (`evals/report.py`, Step 7) is not buil
 | `python -m evals.runner` | main() | parse_args(), run() | evals/runner.py |
 | main() | run() | get_settings(), load_labels(), scored_cases(), dry_run(), ResponseCache(), PinnedLLM(), latest_open_run(), git_state(), done_ids(), Runner.run_case(), write_summary() | evals/runner.py |
 | run() | scored_cases() | json.loads() | evals/runner.py |
+| run() | run_order() | random.Random(seed).shuffle() | evals/runner.py |
+| summarize() | schedule() | — | evals/metrics.py |
 | dry_run(), Runner.run_case() | eval_metadata() | — | evals/runner.py |
 | dry_run(), Runner.run_case() | estimate_tokens() | litellm.token_counter() | evals/runner.py |
 | run() | dry_run() | build_messages(), estimate_tokens() | evals/runner.py |
