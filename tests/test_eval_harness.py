@@ -532,3 +532,27 @@ def test_leak_scan_reads_only_removed_lines() -> None:
     diff = "--- a/x.py\n+++ b/x.py\n@@ -1,2 +1,2 @@\n-# fixes #12, see issue\n+# bug here\n"
     found = scan([{"case_id": "a", "kind": "buggy", "diff": diff}])
     assert set(found) == {"issue/PR reference (#N)", "fix", "see issue"}  # "bug" is on a + line
+
+
+def test_report_renders_every_section_and_flags_a_model_change(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fake: Callable[..., FakeLiteLLM]
+) -> None:
+    from evals import report
+
+    results = bench(tmp_path, monkeypatch)
+    fake({"groq": FINDING})
+    assert runner.main(["--split", "dev"]) == 0
+    run_dir = next(results.iterdir())
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    monkeypatch.setattr(report, "VAULT_RESULTS", vault)
+    assert report.main([str(run_dir), "--leak", "9/80/2/41"]) == 0
+    note = next(vault.glob("baseline-dev-*.md")).read_text()
+    assert note.startswith("---\nname: baseline-dev-")
+    for section in ("## Headline", "Chance baseline", "## Caveats", "noise floor", "95% CI"):
+        assert section in note
+    assert "9 of 80 buggy diffs" in note and "different model identifiers" not in note
+
+    summary = json.loads((run_dir / "summary.json").read_text())
+    summary["schedule"]["model_identical_across_sessions"] = False
+    assert "different model identifiers" in report.render(summary)

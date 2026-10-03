@@ -164,7 +164,7 @@ Traces produced:
 - `update_run(session, run_id, updates)` ! UPDATE; not called in M2.
 
 ## 9. Eval harness flow
-Built in M3 Steps 4–6; the report step (`evals/report.py`, Step 7) is not built yet. Offline: no webhook, queue or GitHub calls.
+Built in M3 Steps 4–7. Offline: no webhook, queue or GitHub calls.
 
 - **Entry:** `python -m evals.runner --split dev [...]` → `main(argv)` → `parse_args()` → `run(args)`.
 - **Holdout guard:** `--split holdout` prints `HOLDOUT_WARNING` and returns 2 unless `--i-know-this-is-holdout`.
@@ -191,6 +191,7 @@ Built in M3 Steps 4–6; the report step (`evals/report.py`, Step 7) is not buil
   - `evaluate()` for the reviewer, and again for `chance_findings()` (first changed line of each hunk via `first_changed_lines()`, filed under `most_common_category()`);
   - `operational()` for cost, latency, failures, tokens, cache use and pinned-model share;
   - the result is written to `summary.json` (schema version 1, loadable into the M7 eval database).
+- **Report:** `python -m evals.report <run_dir> [--leak b/bt/c/ct]` → `main()` → `render(summary, leak)` (with `fmt()`, `mean()`, `noise_floor()`) → writes `docs/vault/08 Results/baseline-<split>-<date>.md` with frontmatter. The Caveats section is always written, and flags a model change between sessions, a non-pinned answer, and failures.
 - **Metric helpers:** `hits()` (same file, ranges overlap after widening the label by ±3 lines), `tier_spans()` (lenient, strict, primary), `case_hit()`, `size_bucket()`, `wilson()`, `rate()`, `p95()`.
 
 ## 10. Call graph index
@@ -257,6 +258,10 @@ Built in M3 Steps 4–6; the report step (`evals/report.py`, Step 7) is not buil
 | run() | scored_cases() | json.loads() | evals/runner.py |
 | run() | run_order() | random.Random(seed).shuffle() | evals/runner.py |
 | summarize() | schedule() | — | evals/metrics.py |
+| `python -m evals.report` | main() | render() | evals/report.py |
+| main() | render() | fmt(), mean(), noise_floor() | evals/report.py |
+| `python -m evals.benchmark.leak_scan` | main() | scored_cases(), scan() | evals/benchmark/leak_scan.py |
+| main() | scan() | removed_lines() | evals/benchmark/leak_scan.py |
 | dry_run(), Runner.run_case() | eval_metadata() | — | evals/runner.py |
 | dry_run(), Runner.run_case() | estimate_tokens() | litellm.token_counter() | evals/runner.py |
 | run() | dry_run() | build_messages(), estimate_tokens() | evals/runner.py |

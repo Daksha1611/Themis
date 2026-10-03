@@ -54,8 +54,10 @@ related:
 - **Dry run** (`--dry-run`): builds every prompt and reports per-case token estimates (LiteLLM `token_counter`, tiktoken `cl100k_base`: an estimate), the largest request, the total, and fit against the per-request ceiling and the daily budget. It calls nothing.
 - **Holdout guard:** `--split holdout` prints a warning and refuses without `--i-know-this-is-holdout`.
 
-**Not built yet:** `evals/report.py` (Step 7), the baseline run itself, and threshold sweeps and injection pairs (later milestones).
+- **Report** (`evals/report.py`): `python -m evals.report evals/results/<run_id>` writes `08 Results/baseline-<split>-<date>.md`, with every rate as k/n and a Wilson interval, the chance baseline beside each recall tier, and a required Caveats section.
 
-**Code location:** `evals/runner.py`, `evals/cache.py`, `evals/metrics.py`; planned `evals/report.py`.
+**Not built yet:** threshold sweeps and injection pairs (later milestones).
+
+**Code location:** `evals/runner.py`, `evals/cache.py`, `evals/metrics.py`, `evals/report.py`.
 
 Risks: [[Benchmark Leakage]], [[Eval Cost]].
