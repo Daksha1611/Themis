@@ -26,7 +26,6 @@ Each question is one bullet starting `**Q<n>.**`, and every number appears once 
 - **Q52b. Stable webhook URL.** Quick-tunnel URLs change on every cloudflared restart, so the App's webhook URL must be updated each time. A named tunnel, or the VPS (ADR-018), removes this.
 
 - **Q58. Security benchmark track.** Mine vulnerability-fix commits from the PyPA advisory database / OSV for Python packages, as a separate security case set, because the M3 benchmark has too few security cases to measure security recall ([[Benchmark]], [[Metrics]]; the M6 security work: [[Review Graph]] security pass, [[ADR-022 CWE Top 25 security taxonomy]]). **Target: M6.**
-- **Q62. Strict recall and contested primary ranges.** 32 of the 80 kept dev cases have a contested primary range: other ranges hold the same bug just as much, either as its other half or as the same mistake on a parallel code path (`primary_contested_with` in the label records). Decide before Step 6 whether a finding on a contested range counts as a strict hit ([[Metrics]], [[label-report-dev-2026-10-03]]). Not blocking until Step 6.
 - **Q59. Regression-test validation.** Use each fix commit's regression test to confirm a case is genuine (the test fails on the reverted source and passes on the fix). Costly: requires each repo's environment at each commit. Candidate for a validated subset ([[Benchmark]], [[Label Noise]]). Not for M3.
 
 
@@ -101,6 +100,7 @@ Each question is one bullet starting `**Q<n>.**`, and every number appears once 
 ### M3 decisions (resolved 2026-10-03)
 - **Q60.** Clean cases: SZZ-style line-level rule, same filters as buggy, size-matched per bucket; FP rate per size bucket → [[Benchmark]], [[Metrics]]
 - **Q61.** Category labels by hand on dev (labelling tool; holdout only after tuning is frozen); frozen splits; label noise = dropped share → [[Benchmark]]. **Amended 2026-10-03:** the owner could not hand-label, so the development assistant labelled the dev split after reading each case's upstream PR and issue threads (read-only). The limitation is stated in [[Benchmark]]; report: [[label-report-dev-2026-10-03]]
+- **Q62.** Strict recall = a finding on any range recorded as holding the bug (primary plus contested ranges); three tiers reported (lenient, strict, primary-only); the chance baseline is scored on all three → [[Metrics]]
 
 ### M3 decisions (resolved 2026-10-02)
 - **Q20.** Benchmark repos: five, `pallets/click`, `agronholm/anyio`, `fastapi/fastapi`, `marshmallow-code/marshmallow`, `Textualize/rich`; httpx and httpcore dropped. Micro and macro recall both reported; security recall flagged as not statistically meaningful (Q58) → [[Benchmark]], [[Metrics]]

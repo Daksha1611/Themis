@@ -93,3 +93,26 @@ related:
 
 **Next:** the owner reviews the label report; then Steps 4–7.
 **Blockers / questions:** Q62 (strict recall with contested ranges) before Step 6.
+
+## 2026-10-03 (3): Q62, verification sample, metric caveats
+**Done:**
+- Recorded the owner's decisions: Q62 closed with three recall tiers and the chance baseline on all three ([[Metrics]]); [[Metrics]] gains the clean-case noise floor and the per-category-counts rule for macro recall.
+- The SZZ code-movement limit is recorded in [[Benchmark Leakage]].
+- Built `evals/benchmark/verify_sample.py` and wrote `evals/benchmark/data/verification_sample.md`:
+  - 25 kept dev cases, stratified: type-or-contract 6, control-flow 5, concurrency-or-async 4, error-handling 4, one per small category;
+  - every repo covered;
+  - the owner's 3 borderline cases added and scored separately.
+- Found and fixed evidence noise: anyio's PR template names issue #123 as a changelog example, and 19 label records listed it as evidence. Only those evidence lists changed; no label did.
+- 137 tests pass; vault check passes.
+
+**Next:** the owner marks the sample and reports the verdicts; agreement rates go into [[Benchmark]] and the label report; then Steps 4–7.
+**Blockers / questions:** the owner's verdicts gate Steps 4–7.
+
+## 2026-10-03 (4): owner verification recorded
+**Done:**
+- The verdicts are the owner's, given after reviewing all 28 sample cases: agree on every field. The agent entered the ticks at the owner's instruction.
+- Score: 25/25 on validity, category and primary range (95% Wilson lower bound 86.7%); borderline cases 3/3.
+- Recorded in [[Benchmark]], [[Label Noise]] and the label report (new section 9, [[label-report-dev-2026-10-03]]). 138 tests pass.
+
+**Next:** M3 Steps 4–7.
+**Blockers / questions:** none.

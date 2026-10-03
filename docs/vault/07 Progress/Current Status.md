@@ -12,7 +12,7 @@ related:
 
 # Current Status
 
-**Phase:** M3 in progress. Steps 2–3 built (238 cases; SZZ clean rule; frozen splits). The dev split is labelled (Step 3b; [[label-report-dev-2026-10-03]]). **Next: Steps 4–7**, after the owner reviews the label report.
+**Phase:** M3 in progress. Steps 2–3 built (238 cases; SZZ clean rule; frozen splits). The dev split is labelled (Step 3b; [[label-report-dev-2026-10-03]]). The owner verified a stratified 25-case sample: 25/25 agreement on every field. **Next: Steps 4–7.**
 **Last updated:** 2026-10-03 (dev-split labels)
 
 New sessions start with [[00 Brief]].
@@ -48,7 +48,17 @@ New sessions start with [[00 Brief]].
 - Primary range clear in 48 of 80 kept cases; contested in 32 (Q62).
 - New code: `fetch_evidence.py`, `write_labels.py`, `label_report.py`; 9 new tests, 128 in all.
 
+**Done (owner decisions and verification sample, 2026-10-03)**
+- Q62 closed: three recall tiers (lenient, strict = any bug-holding range, primary-only), with the chance baseline on all three ([[Metrics]]).
+- [[Metrics]] now requires two caveats:
+  - every false-positive rate carries the clean-case noise floor (3 of 41 suspicious, 7.3%);
+  - macro recall is always reported with per-category counts.
+- The SZZ code-movement limit is recorded in [[Benchmark Leakage]].
+- `evals/benchmark/verify_sample.py` writes the owner's verification sample: 25 stratified kept cases plus 3 borderline ones, seed 20261003. Its `--score` mode computes the agreement rates.
+- Anyio's PR-template example link (#123) removed from 19 cases' evidence lists; the fetcher now skips code blocks, comments and template examples. 137 tests.
+
+- Owner verification recorded: 25/25 agreement on validity, category and primary range (95% Wilson lower bound 86.7%); borderline cases 3/3. The verdicts are the owner's, given after reviewing all 28 cases; the agent entered the ticks at the owner's instruction. The label report gained section 9.
+
 **Next**
-- The owner reviews [[label-report-dev-2026-10-03]].
-- Then M3 Steps 4–7: response cache, eval runner, metrics (decide Q62 first), baseline dev report.
+- M3 Steps 4–7: response cache, eval runner, metrics, baseline dev report.
 - Q47 (TestClient), Q48 (large PRs), Q49 (secrets in traces), Q52b (stable webhook URL).

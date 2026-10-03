@@ -65,7 +65,7 @@ Built by `evals.benchmark.mine_commits` then `evals.benchmark.build_cases` (repo
 | **Median** | **11** | **10** | |
 
 - 12 buggy candidates discarded as non-behavioural (6 annotation-only, 5 whitespace/comment/docstring, 1 rename); 24 clean candidates likewise. Clean shortfall: only the 31–60 bucket (8 of 10).
-- **Ranges per buggy case** (count of cases): 1: 55 | 2: 38 | 3: 32 | 4: 14 | 5: 9 | 6: 6 | 7: 5 | 8: 3 | 10: 2 | 12: 1 | 13: 1 | 14: 1 | 23: 1. A hit on any range is *lenient* recall; *strict* recall uses the labelled primary range ([[Metrics]]).
+- **Ranges per buggy case** (count of cases): 1: 55 | 2: 38 | 3: 32 | 4: 14 | 5: 9 | 6: 6 | 7: 5 | 8: 3 | 10: 2 | 12: 1 | 13: 1 | 14: 1 | 23: 1. Recall is reported in three tiers ([[Metrics]], Q62): *lenient* (any range), *strict* (any range recorded as holding the bug), *primary-only*.
 - Heuristic category labels: 102 of 168 buggy cases have none; the labelling pass replaces them (below).
 - Commit-message trailers naming co-authors or assistants (`Co-authored-by:`, `Assisted-by:`) are stripped when mining.
 
@@ -98,10 +98,16 @@ A clean case is a non-fix commit **none of whose added or modified lines was cha
   - category-correct recall uses labelled cases only.
 - **Dev labels (2026-10-03):**
   - buggy: 80 of 102 kept, 22 dropped;
-  - primary range: clear in 48 of the 80 kept cases, contested in 32 (Q62);
+  - primary range: clear in 48 of the 80 kept cases. In the other 32, further ranges hold the same bug, and strict recall counts a hit on any of them (Q62);
   - clean: 3 of 41 marked suspicious.
 
   Full report: [[label-report-dev-2026-10-03]].
+- **Labels and verification:** the dev labels are LLM-assigned from human-written upstream evidence. The project owner verified them on a stratified sample of 25 kept dev cases (`evals/benchmark/data/verification_sample.md`, written by `python -m evals.benchmark.verify_sample`, seed 20261003).
+  - The sample covers every repo, the four macro-eligible categories (at least 3 cases each), and one case from each small category.
+  - **Measured agreement (2026-10-03):** validity 25/25, category 25/25, primary range 25/25 (100%; 95% Wilson lower bound 86.7% for each field).
+  - The owner's three borderline cases, scored separately: 3/3 agree on validity, and 1/1 on category and primary range (the one kept case).
+  - **How the verdicts were recorded:** the verdicts are the project owner's, given after reviewing all 28 cases. The ticks were entered by the agent at the owner's instruction. There are no per-case notes.
+  - **Not verified:** the 20 dropped cases outside the borderline set.
 
 ## Splits ([[ADR-007 dev-holdout benchmark split]])
 - **60% dev** (for tuning) / **40% holdout** (run only at milestones)

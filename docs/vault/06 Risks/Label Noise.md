@@ -23,4 +23,8 @@ related:
 
 The labels were made by the development assistant from upstream evidence (Q61 amendment, [[Benchmark]]), with a single annotator. Report: [[label-report-dev-2026-10-03]].
 
+**Clean-case noise:** 3 of the 41 dev clean cases (7.3%) are marked suspicious. One of them is demonstrably a bug-introducing commit that SZZ missed because the buggy code moved ([[Benchmark Leakage]]). Every false-positive rate carries this noise floor ([[Metrics]]).
+
+**Owner verification (2026-10-03):** the owner agreed with all 25 labels in a stratified sample, on every field (95% Wilson lower bound 86.7% per field). The 20 non-borderline drops were not sampled ([[Benchmark]]).
+
 **Affects:** [[Benchmark]], [[Metrics]]

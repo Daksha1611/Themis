@@ -23,7 +23,7 @@ related:
 | Location-only recall | As bug recall, ignoring category. The gap to bug recall is what category accuracy costs |
 | Exact-line accuracy | Stricter secondary metric: as bug recall, but within the labeled range with no ±3 margin |
 | **Comment precision** | Headline metric. Findings that land on a labeled bug (same rule as bug recall) ÷ all findings, over buggy and clean cases. On clean cases every finding is a false positive |
-| False-positive rate | On clean cases: fraction of cases with at least one finding, plus mean findings per clean case |
+| False-positive rate | On clean cases: fraction of cases with at least one finding, plus mean findings per clean case. Always stated with the clean-case noise floor (below) |
 | Cost per PR | Mean `cost_usd` per case: LiteLLM's list-price estimate, **not actual spend** (free tiers, [[ADR-021 Free-tier four-provider LLM cascade]]) |
 | Latency | Mean and p95 (95th percentile) of per-case review latency |
 | Parse error rate | Fraction of cases whose LLM response had at least one parse error |
@@ -48,11 +48,23 @@ So one over-represented category (anyio contributes many `concurrency-or-async` 
 
 **Security recall** is reported with raw counts and the statement that it is **not statistically meaningful** in M3 (too few security cases; see [[Benchmark]], Q58).
 
-## Strict and lenient recall, chance baseline (decided 2026-10-03; computed in Step 6)
-- **Lenient recall:** a finding hits *any* labelled range (±3 lines, Q23).
-- **Strict recall:** a finding hits the labelled **primary range** ([[Benchmark]]; contested ranges: Q62). Many cases have several ranges (up to 23), so lenient recall alone would overstate detection.
-- **Chance baseline**, computed with no LLM calls: a trivial reviewer that flags the first changed line of every hunk with the most common category. Its location and category recall are reported next to the real reviewer's. If it scores high, the metric is too lenient, and that must be visible.
+## Recall tiers, chance baseline (decided 2026-10-03; computed in Step 6)
+Recall is reported in **three tiers**, always all three side by side (Q62, decided 2026-10-03). Each tier allows ±3 lines (Q23).
+- **Lenient:** a finding hits *any* auto-labelled range. A case has up to 23 of these.
+- **Strict:** a finding hits *any range recorded as holding the bug*: the primary range plus `primary_contested_with` ([[Benchmark]]). In 32 of the 80 kept dev cases the bug really spans several ranges: the other half of the change, or the same mistake on a parallel code path. Penalising a hit there would measure nothing real.
+- **Primary-only:** a finding hits the single primary range.
+
+The gap between lenient and strict shows how much the auto-labelled ranges overstate detection.
+
+- **Chance baseline**, computed with no LLM calls: a trivial reviewer that flags the first changed line of every hunk with the most common category. It is scored on all three tiers, with location and category recall reported next to the real reviewer's. If it scores high on a tier, that tier is too lenient, and that must be visible.
 - **Macro recall floor:** macro recall includes only categories with **≥5 labelled cases**; smaller categories are listed separately with raw counts.
+- **Category concentration:** whenever macro recall is reported, the per-category case counts are reported with it. On the dev split:
+  - `type-or-contract` is 34 of 80 kept cases (43%);
+  - macro recall covers only four categories: `type-or-contract` 34, `control-flow` 17, `concurrency-or-async` 9, `error-handling` 7 ([[label-report-dev-2026-10-03]]).
+- **Clean-case noise floor:** every false-positive rate is reported with this noise floor stated beside it, every time it appears.
+  - 3 of the 41 dev clean cases (7.3%) are marked suspicious.
+  - One of them, click `3fe0fe03`, demonstrably introduced the later bugs #3111 and #3121. It was filed as clean because the SZZ trace lost code that moved ([[Benchmark Leakage]]).
+  - A finding on such a case may be a true positive, so up to 3 of 41 clean cases (about 7 percentage points) of the measured false-positive rate on dev can be label noise.
 - **False-positive rate per size bucket** (1–5, 6–15, 16–30, 31–60 changed lines), always, so a "big diff means bug" shortcut is detectable.
 - **False-positive rate per repo**, always, alongside the size-bucket breakdown. Clean cases are unevenly spread (`Textualize/rich` supplies 17 clean against 16 buggy, a much larger clean share than other repos), so a per-repo difference in reviewer behaviour could otherwise move the overall rate unnoticed.
 - Category-correct recall uses labelled cases only. Until the holdout is labelled, it covers the kept dev cases, while location recall covers all holdout cases and the kept dev cases. The dev labels are evidence-grounded LLM labels, not human labels (Q61 amendment, [[Benchmark]]).

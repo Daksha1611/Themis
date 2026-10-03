@@ -10,6 +10,7 @@ report as Markdown; `--write` also saves it as a vault note with frontmatter. No
 import argparse
 import hashlib
 import json
+import math
 from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
@@ -30,6 +31,53 @@ def pct(part: int, whole: int) -> str:
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()[:12]
+
+
+def wilson_lower(agree: int, n: int, z: float = 1.96) -> float:
+    """Lower bound of the 95% Wilson score interval for agree/n."""
+    if n == 0:
+        return 0.0
+    p = agree / n
+    centre = p + z * z / (2 * n)
+    spread = z * math.sqrt((p * (1 - p) + z * z / (4 * n)) / n)
+    return (centre - spread) / (1 + z * z / n)
+
+
+def verification(sample_path: Path) -> list[str]:
+    """Section 9: the owner's agreement with the labels on the verification sample."""
+    from evals.benchmark.verify_sample import FIELDS, parse, score  # noqa: PLC0415 (cycle)
+
+    out = ["", "## 9. Owner verification", ""]
+    if not sample_path.exists():
+        return [*out, "No verification sample yet."]
+    verdicts = parse(sample_path.read_text())
+    scored = score(verdicts, "sample")
+    if not any(scored[f]["agree"] + scored[f]["disagree"] for f in FIELDS):
+        return [*out, f"Verification sample `{sample_path}` not marked yet."]
+    out += [
+        f"Stratified sample of {sum(v['section'] == 'sample' for v in verdicts.values())} kept "
+        f"cases (`{sample_path}`; `python -m evals.benchmark.verify_sample --score`):",
+        "",
+        "| Field | Agree | Decided | Agreement | 95% lower bound (Wilson) |",
+        "|---|---|---|---|---|",
+    ]
+    for f in FIELDS:
+        agree, decided = scored[f]["agree"], scored[f]["agree"] + scored[f]["disagree"]
+        out.append(
+            f"| {f} | {agree} | {decided} | {pct(agree, decided)} | "
+            f"{wilson_lower(agree, decided):.1%} |"
+        )
+    border = score(verdicts, "borderline")
+    out += [
+        "",
+        "Borderline cases (owner's choice, scored separately): "
+        + "; ".join(
+            f"{f} {border[f]['agree']}/{border[f]['agree'] + border[f]['disagree']} agree"
+            for f in FIELDS
+        )
+        + ".",
+    ]
+    return out
 
 
 def summarize(cases: list[dict[str, Any]], labels: dict[str, dict[str, Any]]) -> dict[str, Any]:
@@ -234,10 +282,13 @@ def render(s: dict[str, Any], split: str, provenance: list[str]) -> str:
     return "\n".join(out) + "\n"
 
 
+SAMPLE = DATA / "verification_sample.md"
+
 FRONTMATTER = """---
 name: {name}
 description: "Label report for the {split} split: kept/dropped, drop reasons, categories, \
-heuristic agreement, primary-range coverage, suspicious clean cases, label noise."
+heuristic agreement, primary-range coverage, suspicious clean cases, label noise, \
+owner verification."
 type: reliability
 status: done
 tags: [reliability, benchmark]
@@ -273,6 +324,8 @@ def main(argv: list[str] | None = None) -> int:
         f"`python -m evals.benchmark.label_report --split {args.split}`",
     ]
     report = render(summary, args.split, provenance)
+    if args.split == "dev":
+        report += "\n".join(verification(SAMPLE)) + "\n"
     print(report)
     if args.write:
         args.write.write_text(FRONTMATTER.format(name=args.write.stem, split=args.split) + report)

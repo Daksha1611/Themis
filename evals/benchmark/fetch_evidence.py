@@ -21,6 +21,11 @@ LINKED = re.compile(
     r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?|refs?|see)\b:?\s+#(\d+)", re.IGNORECASE
 )
 BARE = re.compile(r"(?<![\w/])#(\d+)\b")
+# Code blocks and HTML comments in PR bodies hold template examples ("if your patch fixes
+# issue #123, ..."), not references, so links are not taken from them.
+NOT_PROSE = re.compile(r"```.*?```|<!--.*?-->", re.S)
+# Issue numbers a repo's PR template uses as examples; never evidence for a case.
+TEMPLATE_EXAMPLES = {"agronholm/anyio": {123}}  # "If, say, your patch fixes issue #123, ..."
 MAX_COMMENTS = 30
 
 
@@ -50,6 +55,19 @@ def comments(items: Any, body_key: str = "body") -> list[dict[str, Any]]:
         for c in items[:MAX_COMMENTS]
         if (c.get(body_key) or "").strip()
     ]
+
+
+def linked_issues(repo: str, texts: list[str], exclude: set[int]) -> list[int]:
+    """Issue numbers referenced in the prose of `texts`, in order of first mention."""
+    same_repo_url = re.compile(rf"github\.com/{re.escape(repo)}/issues/(\d+)", re.IGNORECASE)
+    linked: list[int] = []
+    exclude = exclude | TEMPLATE_EXAMPLES.get(repo, set())
+    for text in texts:
+        prose = NOT_PROSE.sub(" ", text)
+        for n in [*LINKED.findall(prose), *same_repo_url.findall(prose), *BARE.findall(prose)]:
+            if int(n) not in exclude and int(n) not in linked:
+                linked.append(int(n))
+    return linked
 
 
 def evidence(case: dict[str, Any]) -> dict[str, Any]:
@@ -88,14 +106,7 @@ def evidence(case: dict[str, Any]) -> dict[str, Any]:
             }
         )
         texts.append(pr.get("body") or "")
-    pr_numbers = set(numbers)
-    linked = []
-    same_repo_url = re.compile(rf"github\.com/{re.escape(repo)}/issues/(\d+)", re.IGNORECASE)
-    for text in texts:
-        for n in [*LINKED.findall(text), *same_repo_url.findall(text), *BARE.findall(text)]:
-            if int(n) not in pr_numbers and int(n) not in linked:
-                linked.append(int(n))
-    for number in linked[:4]:
+    for number in linked_issues(repo, texts, set(numbers))[:4]:
         issue = get(f"repos/{repo}/issues/{number}")
         if not isinstance(issue, dict) or "error" in issue:
             continue

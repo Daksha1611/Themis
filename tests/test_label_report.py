@@ -108,3 +108,11 @@ def test_report_has_all_eight_sections_and_noise_bounds() -> None:
         assert f"## {n}. " in report
     assert "Upper bound: 2/5 = 40.0%" in report  # every drop reason
     assert "Excluding `o`" in report and "1/5 = 20.0%" in report
+
+
+def test_wilson_lower_bound() -> None:
+    from evals.benchmark.label_report import wilson_lower
+
+    assert round(wilson_lower(25, 25), 3) == 0.867
+    assert wilson_lower(0, 0) == 0.0
+    assert wilson_lower(5, 10) < 0.5

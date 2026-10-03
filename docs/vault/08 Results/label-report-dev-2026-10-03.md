@@ -1,6 +1,6 @@
 ---
 name: label-report-dev-2026-10-03
-description: "Label report for the dev split: kept/dropped, drop reasons, categories, heuristic agreement, primary-range coverage, suspicious clean cases, label noise."
+description: "Label report for the dev split: kept/dropped, drop reasons, categories, heuristic agreement, primary-range coverage, suspicious clean cases, label noise, owner verification."
 type: reliability
 status: done
 tags: [reliability, benchmark]
@@ -13,7 +13,7 @@ related:
 # Label report: dev split
 
 - Split: `dev` (`evals/benchmark/data/dev.jsonl`, sha256 `e923501468af`)
-- Labels: `evals/benchmark/data/labels_human.jsonl` (sha256 `d1e0b249424a`); the latest record per case counts
+- Labels: `evals/benchmark/data/labels_human.jsonl` (sha256 `ec8b9c27e48f`); the latest record per case counts
 - Labelled by: assistant, evidence-grounded (143)
 - Generated: 2026-10-03 by `python -m evals.benchmark.label_report --split dev`
 
@@ -116,3 +116,15 @@ Overrides (heuristic → label):
 concurrency-or-async (9), control-flow (17), error-handling (7), type-or-contract (34)
 
 Below the threshold: null-or-none-handling (4), off-by-one-or-boundary (3), resource-leak (2), arithmetic-or-numeric (2), CWE-20 (1), CWE-400 (1).
+
+## 9. Owner verification
+
+Stratified sample of 25 kept cases (`evals/benchmark/data/verification_sample.md`; `python -m evals.benchmark.verify_sample --score`):
+
+| Field | Agree | Decided | Agreement | 95% lower bound (Wilson) |
+|---|---|---|---|---|
+| validity | 25 | 25 | 100.0% | 86.7% |
+| category | 25 | 25 | 100.0% | 86.7% |
+| primary range | 25 | 25 | 100.0% | 86.7% |
+
+Borderline cases (owner's choice, scored separately): validity 3/3 agree; category 1/1 agree; primary range 1/1 agree.

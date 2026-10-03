@@ -1182,3 +1182,128 @@ The owner asked for an evidence-grounded labelling pass on the dev split, with a
 - **Benchmark:** the dev labels exist; the labels section is rewritten for the Q61 amendment.
 - **Metrics:** strict recall depends on Q62. Category-correct recall uses the kept dev cases.
 - **Label Noise:** measured.
+
+---
+
+## M3: Q62 recall tiers, owner verification sample, metric caveats: pre-work
+**Date**: 2026-10-03
+**File(s) affected**:
+- Created: `evals/benchmark/verify_sample.py`, `evals/benchmark/data/verification_sample.md`, `tests/test_verify_sample.py`
+- Edited: `docs/vault/03 Reliability/Metrics.md`, `docs/vault/03 Reliability/Benchmark.md`, `docs/vault/06 Risks/Benchmark Leakage.md`, `docs/vault/06 Risks/Label Noise.md`, `docs/vault/07 Progress/Open Questions.md` (Q62 closed), Current Status, Session Log, 00 Brief
+
+### What I am changing
+Owner decisions, 2026-10-03:
+1. **Q62.** Strict recall counts a finding on *any range recorded as holding the bug*: the primary range plus `primary_contested_with`. Step 6 reports three tiers, and runs the chance baseline against all three:
+   - lenient: any auto-labelled range;
+   - strict: any bug-holding range;
+   - primary-only: the primary range.
+2. **Verification sample.** `verify_sample.py` selects 25 kept buggy dev cases with a recorded seed, and writes `verification_sample.md` for the owner to mark by hand.
+   - Stratified across repos and across the four macro-eligible categories, with at least one case from each small category.
+   - The owner's three borderline cases are added regardless of the selection: `2109faa4`, `c06100e3`, `0f097b6d`.
+   - Each case shows the diff the reviewer sees, the assigned labels and the recorded evidence links, with agree/disagree boxes for validity, category and primary range, and a note field.
+   - The script also scores the ticked file, so the agreement rates come from a run, not a hand count.
+   - The owner's verdicts are not filled in.
+3. **Metrics caveats.**
+   - Every false-positive rate is reported with the clean-case noise floor (3 of 41 suspicious, 7.3%).
+   - Whenever macro recall is reported, the per-category counts are reported with it.
+   - The SZZ code-movement limitation is recorded in Benchmark Leakage.
+
+### Why I am making this change
+Owner decisions before Steps 4–7.
+
+### Alternatives I considered
+1. Count the three borderline cases inside the 25.
+2. Proportional allocation across the four macro categories.
+
+### Reasons I rejected each alternative
+1. They were chosen because they are hard, so including them would bias the agreement rate. They are reported separately, and `2109faa4` (a kept case) is excluded from the stratified pool so that it is not drawn twice.
+2. Proportional allocation would give `error-handling` and `concurrency-or-async` one or two cases each, too few to say anything per category. Each macro category gets at least 3, and the rest is allocated by size.
+
+### Trade-offs I am accepting
+- The 25 cases are stratified, not a simple random sample, so per-field agreement on them is not exactly a population estimate. The rates are reported with raw counts and the per-category breakdown.
+
+### What could go wrong
+- Regenerating the sample after the owner has started would overwrite the verdicts. The script refuses to overwrite a file that has any ticked box unless `--force` is passed.
+
+### How this affects other components
+- **Metrics:** three recall tiers; FP rates carry the noise floor; macro recall carries per-category counts.
+- **Benchmark:** gains the verification statement once the verdicts are in.
+
+---
+
+## M3: Q62 recall tiers, owner verification sample, metric caveats: completion
+**Date**: 2026-10-03
+**File(s) affected**:
+- As in the pre-work entry above.
+- Also edited: `evals/benchmark/fetch_evidence.py`, `evals/benchmark/data/labels_human.jsonl` (evidence lists only), `docs/vault/08 Results/label-report-dev-2026-10-03.md` (regenerated; only the label-file hash changed).
+
+### What I am changing
+**Results:**
+- **Verification sample:** 25 kept dev cases.
+  - By category: type-or-contract 6, control-flow 5, concurrency-or-async 4, error-handling 4, one each from null-or-none-handling, off-by-one-or-boundary, arithmetic-or-numeric, resource-leak, CWE-20 and CWE-400.
+  - By repo: anyio 7, fastapi 7, click 5, marshmallow 3, rich 3 (each within one case of its share of kept cases).
+  - Plus the 3 borderline cases, in their own section.
+  - Seed 20261003. `python -m evals.benchmark.verify_sample --score` computes agreement per field and per section. Nothing is ticked.
+- **Metrics:** three recall tiers; the noise-floor and category-count rules. Q62 closed.
+- **Benchmark Leakage:** the SZZ code-movement limit.
+
+**Departures from the pre-work entry:**
+1. **Template link removed from evidence.** anyio's PR template names issue #123 as a changelog example, and the fetcher had linked it as evidence for 19 anyio cases.
+   - The fetcher now skips code blocks and HTML comments in PR bodies, plus a per-repo list of template example numbers. One PR body kept the example in prose.
+   - The 19 cases were re-fetched read-only. Their records' `evidence` lists were corrected in place: only that URL was removed, which was checked record by record against the committed file. No label changed.
+   - The issue played no part in any judgement.
+2. **First allocation draft wrong.** It re-applied the proportional split on each pass and gave type-or-contract 9 of 19 slots. It was replaced by a single largest-remainder pass, with a test.
+
+### Why I am making this change
+Owner decisions before Steps 4–7. The evidence links shown to the owner must be real evidence.
+
+### Alternatives I considered
+Append corrected records for the 19 cases instead of editing the evidence lists in place.
+
+### Reasons I rejected each alternative
+The label decisions did not change. Appending would only have duplicated 19 records to fix metadata, and the append-only rule exists to keep label history.
+
+### Trade-offs I am accepting
+The label file's hash changed. The label report and the sample record the new hash.
+
+### What could go wrong
+Some evidence lists may still contain a link the labeller read but did not need. Only #123 was found by the check over all 143 cases.
+
+### How this affects other components
+- **Metrics:** Step 6 implements three tiers and both caveats.
+- **Benchmark:** the verification statement and agreement rates follow the owner's verdicts.
+
+---
+
+## M3: owner verification of the dev labels recorded
+**Date**: 2026-10-03
+**File(s) affected**:
+- `evals/benchmark/data/verification_sample.md` (ticked)
+- `evals/benchmark/label_report.py` (section 9: owner verification, with a Wilson lower bound)
+- `tests/test_label_report.py`
+- `docs/vault/03 Reliability/Benchmark.md`, `docs/vault/06 Risks/Label Noise.md`, the label report note, Current Status, Session Log, 00 Brief
+
+### What I am changing
+- The verdicts are the project owner's, given after reviewing all 28 cases: agree on every field. The agent entered the ticks at the owner's instruction.
+- All `agree` boxes were ticked, and the file header says how the verdicts were entered.
+- Score (`verify_sample --score`): 25/25 on validity, category and primary range; borderline cases 3/3 on validity, 1/1 on category and primary range.
+- Benchmark now states that the labels are LLM-assigned from human-written upstream evidence and were verified by the project owner on a stratified 25-case sample, with these rates.
+
+### Why I am making this change
+The owner's verdicts gate Steps 4–7.
+
+### Alternatives I considered
+Report the bare 100%.
+
+### Reasons I rejected each alternative
+25/25 has a 95% Wilson lower bound of 86.7%, so the bound is reported next to the rate.
+
+### Trade-offs I am accepting
+The verdicts are a blanket agreement with no per-case notes. That is recorded as such.
+
+### What could go wrong
+The 20 dropped cases outside the borderline set were not sampled.
+
+### How this affects other components
+- **Benchmark:** the label-quality statement is complete.
+- **Steps 4–7:** unblocked.

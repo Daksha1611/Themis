@@ -1,6 +1,6 @@
 ---
 name: Benchmark Leakage
-description: "Risk that the model memorised benchmark fixes or holdout leaks into tuning; measured commit-date distribution."
+description: "Risk that the model memorised benchmark fixes or holdout leaks into tuning; measured commit-date distribution; SZZ code-movement limit on clean cases."
 type: risk
 status: in-progress
 tags: [risk]
@@ -54,6 +54,12 @@ Buggy cases actually built, by quarter of the fix commit:
 | Textualize/rich ⚠ weakest date profile | 4 | 0 | 2 | 9 | 1 | 0 | 12/16 |
 
 `Textualize/rich` remains the weakest (12/16 after mid-2025, none after 2026-Q2). Overall 154 of 168 buggy cases (92%) are after mid-2025.
+
+## Clean-case selection limit: code movement (found 2026-10-03)
+Clean cases are chosen by SZZ attribution (Q60, [[Benchmark]]): a later fix runs `git blame` at its parent on the lines it removes or modifies, and every commit blamed that way is excluded from the clean pool. If the buggy code was moved or rewritten between the introducing commit and the fix, blame points at the commit that moved it. The commit that introduced the bug then stays eligible as clean.
+- **Observed:** click `3fe0fe03` added an eager `default=True` → `flag_value` substitution in `Option.__init__`. That substitution caused issues #3111 and #3121. The fixes changed the same logic after it had been moved into `get_default`, so blame never reached `3fe0fe03`, and it was filed as a clean case.
+- **Effect:** clean cases can contain real bugs. The dev labelling pass marked 3 of 41 clean cases suspicious, and [[Metrics]] reports every false-positive rate with that noise floor (up to 7.3%).
+- **Mitigation not applied:** blame's move and copy detection (`-M`, `-C`) catches only verbatim moves, not code that was moved and rewritten, as here.
 
 ## Required M3 output
 M3 Step 1 output must include **the date distribution of the actually-mined commits, bucketed by quarter, per repo**, not only of the candidate pool above. A window starting 2025-04-01 sits before several current models' training cutoffs. **`Textualize/rich` has the weakest date profile** (its candidates end in 2026-04, and only 66% are after mid-2025); every per-repo date report names it explicitly.
