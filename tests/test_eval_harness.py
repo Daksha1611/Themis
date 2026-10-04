@@ -686,3 +686,26 @@ def test_targets_table_values() -> None:
     assert show_target("cost_ratio", 1.5) == "1.50×"
     assert show_target("p95_latency_s", 4.8) == "4.8 s"
     assert show_target("clean_fpr", 0.415) == "41.5%"
+
+
+def test_attribution_splits_changed_cases_by_cause() -> None:
+    from evals import diagnostics as dx
+
+    removed = DIFF.replace("@@ -30,2 +30,2 @@", "@@ -90,2 +30,2 @@")
+    cases = [{"case_id": cid, "diff": removed} for cid in ("r", "n", "b", "x", "same")]
+    old_side = {"file": "pkg/m.py", "line_start": 90, "line_end": 90}
+    before = {
+        "r": {"findings": []},
+        "n": {"findings": [old_side]},
+        "b": {"findings": [old_side]},
+        "x": {"findings": []},
+        "same": {"findings": []},
+    }
+    after = {cid: {"validation_retries": int(cid in ("r", "b"))} for cid in before}
+    step = {
+        "detected": {"first_only": ["n"], "second_only": ["r", "b", "x"]},
+        "strict_category": {"first_only": [], "second_only": []},
+    }
+    result = dx.attribution(cases, before, after, step)
+    assert result["changed"] == 4
+    assert result["groups"] == {"retry": ["r"], "numbering": ["n"], "both": ["b"], "neither": ["x"]}

@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from evals.benchmark.label import LABELS, load_labels
+from evals.diagnostics import attribution
 from evals.metrics import TARGETS, compare_runs, summarize
 
 VAULT_RESULTS = Path("docs/vault/08 Results")
@@ -129,6 +130,7 @@ def ablation_section(
     runs: list[tuple[str, dict[str, Any]]],
     noise: dict[str, Any] | None,
     step: dict[str, Any] | None,
+    attrib: dict[str, Any] | None = None,
 ) -> list[str]:
     """Runs side by side (v1, v1 rerun, v2, ...), the Q63 noise floor, the latest step's
     McNemar verdict, the sensitivity line, and the Q25 targets table."""
@@ -194,6 +196,39 @@ def ablation_section(
                 f"- {FIELD_NAMES[field]}: b = {m['b']} ({prev} only), c = {m['c']} ({cur} only), "
                 f"p = {m['p_value']:.3f}: {verdict(m, noise[field] if noise else None)}"
             )
+    if attrib is not None:
+        g = attrib["groups"]
+        noise_changes = (
+            len({c for m in noise.values() for c in m["first_only"] + m["second_only"]})
+            if noise
+            else None
+        )
+        out += [
+            "",
+            f"**Attribution of the {attrib['changed']} cases whose outcome changed** (any field; "
+            "no extra calls). Retry-related: v2 needed a validation retry. Numbering-related: "
+            "v1 had a finding citing an old-file line or pointing outside the diff.",
+            "",
+            "| Group | Cases | Case IDs |",
+            "|---|---|---|",
+            *(
+                f"| {name} | {len(ids)} | {', '.join(f'`{c}`' for c in ids) or '—'} |"
+                for name, ids in (
+                    ("retry-related", g["retry"]),
+                    ("numbering-related", g["numbering"]),
+                    ("both", g["both"]),
+                    ("neither", g["neither"]),
+                )
+            ),
+            "",
+            f'Cases in "neither" ({len(g["neither"])}) are most likely run-to-run variance; '
+            + (
+                f"two identical runs changed {noise_changes} cases on the same fields "
+                "(noise floor)."
+                if noise_changes is not None
+                else "no noise-floor run to compare with."
+            ),
+        ]
     out += ["", "## Sensitivity line (suspicious clean cases excluded)", ""]
     out.append(
         "Excluding the 3 clean cases marked suspicious during labelling, a criterion recorded "
@@ -518,7 +553,13 @@ def main(argv: list[str] | None = None) -> int:
             noise = compare_runs(args.baseline, args.rerun, cases, labels)
         runs.append((args.label, summary))
         step = compare_runs(args.baseline, args.run_dir, cases, labels)
-        extra = ablation_section(runs, noise, step)
+
+        def records(run_dir: Path) -> dict[str, dict[str, Any]]:
+            text = (run_dir / "results.jsonl").read_text()
+            return {r["case_id"]: r for r in map(json.loads, text.splitlines()) if r}
+
+        attrib = attribution(cases, records(args.baseline), records(args.run_dir), step)
+        extra = ablation_section(runs, noise, step, attrib)
     name = f"baseline-{summary['split']}-{summary['finished_at'][:10]}"
     name += f"-{args.suffix}" if args.suffix else ""
     path = VAULT_RESULTS / f"{name}.md"

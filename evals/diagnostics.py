@@ -260,3 +260,36 @@ def diagnostics(
         "clean_false_positives": clean_false_positives(cases, records),
         "leak_split": leak_split(cases, labels, records),
     }
+
+
+def attribution(
+    cases: list[dict[str, Any]],
+    before: dict[str, dict[str, Any]],
+    after: dict[str, dict[str, Any]],
+    step: dict[str, Any],
+) -> dict[str, Any]:
+    """Why outcomes changed between two runs (no LLM calls). For each case whose outcome
+    changed on any McNemar field: did it need a validation retry in the later run, and was
+    its earlier result affected by line numbering (findings citing old-file lines or outside
+    the diff)? Cases in "neither" are most likely run-to-run variance."""
+    by_id = {c["case_id"]: c for c in cases}
+    changed = sorted({cid for m in step.values() for cid in m["first_only"] + m["second_only"]})
+    groups: dict[str, list[str]] = {"retry": [], "numbering": [], "both": [], "neither": []}
+    for cid in changed:
+        retry = after[cid].get("validation_retries", 0) > 0
+        sides = diff_sides(by_id[cid]["diff"])
+        numbering = any(
+            finding_position(f, sides).startswith(("old-side", "outside"))
+            for f in before[cid]["findings"]
+        )
+        key = (
+            "both"
+            if retry and numbering
+            else "retry"
+            if retry
+            else "numbering"
+            if numbering
+            else "neither"
+        )
+        groups[key].append(cid)
+    return {"changed": len(changed), "groups": groups}
