@@ -78,6 +78,7 @@ Outside the vault: `README.md` (repo overview), `docs/flow.md` (what the code do
 - [[ADR-023 Arithmetic-or-numeric logic category]]
 - [[ADR-024 Eval runs pin a single provider and model]]
 - [[ADR-025 Detection-first metrics]]
+- [[ADR-026 Numbered diffs and validated output]]
 
 ## 05 Stack
 - [[Python]]

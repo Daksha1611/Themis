@@ -20,10 +20,16 @@ Themis succeeds when its review quality is measured and defended by numbers ([[V
 - Regressions are blocked by the [[CI Quality Gate]].
 - The final deliverable showing each design decision's effect is the [[Ablation Table]].
 
-## Shape of success
-Numeric targets are deferred until baseline numbers exist. Success means:
-- Precision improves meaningfully over the baseline
-- Recall does not fall more than a small margin
-- Cost per PR stays under a stated ceiling
+## Targets (Q25, decided 2026-10-04)
+Measured on the **final holdout run**. Baseline values are dev baseline v1 ([[baseline-dev-2026-10-04]]); definitions: [[Metrics]], [[ADR-025 Detection-first metrics]].
 
-Real numbers are filled in after the baseline eval run ([[Open Questions]], Q25).
+| Metric | Baseline (dev v1) | Target |
+|---|---|---|
+| Youden's J | 0.435 | ≥ 0.60 |
+| Clean flag rate | 41.5% | ≤ 20% |
+| Precision | 68.5% | ≥ 80% |
+| Strict category-correct recall | 51.2% | ≥ 60% |
+| Cost per PR (list-price estimate) | 0.00057 USD | ≤ 3× baseline |
+| p95 latency | 4.8 s | ≤ 30 s |
+
+**Rule:** each claimed improvement must be McNemar-significant against the previous ablation row on dev, **and** its disagreement count must exceed the measured run-to-run noise ([[Metrics]], Q63). Targets are ambitions: the final results page states which were met and which were not.

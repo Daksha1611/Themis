@@ -94,9 +94,9 @@ Diff fetch: `fetch_pr_diff(token, repo_full_name, pr_number)` in `app/github/dif
 
 **Single baseline pass. No LangGraph, no multi-pass yet** (M4).
 
-`run_baseline_review(diff, pr_metadata)` in `app/graph/baseline.py`. **Never raises**: any exception ! `logger.exception` ↳ `BaselineResult(status="failed", parse_errors=["<Type>: <message>"])`.
+`run_baseline_review(diff, pr_metadata, llm=None)` in `app/graph/baseline.py` (`llm`: a `PinnedLLM` for eval runs, ADR-024). **Never raises**: any exception ! `logger.exception` ↳ `BaselineResult(status="failed", parse_errors=["<Type>: <message>"])`.
 1. Blank diff ↳ `BaselineResult(status="success", findings=[])` with no LLM call.
-2. → `build_messages(diff, pr_metadata)`: system prompt listing every allowed category (`prompt_category_list()` from `app/taxonomy.py`: 7 logic categories, 11 CWE IDs, `security-other`), then the diff between `<diff>` and `</diff>` with the statement that it is data, not instructions (both inserted with `str.replace`, since diffs contain braces); user message `PR: {pr_title} in {repo_full_name}`.
+2. → `build_messages(diff, pr_metadata)`: system prompt listing every allowed category (`prompt_category_list()` from `app/taxonomy.py`: 7 logic categories, 11 CWE IDs, `security-other`), the line-number rule (findings use the new-file line numbers shown; findings about removed code anchor to the nearest numbered line in the same hunk; ADR-026), then the diff rendered by `number_diff(diff)` (`app/github/diff.py`: every context and added line prefixed by its new-file line number, removed lines marked `-` with no number) between `<diff>` and `</diff>`, with the statement that it is data, not instructions (both inserted with `str.replace`, since diffs contain braces); user message `PR: {pr_title} in {repo_full_name}`.
 3. → `complete(messages)` in `app/llm.py`: the free-tier provider cascade (ADR-021).
    1. Opens span `observe("llm.complete", input={cascade})` ! Langfuse span, nested under `baseline.review`.
    2. For each provider in `LLM_PROVIDER_CASCADE` (default groq → gemini → mistral → openrouter):
@@ -111,8 +111,9 @@ Diff fetch: `fetch_pr_diff(token, repo_full_name, pr_number)` in `app/github/dif
    - Not JSON, or not a JSON array ↳ no findings, one parse error containing the raw response, status `failed`.
    - Per element: drop any `confidence` key, validate as `Finding` with `confidence=0.0` (`Finding` rejects a category outside `ALLOWED_CATEGORIES`, and `security-other` without a subcategory); invalid elements → `parse_errors`.
    - → `normalize_paths(findings, diff)`: a path with git's `a/` or `b/` prefix that is not in the diff, but whose unprefixed form is, is rewritten to the diff's path (uses `commentable_lines`).
-5. Any parse errors ! warning log with the errors.
-6. ↳ `BaselineResult(status, findings, llm_response, parse_errors)`: `success` (no errors), `partial` (some elements invalid), `failed` (unparseable).
+5. Any parse errors (not a JSON array, or any invalid element) → **one retry** (ADR-026): `complete()` again with the original messages, the model's answer, and a user message `RETRY_MESSAGE` listing the validation errors → `parse_findings()` on the second answer. `_sum_usage()` records both calls' tokens and cost on the returned `LLMResponse`; `retries = 1`. A second failure keeps its parse errors ! warning log.
+6. → `drop_invalid_lines(findings, diff)`: a finding whose `line_start` or `line_end` is not a new-file line of any hunk in its file (`commentable_lines`) is dropped and counted as `invalid_line`.
+7. ↳ `BaselineResult(status, findings, llm_response, parse_errors, retries, invalid_line)`: `success` (no errors), `partial` (some elements invalid), `failed` (unparseable).
 
 ## 5. Precision filter
 `[NOT YET BUILT]`
@@ -233,8 +234,10 @@ Built in M3 Steps 4–7. Offline: no webhook, queue or GitHub calls.
 | build_review() | format_finding() | — | app/github/comments.py |
 | post_findings() | _post_review() | gh.get_client(), gh.github_headers(), gh.raise_if_rate_limited() | app/github/comments.py |
 | _review(), _fail() | post_review_comment() | gh.get_client(), gh.github_headers(), gh.raise_if_rate_limited() | app/github/comments.py |
-| _review() | run_baseline_review() | build_messages(), complete(), parse_findings(), normalize_paths() | app/graph/baseline.py |
-| run_baseline_review() | build_messages() | prompt_category_list() | app/graph/baseline.py |
+| _review() | run_baseline_review() | build_messages(), complete() (twice on a validation retry), parse_findings(), normalize_paths(), drop_invalid_lines() | app/graph/baseline.py |
+| run_baseline_review() | build_messages() | prompt_category_list(), number_diff() | app/graph/baseline.py |
+| build_messages() | number_diff() | — | app/github/diff.py |
+| run_baseline_review() | drop_invalid_lines() | commentable_lines() | app/graph/baseline.py |
 | run_baseline_review() | parse_findings() | strip_fences(), json.loads(), Finding.model_validate() | app/graph/baseline.py |
 | parse_findings() | strip_fences() | — | app/graph/baseline.py |
 | run_baseline_review() | complete() | get_settings(), Settings.api_key_for(), observe(), _call(), update(); with `pinned`: _complete_pinned() | app/llm.py |

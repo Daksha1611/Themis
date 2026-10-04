@@ -277,6 +277,8 @@ class Runner:
             "status": outcome,
             "findings": [f.model_dump() for f in result.findings],
             "parse_errors": result.parse_errors,
+            "validation_retries": result.retries,
+            "invalid_line": result.invalid_line,
             "error": {
                 "type": result.error_type,
                 "status": result.error_status,

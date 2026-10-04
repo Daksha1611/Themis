@@ -27,6 +27,19 @@ SIZE_BUCKETS = ((1, 5), (6, 15), (16, 30), (31, 60))
 SECURITY_PREFIXES = ("CWE-", "security-other")
 NOISE_SUSPICIOUS, NOISE_CLEAN = 3, 41  # dev clean cases marked suspicious (label report)
 SCHEMA_VERSION = 1
+# Clean cases marked suspicious in the dev labelling pass (2026-10-03), before any eval run.
+# The sensitivity line excludes them; headline numbers stay on the full frozen set.
+SUSPICIOUS_CLEAN = ("1368e5b14e17732e", "3350b7f5558de194", "3fe0fe03cd5c9e75")
+# Q25 project targets (owner, 2026-10-04), measured on the final holdout run. cost_ratio is
+# relative to the dev baseline v1's mean cost per case.
+TARGETS = {
+    "youden_j": (">=", 0.60),
+    "clean_fpr": ("<=", 0.20),
+    "strict_location_precision": (">=", 0.80),
+    "strict_category_recall": (">=", 0.60),
+    "cost_ratio": ("<=", 3.0),
+    "p95_latency_s": ("<=", 30.0),
+}
 
 Span = dict[str, Any]
 Finding = dict[str, Any]
@@ -310,7 +323,11 @@ def paired_comparison(
     out: dict[str, Any] = {}
     for field in ("detected", "strict_category", "flagged"):
         ids = sorted(k for k in first.keys() & second.keys() if field in first[k])
-        out[field] = mcnemar([first[k][field] for k in ids], [second[k][field] for k in ids])
+        out[field] = {
+            **mcnemar([first[k][field] for k in ids], [second[k][field] for k in ids]),
+            "first_only": [k for k in ids if first[k][field] and not second[k][field]],
+            "second_only": [k for k in ids if second[k][field] and not first[k][field]],
+        }
     return out
 
 
@@ -338,6 +355,9 @@ def operational(records: Iterable[dict[str, Any]]) -> dict[str, Any]:
         "status": dict(sorted(status.items())),
         "failures": {k: v for k, v in sorted(status.items()) if k.startswith("failed")},
         "parse_error_rate": rate(sum(bool(r["parse_errors"]) for r in answered), len(answered)),
+        # ADR-026; absent from runs before it
+        "validation_retries": sum(r.get("validation_retries", 0) for r in records),
+        "invalid_line_findings": sum(r.get("invalid_line", 0) for r in records),
         "cost_usd_estimate": {
             "note": "LiteLLM list-price estimate; actual free-tier spend is $0",
             "mean_per_case": statistics.fmean(r["cost_usd_estimate"] for r in answered)
@@ -413,11 +433,27 @@ def summarize(
             "strict_location_precision": m["precision"]["strict_location"],
         }
 
+    def sensitivity(found: dict[str, list[Finding]]) -> dict[str, Any]:
+        """Clean flag rate, precision and J without the suspicious clean cases."""
+        kept = [c for c in scored if c["case_id"] not in SUSPICIOUS_CLEAN]
+        m = evaluate(kept, labels, found)
+        return {
+            "excluded": list(SUSPICIOUS_CLEAN),
+            "clean_fpr": m["detection"]["fpr"],
+            "strict_location_precision": m["precision"]["strict_location"],
+            "youden_j": m["detection"]["youden_j"],
+        }
+
     # ADR-025: detection-first headline, with the chance baseline beside every number
     headline = {
         "reviewer": heads(reviewer),
         "chance": heads(chance),
         "noise_floor": reviewer["false_positives"]["noise_floor"],
+        "sensitivity_without_suspicious_clean": {
+            "reviewer": sensitivity({cid: r["findings"] for cid, r in records.items()}),
+            "chance": sensitivity({c["case_id"]: chance_findings(c, top) for c in scored}),
+            "criterion": "clean cases marked suspicious during labelling, before any run",
+        },
     }
     return {
         "schema_version": SCHEMA_VERSION,

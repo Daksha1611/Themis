@@ -46,6 +46,8 @@ class FakeSession:
 
 
 CTX: dict[str, Any] = {"session_factory": FakeSession}
+# A real hunk: findings must point at a line inside it (ADR-026 line validation).
+REVIEW_DIFF = "diff --git a/a.py b/a.py\n--- a/a.py\n+++ b/a.py\n@@ -1 +1 @@\n-x = 0\n+x = 1\n"
 
 
 def llm_response(content: str) -> LLMResponse:
@@ -65,7 +67,9 @@ def mocks(monkeypatch: pytest.MonkeyPatch) -> Mock:
     """Mocks every external call; `mocks.mock_calls` records their order."""
     m = Mock()
     m.get_installation_token = AsyncMock(return_value="tok-123")
-    m.fetch_pr_diff = AsyncMock(return_value=PRDiff(text="diff", original_chars=4, truncated=False))
+    m.fetch_pr_diff = AsyncMock(
+        return_value=PRDiff(text=REVIEW_DIFF, original_chars=len(REVIEW_DIFF), truncated=False)
+    )
     m.complete = AsyncMock(return_value=llm_response(json.dumps([FINDING, FINDING])))
     m.post_findings = AsyncMock(return_value=PostedReview(line_comments=2, summary_findings=0))
     m.post_review_comment = AsyncMock()
@@ -103,7 +107,7 @@ async def test_full_flow_in_order(mocks: Mock) -> None:
     assert (row["finding_count"], row["raw_finding_count"]) == (2, 2)
     assert (row["prompt_tokens"], row["completion_tokens"]) == (1200, 80)
     assert row["model"] == "groq/openai/gpt-oss-120b" and float(row["cost_usd"]) == 0.000228
-    assert (row["diff_chars"], row["diff_truncated"]) == (4, False)
+    assert (row["diff_chars"], row["diff_truncated"]) == (len(REVIEW_DIFF), False)
 
 
 async def test_no_findings_posts_no_issues_comment(mocks: Mock) -> None:
@@ -123,7 +127,8 @@ async def test_failed_parse_posts_error_comment_and_records_failed_run(mocks: Mo
     mocks.post_findings.assert_not_called()
     row = mocks.create_run.await_args.args[1]
     assert row["status"] == "failed" and "baseline review failed" in row["error"]
-    assert row["prompt_tokens"] == 1200  # the LLM call still cost money; it is recorded
+    # both calls (the first answer and the one retry, ADR-026) cost money; both are recorded
+    assert row["prompt_tokens"] == 2400 and mocks.complete.await_count == 2
 
 
 async def test_diff_fetch_failure_posts_error_comment_and_records_failed_run(mocks: Mock) -> None:

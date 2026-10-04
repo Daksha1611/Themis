@@ -87,3 +87,36 @@ def commentable_lines(diff: str) -> dict[str, dict[int, int]]:
             new_line += 1
         # "-" lines exist only on the old side; "\ No newline at end of file" is a marker.
     return lines_by_file
+
+
+def number_diff(diff: str) -> str:
+    """The diff as the reviewer reads it (ADR-026): every context and added line prefixed with
+    its new-file line number, removed lines marked "-" with no number. File and hunk headers
+    are kept, so the model reads line numbers instead of computing them from hunk offsets."""
+    out: list[str] = []
+    new_line = 0
+    in_hunk = False
+    for raw in diff.splitlines():
+        if raw.startswith(("diff --git", "--- ", "+++ ", "index ", "new file", "deleted file")):
+            in_hunk = False
+            out.append(raw)
+            continue
+        header = _HUNK_HEADER.match(raw)
+        if header:
+            new_line = int(header.group(1))
+            in_hunk = True
+            out.append(raw)
+            continue
+        if not in_hunk:
+            out.append(raw)
+        elif raw.startswith("+"):
+            out.append(f"{new_line:>5} + {raw[1:]}")
+            new_line += 1
+        elif raw.startswith("-"):
+            out.append(f"{'':>5} - {raw[1:]}")
+        elif raw.startswith(" "):
+            out.append(f"{new_line:>5}   {raw[1:]}")
+            new_line += 1
+        else:  # "\ No newline at end of file"
+            out.append(f"{'':>5}   {raw}")
+    return "\n".join(out)

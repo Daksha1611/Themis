@@ -546,6 +546,8 @@ def test_report_renders_every_section_and_flags_a_model_change(
     vault = tmp_path / "vault"
     vault.mkdir()
     monkeypatch.setattr(report, "VAULT_RESULTS", vault)
+    monkeypatch.setattr(report, "DATA", runner.DATA)
+    monkeypatch.setattr(report, "LABELS", runner.LABELS)
     assert report.main([str(run_dir)]) == 0
     note = next(vault.glob("baseline-dev-*.md")).read_text()
     assert note.startswith("---\nname: baseline-dev-")
@@ -648,3 +650,39 @@ def test_mask_issue_refs_touches_only_removed_lines() -> None:
     assert masked[3] == "-# fixes #N, see <issue-link>"
     assert masked[4] == "-color = '&#123;'"  # an HTML entity, not an issue reference
     assert masked[5:] == diff.split("\n")[5:]  # added and context lines unchanged
+
+
+# --- Q63 noise rule, sensitivity line, Q25 targets --------------------------------------------
+
+
+def test_noise_rule_needs_significance_and_more_disagreements_than_identical_runs() -> None:
+    from evals.report import verdict
+
+    noise = {"b": 3, "c": 4}
+    assert verdict({"b": 0, "c": 12, "p_value": 0.0005}, noise).startswith("**counts**")
+    assert verdict({"b": 0, "c": 6, "p_value": 0.03}, noise).startswith("within run-to-run")
+    assert verdict({"b": 2, "c": 3, "p_value": 1.0}, noise) == "not significant"
+
+
+def test_sensitivity_line_drops_only_the_suspicious_clean_cases() -> None:
+    clean = [
+        {"case_id": cid, "kind": "clean", "repo": "o/r", "size_lines": 3, "labels": []}
+        for cid in (*metrics.SUSPICIOUS_CLEAN, "ok1", "ok2")
+    ]
+    flagged = {cid: [finding(1, "control-flow")] for cid in metrics.SUSPICIOUS_CLEAN}
+    full = metrics.evaluate(clean, {}, flagged)
+    kept = metrics.evaluate(
+        [c for c in clean if c["case_id"] not in metrics.SUSPICIOUS_CLEAN], {}, flagged
+    )
+    assert full["detection"]["fpr"]["k"] == 3 and full["detection"]["fpr"]["n"] == 5
+    assert kept["detection"]["fpr"]["k"] == 0 and kept["detection"]["fpr"]["n"] == 2
+
+
+def test_targets_table_values() -> None:
+    from evals.report import show_target
+
+    assert metrics.TARGETS["youden_j"] == (">=", 0.60)
+    assert metrics.TARGETS["clean_fpr"] == ("<=", 0.20)
+    assert show_target("cost_ratio", 1.5) == "1.50×"
+    assert show_target("p95_latency_s", 4.8) == "4.8 s"
+    assert show_target("clean_fpr", 0.415) == "41.5%"

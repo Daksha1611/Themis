@@ -9,7 +9,7 @@ from app.graph.baseline import run_baseline_review
 from app.llm import LLMError, LLMResponse
 
 META = {"pr_title": "Fix parser", "repo_full_name": "octo/widgets"}
-DIFF = "diff --git a/a.py b/a.py\n+++ b/a.py\n@@ -1 +1 @@\n+x = 1\n"
+DIFF = "diff --git a/a.py b/a.py\n+++ b/a.py\n@@ -1 +1,3 @@\n+x = 1\n+y = 2\n+z = 3\n"
 
 
 def valid(**overrides: object) -> dict[str, object]:
@@ -153,3 +153,66 @@ def test_prompt_lists_every_category() -> None:
     system = baseline.build_messages(DIFF, META)[0]["content"]
     for category in ALLOWED_CATEGORIES:
         assert category in system
+
+
+# --- ADR-026: numbered diff, line validation, one retry ------------------------------------
+
+NUMBERED_SOURCE = (
+    "diff --git a/a.py b/a.py\n--- a/a.py\n+++ b/a.py\n"
+    "@@ -10,3 +10,3 @@ def f():\n"
+    "     keep = 1\n"
+    "-    old = 2\n"
+    "+    new = 2\n"
+    "     tail = 3\n"
+)
+
+
+def test_numbered_diff_shows_new_file_numbers_and_unnumbered_removed_lines() -> None:
+    from app.github.diff import number_diff
+
+    lines = number_diff(NUMBERED_SOURCE).splitlines()
+    assert lines[:4] == NUMBERED_SOURCE.splitlines()[:4]  # headers unchanged
+    assert lines[4:] == [
+        "   10       keep = 1",
+        "      -     old = 2",
+        "   11 +     new = 2",
+        "   12       tail = 3",
+    ]
+
+
+def test_prompt_carries_the_numbered_diff_and_the_line_rule() -> None:
+    prompt = baseline.build_messages(NUMBERED_SOURCE, META)[0]["content"]
+    assert "   11 +     new = 2" in prompt
+    assert "new-file line" in prompt and "nearest" in prompt
+
+
+async def test_findings_outside_every_hunk_are_dropped_and_counted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    findings = [valid(line_start=1, line_end=1), valid(line_start=40, line_end=40)]
+    monkeypatch.setattr(baseline, "complete", llm_returning(json.dumps(findings)))
+    result = await run_baseline_review(DIFF, META)
+    assert len(result.findings) == 1 and result.invalid_line == 1
+    assert result.status == "success"
+
+
+async def test_one_retry_with_the_errors_fed_back(monkeypatch: pytest.MonkeyPatch) -> None:
+    first = llm_returning(json.dumps([valid(category="logic-or-contract")]))
+    second = llm_returning(json.dumps([valid()]))
+    calls = AsyncMock(side_effect=[first.return_value, second.return_value])
+    monkeypatch.setattr(baseline, "complete", calls)
+    result = await run_baseline_review(DIFF, META)
+    assert result.status == "success" and result.retries == 1 and len(result.findings) == 1
+    retry_messages = calls.await_args_list[1].args[0]
+    assert (
+        retry_messages[-1]["role"] == "user"
+        and "logic-or-contract" in retry_messages[-1]["content"]
+    )
+    assert result.llm_response is not None and result.llm_response.prompt_tokens == 20  # both calls
+
+
+async def test_a_second_failure_goes_to_parse_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(baseline, "complete", llm_returning("not json"))
+    result = await run_baseline_review(DIFF, META)
+    assert result.status == "failed" and result.retries == 1 and result.parse_errors
+    assert baseline.complete.await_count == 2  # type: ignore[attr-defined]

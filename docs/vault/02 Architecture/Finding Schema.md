@@ -27,8 +27,8 @@ Defined in `app/schemas.py` (M2).
 | Field | Values |
 |---|---|
 | file | path |
-| line_start, line_end | the line range of the problem (`line_end >= line_start`). A range, not a single line: bug-location matching compares against a labeled range ±3 lines (Q23) |
-| category | a logic-bug category ([[ADR-019 Logic bug taxonomy]], plus `arithmetic-or-numeric` from [[ADR-023 Arithmetic-or-numeric logic category]]; overlaps decided by the precedence rules in the [[Glossary]]), a CWE ID from [[ADR-022 CWE Top 25 security taxonomy]], or `security-other`. **Validated:** any other value fails validation (and becomes a parse error); the allowed set is in `app/taxonomy.py` |
+| line_start, line_end | the line range of the problem (`line_end >= line_start`), in **new-file line numbers as shown in the numbered diff**. A finding about removed code anchors to the nearest numbered line in the same hunk. A finding outside every hunk's new-file range is dropped and counted as `invalid_line` ([[ADR-026 Numbered diffs and validated output]]). A range, not a single line: bug-location matching compares against a labeled range ±3 lines (Q23) |
+| category | a logic-bug category ([[ADR-019 Logic bug taxonomy]], plus `arithmetic-or-numeric` from [[ADR-023 Arithmetic-or-numeric logic category]]; overlaps decided by the precedence rules in the [[Glossary]]), a CWE ID from [[ADR-022 CWE Top 25 security taxonomy]], or `security-other`. **Validated:** any other value fails validation. The response then gets one retry with the errors fed back; a second failure becomes a parse error ([[ADR-026 Numbered diffs and validated output]]). The allowed set is in `app/taxonomy.py` |
 | subcategory | required free text when category is `security-other` |
 | severity | `critical` \| `high` \| `medium` \| `low` |
 | message | what is wrong, one sentence |

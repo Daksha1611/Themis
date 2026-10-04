@@ -16,10 +16,17 @@ from collections import Counter
 from typing import Any
 
 from evals.benchmark.leak_scan import scan
-from evals.metrics import MARGIN, case_hit, hits, rate, size_bucket, tier_spans
+from evals.metrics import (
+    MARGIN,
+    SUSPICIOUS_CLEAN,
+    case_hit,
+    hits,
+    rate,
+    size_bucket,
+    tier_spans,
+)
 
 HUNK = re.compile(r"^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@")
-SUSPICIOUS_CLEAN = ("1368e5b14e17732e", "3350b7f5558de194", "3fe0fe03cd5c9e75")  # label report
 
 
 def diff_sides(diff: str) -> dict[str, dict[str, set[int]]]:

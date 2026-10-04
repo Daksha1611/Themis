@@ -10,11 +10,12 @@ The Caveats section is required.
 
 import argparse
 import json
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 from evals.benchmark.label import LABELS, load_labels
-from evals.metrics import compare_runs, summarize
+from evals.metrics import TARGETS, compare_runs, summarize
 
 VAULT_RESULTS = Path("docs/vault/08 Results")
 DATA = Path("evals/benchmark/data")
@@ -47,6 +48,8 @@ def noise_floor(s: dict[str, Any]) -> str:
 
 def base_rate_note(s: dict[str, Any]) -> str:
     br = s["diagnostics"]["base_rate"]
+    if br["mean"] is None:
+        return "no kept buggy cases to measure the base rate on"
     return (
         f"on average {br['mean']:.1%} of a buggy case's changed lines lie inside its "
         f"bug-holding ranges ±3 (median {br['median']:.0%}; {br['all_changed_lines_inside']} "
@@ -79,7 +82,168 @@ def headline(s: dict[str, Any]) -> list[str]:
     ]
 
 
-def render(s: dict[str, Any], comparison: dict[str, Any] | None = None) -> str:
+FIELD_NAMES = {
+    "detected": "Detection (buggy cases with ≥1 finding)",
+    "strict_category": "Strict category-correct",
+    "flagged": "Clean flag (clean cases with ≥1 finding)",
+}
+
+
+def verdict(step: dict[str, Any], noise: dict[str, Any] | None) -> str:
+    """Q63 rule: a change counts only if McNemar-significant and its disagreement count
+    exceeds what two identical runs produce."""
+    significant = step["p_value"] < 0.05
+    above_noise = noise is None or step["b"] + step["c"] > noise["b"] + noise["c"]
+    if significant and above_noise:
+        return "**counts** (significant, above run-to-run noise)"
+    if significant:
+        return "within run-to-run noise (significant, but disagreements ≤ noise floor)"
+    return "not significant"
+
+
+def target_value(name: str, s: dict[str, Any], v1: dict[str, Any]) -> float | None:
+    head = s["headline"]["reviewer"]
+    if name == "youden_j":
+        return float(head["youden_j"]["j"])
+    if name in ("clean_fpr", "strict_location_precision", "strict_category_recall"):
+        return float(head[name]["rate"])
+    if name == "cost_ratio":
+        base = v1["operational"]["cost_usd_estimate"]["mean_per_case"]
+        cur = s["operational"]["cost_usd_estimate"]["mean_per_case"]
+        return float(cur / base) if base else None
+    p95 = s["operational"]["latency_ms"]["p95"]
+    return None if p95 is None else float(p95) / 1000
+
+
+def show_target(name: str, value: float | None) -> str:
+    if value is None:
+        return "n/a"
+    if name in ("youden_j", "cost_ratio"):
+        return f"{value:.3f}" if name == "youden_j" else f"{value:.2f}×"
+    if name == "p95_latency_s":
+        return f"{value:.1f} s"
+    return f"{value:.1%}"
+
+
+def ablation_section(
+    runs: list[tuple[str, dict[str, Any]]],
+    noise: dict[str, Any] | None,
+    step: dict[str, Any] | None,
+) -> list[str]:
+    """Runs side by side (v1, v1 rerun, v2, ...), the Q63 noise floor, the latest step's
+    McNemar verdict, the sensitivity line, and the Q25 targets table."""
+    current, v1 = runs[-1][1], runs[0][1]
+    chance = current["headline"]["chance"]
+    names = [n for n, _ in runs]
+    out = [
+        "## Runs side by side",
+        "",
+        "| Metric | " + " | ".join(names) + " | Chance baseline |",
+        "|---|" + "---|" * (len(runs) + 1),
+    ]
+    rows: list[tuple[str, Callable[[dict[str, Any]], str]]] = [
+        ("Youden's J", lambda h: fmt_j(h["youden_j"])),
+        ("Strict category-correct recall", lambda h: fmt(h["strict_category_recall"])),
+        ("Precision", lambda h: fmt(h["strict_location_precision"])),
+        ("Clean flag rate", lambda h: fmt(h["clean_fpr"])),
+        ("Detection rate", lambda h: fmt(h["detection_tpr"])),
+    ]
+    for label, get in rows:
+        cells = [get(r["headline"]["reviewer"]) for _, r in runs]
+        out.append(f"| {label} | " + " | ".join(cells) + f" | {get(chance)} |")
+    op_rows: list[tuple[str, Callable[[dict[str, Any]], str]]] = [
+        ("Parse failures", lambda r: str(r["operational"]["failures"] or "none")),
+        ("Validation retries", lambda r: str(r["operational"].get("validation_retries", "—"))),
+        (
+            "Invalid-line findings dropped",
+            lambda r: str(r["operational"].get("invalid_line_findings", "—")),
+        ),
+        (
+            "Mean cost per case (list-price estimate)",
+            lambda r: f"{r['operational']['cost_usd_estimate']['mean_per_case']:.5f} USD",
+        ),
+        ("p95 latency", lambda r: f"{r['operational']['latency_ms']['p95'] / 1000:.1f} s"),
+    ]
+    for label, get_op in op_rows:
+        out.append(f"| {label} | " + " | ".join(get_op(r) for _, r in runs) + " | — |")
+    if noise:
+        out += ["", "## Run-to-run noise floor (Q63)", ""]
+        out.append(
+            f"Two runs with identical configuration and review code ({names[0]} vs "
+            f"{names[1]}; the second with the cache disabled), exact McNemar on paired cases:"
+        )
+        out.append("")
+        for field, m in noise.items():
+            changed = m["first_only"] + m["second_only"]
+            out.append(
+                f"- {FIELD_NAMES[field]}: b = {m['b']}, c = {m['c']}, p = {m['p_value']:.3f}; "
+                f"disagreements {m['b'] + m['c']} of {m['n_pairs']}"
+                + (f" ({', '.join(f'`{c}`' for c in changed)})" if changed else "")
+            )
+        out += [
+            "",
+            "**Rule:** a later change counts only if it is McNemar-significant (p < 0.05) "
+            "against the previous row **and** its disagreement count (b + c) exceeds the "
+            "noise floor above.",
+        ]
+    if step:
+        prev, cur = names[-2] if noise is None else names[0], names[-1]
+        out += ["", f"## {prev} → {cur} (exact McNemar)", ""]
+        for field, m in step.items():
+            out.append(
+                f"- {FIELD_NAMES[field]}: b = {m['b']} ({prev} only), c = {m['c']} ({cur} only), "
+                f"p = {m['p_value']:.3f}: {verdict(m, noise[field] if noise else None)}"
+            )
+    out += ["", "## Sensitivity line (suspicious clean cases excluded)", ""]
+    out.append(
+        "Excluding the 3 clean cases marked suspicious during labelling, a criterion recorded "
+        "before any results were seen. Headline numbers stay on the full frozen set."
+    )
+    out += ["", "| Run | Clean flag rate | Precision | J |", "|---|---|---|---|"]
+    for name, r in [*runs, ("Chance", current)]:
+        key = "chance" if name == "Chance" else "reviewer"
+        sens = r["headline"]["sensitivity_without_suspicious_clean"][key]
+        out.append(
+            f"| {name} | {fmt(sens['clean_fpr'])} | {fmt(sens['strict_location_precision'])} | "
+            f"{fmt_j(sens['youden_j'])} |"
+        )
+    out += [
+        "",
+        "## Targets (Q25)",
+        "",
+        "Measured on the final holdout run; dev values are shown for tracking. Targets are "
+        "ambitions: the final results page states which were met.",
+        "",
+        f"| Metric | Baseline ({names[0]}) | Target | Current ({names[-1]}) | Met on dev? |",
+        "|---|---|---|---|---|",
+    ]
+    labels = {
+        "youden_j": "Youden's J",
+        "clean_fpr": "Clean flag rate",
+        "strict_location_precision": "Precision",
+        "strict_category_recall": "Strict category-correct recall",
+        "cost_ratio": "Cost per PR vs baseline",
+        "p95_latency_s": "p95 latency",
+    }
+    for name, (op, goal) in TARGETS.items():
+        base, now = target_value(name, v1, v1), target_value(name, current, v1)
+        met = (
+            "n/a"
+            if now is None
+            else ("yes" if (now >= goal if op == ">=" else now <= goal) else "no")
+        )
+        out.append(
+            f"| {labels[name]} | {show_target(name, base)} | {op} {show_target(name, goal)} | "
+            f"{show_target(name, now)} | {met} |"
+        )
+    return out
+
+
+def render(
+    s: dict[str, Any],
+    comparison: dict[str, Any] | None = None,
+    extra: list[str] | None = None,
+) -> str:
     rev, chance, op, sched = s["reviewer"], s["chance_baseline"], s["operational"], s["schedule"]
     dx = s["diagnostics"]
     fresh = list(s.get("fresh_cases", []))
@@ -107,6 +271,7 @@ def render(s: dict[str, Any], comparison: dict[str, Any] | None = None) -> str:
         f"- Raw evidence: `evals/results/{s['run_id']}/` (`results.jsonl`, `summary.json`)",
         "",
         *headline(s),
+        *(["", *extra] if extra else []),
         "",
         "## Location matching: a diagnostic, not a headline",
         "",
@@ -308,35 +473,54 @@ related:
 """
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("run_dir", type=Path)
-    parser.add_argument("--compare", type=Path, help="an earlier run on the same cases")
-    args = parser.parse_args(argv)
-    summary = json.loads((args.run_dir / "summary.json").read_text())
-    if "diagnostics" not in summary:  # summaries written before ADR-025: recompute from cache
-        cases = [
-            json.loads(x) for x in (DATA / f"{summary['split']}.jsonl").read_text().splitlines()
-        ]
-        summary = summarize(args.run_dir, cases, load_labels(LABELS))
+def load_summary(run_dir: Path) -> dict[str, Any]:
+    """The run's summary recomputed with the current metrics code (same cached results, so the
+    same numbers for unchanged definitions), keeping the run's recorded finish time."""
+    saved = json.loads((run_dir / "summary.json").read_text())
+    cases = [json.loads(x) for x in (DATA / f"{saved['split']}.jsonl").read_text().splitlines()]
+    summary = summarize(run_dir, cases, load_labels(LABELS))
+    summary["finished_at"] = saved["finished_at"]
     records = [
         json.loads(line)
-        for line in (args.run_dir / "results.jsonl").read_text().splitlines()
+        for line in (run_dir / "results.jsonl").read_text().splitlines()
         if line.strip()
     ]
     summary["fresh_cases"] = sorted(
         r["case_id"] for r in records if r.get("diff_masked") and not r["cached"]
     )
+    return summary
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("run_dir", type=Path)
+    parser.add_argument("--compare", type=Path, help="an earlier run on the same cases")
+    parser.add_argument("--baseline", type=Path, help="baseline v1 run (ablation table)")
+    parser.add_argument("--rerun", type=Path, help="an identical rerun of the baseline (Q63)")
+    parser.add_argument("--label", default="v2", help="name of this run in the tables")
+    parser.add_argument("--suffix", default="", help="report file name suffix, e.g. v2")
+    args = parser.parse_args(argv)
+    summary = load_summary(args.run_dir)
+    cases = [json.loads(x) for x in (DATA / f"{summary['split']}.jsonl").read_text().splitlines()]
+    labels = load_labels(LABELS)
     comparison = None
     if args.compare:
-        cases = [
-            json.loads(x) for x in (DATA / f"{summary['split']}.jsonl").read_text().splitlines()
-        ]
         comparison = {
             "against": args.compare.name,
-            "mcnemar": compare_runs(args.compare, args.run_dir, cases, load_labels(LABELS)),
+            "mcnemar": compare_runs(args.compare, args.run_dir, cases, labels),
         }
+    extra = None
+    if args.baseline:
+        runs = [("v1", load_summary(args.baseline))]
+        noise = None
+        if args.rerun:
+            runs.append(("v1 rerun", load_summary(args.rerun)))
+            noise = compare_runs(args.baseline, args.rerun, cases, labels)
+        runs.append((args.label, summary))
+        step = compare_runs(args.baseline, args.run_dir, cases, labels)
+        extra = ablation_section(runs, noise, step)
     name = f"baseline-{summary['split']}-{summary['finished_at'][:10]}"
+    name += f"-{args.suffix}" if args.suffix else ""
     path = VAULT_RESULTS / f"{name}.md"
     description = (
         f"Baseline eval of the {summary['split']} split on the pinned model: Youden's J, "
@@ -344,7 +528,7 @@ def main(argv: list[str] | None = None) -> int:
         "caveats."
     )
     front = FRONTMATTER.format(name=name, description=description, label_report=LABEL_REPORT)
-    path.write_text(front + render(summary, comparison))
+    path.write_text(front + render(summary, comparison, extra))
     print(f"wrote {path}")
     return 0
 

@@ -31,7 +31,7 @@ related:
 **Inputs:** a sanitized `ReviewContext` from the [[Context Builder]], via [[Guardrails]].
 **Outputs:** findings in the [[Finding Schema]] **without** a confidence value ([[ADR-016 Confidence comes from the precision filter, not the LLM]]). They go to [[Guardrails]] for validation, then to the [[Precision Filter]].
 
-**Built (M2):** `app/graph/baseline.py` holds a single baseline pass: one LLM call over the raw diff, covering both logic bugs and security with every allowed category listed in the prompt; no LangGraph, no repo context, no guardrails. It produces the baseline row of the [[Ablation Table]] and is what the [[Eval Harness]] will call. Details: `docs/flow.md` section 4.
+**Built (M2):** `app/graph/baseline.py` holds a single baseline pass: one LLM call over the raw diff, covering both logic bugs and security with every allowed category listed in the prompt; no LangGraph, no repo context, no guardrails. It produces the baseline row of the [[Ablation Table]] and is what the [[Eval Harness]] calls. Since [[ADR-026 Numbered diffs and validated output]], the prompt carries a numbered diff (new-file line numbers), findings outside every hunk are dropped (`invalid_line`), and an invalid response gets one retry with the errors fed back. Details: `docs/flow.md` section 4.
 
 **Planned code location:** `app/graph/` (bug pass, security pass, merge nodes).
 

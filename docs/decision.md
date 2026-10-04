@@ -1649,3 +1649,68 @@ Q65 also affects production comment placement, and is undecided.
 - **Metrics:** headline changed.
 - **Benchmark:** masking rule.
 - **Open Questions:** Q65.
+
+---
+
+## M3: Q63 noise floor, Q65 fix (ADR-026, baseline v2), sensitivity line, Q25 targets: pre-work
+**Date**: 2026-10-04
+**File(s) affected**:
+- Created: `docs/vault/04 Decisions/ADR-026 Numbered diffs and validated output.md`, two run directories (the v1 rerun and v2), `docs/vault/08 Results/baseline-dev-<date>-v2.md`
+- Edited:
+  - code: `app/graph/baseline.py`, `app/github/diff.py`, `evals/metrics.py`, `evals/report.py`, tests
+  - docs: `docs/flow.md`; Finding Schema, Metrics, Success Metrics, Ablation Table, Open Questions (Q63, Q65, Q25 closed); the earlier reports (marked superseded); Results README; Current Status, Session Log, 00 Brief
+
+### What I am changing
+Owner decisions, 2026-10-04.
+
+**1. Q63, run-to-run variance.**
+- The dev baseline is rerun with `--no-cache` as a new run, with the same configuration and the same review-path code. `app/`, `evals/runner.py` and `evals/cache.py` are identical between v1's commit `ad2fc7d` and HEAD; the git SHA differs only through docs and report code.
+- Exact McNemar against v1 on detection, strict category-correct recall and clean flags, listing the cases that changed.
+- The disagreement counts become the **ablation noise floor**. An improvement counts only if it is McNemar-significant against the previous row **and** its disagreement count exceeds what two identical runs produce.
+
+**2. Q65 fix, ADR-026, baseline v2.** Four changes to the review path:
+- **Numbered diff in the prompt:** every context and added line is prefixed with its new-file line number, and removed lines are marked `-` with no number.
+- **Prompt rule:** findings use new-file line numbers; a finding about removed code anchors to the nearest new-file line in the same hunk.
+- **Line validation:** a finding whose line falls outside every hunk's new-file range is dropped and counted as `invalid_line`.
+- **One retry on validation failure:** malformed JSON or an invalid element gets one retry, with the errors fed back. Retries are counted; a second failure goes to `parse_errors` as before. The tokens and cost of both calls are summed.
+
+Production gets the same review path (one code path). The v2 run uses the pinned model with the cache on; the prompt changes, so every case is a fresh call.
+
+**3. Sensitivity line,** in every report: clean flag rate, precision and J recomputed excluding the 3 clean cases marked suspicious during labelling, before any run. The headline stays on the full frozen set.
+
+**4. Q25 targets,** measured on the final holdout run:
+
+| Metric | Target |
+|---|---|
+| Youden's J | ≥ 0.60 |
+| Clean flag rate | ≤ 20% |
+| Precision | ≥ 80% |
+| Strict category-correct recall | ≥ 60% |
+| Cost per PR (list-price estimate) | ≤ 3× baseline |
+| p95 latency | ≤ 30 s |
+
+Each claimed improvement must be McNemar-significant against the previous ablation row on dev and exceed the run-to-run noise. Targets are ambitions; the final results page states which were met.
+
+**5. Report:** v1, the v1 rerun and v2 side by side, with the noise floor, the v1→v2 McNemar result, the sensitivity line and the targets table. Earlier reports are kept as superseded.
+
+### Why I am making this change
+Owner decisions on Q63, Q65 and Q25, and on the suspicious clean cases.
+
+### Alternatives I considered
+Map old-side line numbers after the fact instead of numbering the diff.
+
+### Reasons I rejected each alternative
+The owner chose numbering in the prompt, so the model reads line numbers rather than computing them. It also fixes production comment placement at the source.
+
+### Trade-offs I am accepting
+- The numbered prompt is longer (more tokens per case).
+- Retries add calls on cases that fail validation.
+
+### What could go wrong
+- Groq's daily budget: two full runs today. If the limit binds, the runner checkpoints and the owner gets the resume command.
+- Changing the prompt changes behaviour beyond line numbers. Q63's noise floor tells signal from variance.
+
+### How this affects other components
+- **Review Graph / baseline:** new prompt, numbered diff, validation and retry. Production comments now get correct line numbers.
+- **Metrics:** noise-floor rule, sensitivity line, targets.
+- **Ablation Table:** starts with v1 → v2.
