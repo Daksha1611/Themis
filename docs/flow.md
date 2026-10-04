@@ -176,6 +176,7 @@ Built in M3 Steps 4–7. Offline: no webhook, queue or GitHub calls.
   - `PinnedLLM(eval_provider, eval_model, cache)` (ADR-024).
   - The run directory `evals/results/<split>-<UTC time>-<sha7>/` gets `run.json` (config, `git_state()` SHA and dirty flag). `--resume` uses `latest_open_run(split)` (no `summary.json` yet) and skips `done_ids()`.
 - **Per case,** `Runner.run_case(case)`:
+  0. `mask_issue_refs(case["diff"])` (`DIFF_TRANSFORM`, recorded in `run.json`) masks issue references in removed lines; the record carries `diff_masked`.
   1. `build_messages()` → `ResponseCache.key()` → `ResponseCache.contains()` (a miss in `--cache-only` mode raises `CacheOnlyMiss`, exit 4).
   2. For an uncached case: `TokenWindow.reserve(estimate + max_tokens)` keeps estimated tokens in any 60 s under `TOKENS_PER_MINUTE`.
   3. `run_baseline_review(diff, metadata, pinned)` → `complete(messages, pinned=...)` → `_complete_pinned()`: `ResponseCache.get()`; on a miss, one `_call()` on the pinned model, then `ResponseCache.put()`. A failure raises `LLMError` with status and detail, and `run_baseline_review` returns it as `BaselineResult.error_*`.
@@ -190,8 +191,9 @@ Built in M3 Steps 4–7. Offline: no webhook, queue or GitHub calls.
 - **End of run:** when every scored case has a record, `write_summary(run_dir, cases, labels)` → `summarize()`:
   - `evaluate()` for the reviewer, and again for `chance_findings()` (first changed line of each hunk via `first_changed_lines()`, filed under `most_common_category()`);
   - `operational()` for cost, latency, failures, tokens, cache use and pinned-model share;
+  - the ADR-025 headline per reviewer and chance (`youden_j()`, detection, precision, clean flag rate) and `diagnostics()` (`evals/diagnostics.py`);
   - the result is written to `summary.json` (schema version 1, loadable into the M7 eval database).
-- **Report:** `python -m evals.report <run_dir> [--leak b/bt/c/ct]` → `main()` → `render(summary, leak)` (with `fmt()`, `mean()`, `noise_floor()`) → writes `docs/vault/08 Results/baseline-<split>-<date>.md` with frontmatter. The Caveats section is always written, and flags a model change between sessions, a non-pinned answer, and failures.
+- **Report:** `python -m evals.report <run_dir> [--compare <earlier run>]` → `main()` (recomputes summaries written before ADR-025; `compare_runs()` for McNemar) → `render(summary, comparison)` (with `fmt()`, `mean()`, `noise_floor()`) → writes `docs/vault/08 Results/baseline-<split>-<date>.md` with frontmatter. The Caveats section is always written, and flags a model change between sessions, a non-pinned answer, and failures.
 - **Metric helpers:** `hits()` (same file, ranges overlap after widening the label by ±3 lines), `tier_spans()` (lenient, strict, primary), `case_hit()`, `size_bucket()`, `wilson()`, `rate()`, `p95()`.
 
 ## 10. Call graph index
@@ -258,8 +260,21 @@ Built in M3 Steps 4–7. Offline: no webhook, queue or GitHub calls.
 | run() | scored_cases() | json.loads() | evals/runner.py |
 | run() | run_order() | random.Random(seed).shuffle() | evals/runner.py |
 | summarize() | schedule() | — | evals/metrics.py |
+| evaluate() | youden_j() | math.sqrt() | evals/metrics.py |
+| compare_runs() | case_outcomes() | case_hit(), tier_spans() | evals/metrics.py |
+| compare_runs() | paired_comparison() | mcnemar() | evals/metrics.py |
+| paired_comparison() | mcnemar() | math.comb() | evals/metrics.py |
+| report main() | compare_runs() | load_results(), case_outcomes(), paired_comparison() | evals/metrics.py |
+| summarize() | diagnostics() | base_rate(), miss_breakdown(), coordinates(), clean_false_positives(), leak_split() | evals/diagnostics.py |
+| diagnostics() | base_rate() | diff_sides(), tier_spans() | evals/diagnostics.py |
+| diagnostics() | miss_breakdown() | diff_sides(), finding_position(), hits() | evals/diagnostics.py |
+| diagnostics() | coordinates() | diff_sides(), finding_position() | evals/diagnostics.py |
+| diagnostics() | clean_false_positives() | size_bucket() | evals/diagnostics.py |
+| diagnostics() | leak_split() | leak_cases(), case_hit(), rate() | evals/diagnostics.py |
+| leak_split() | leak_cases() | scan() | evals/diagnostics.py |
+| Runner.run_case(), dry_run() | mask_issue_refs() | re.sub() | evals/runner.py |
 | `python -m evals.report` | main() | render() | evals/report.py |
-| main() | render() | fmt(), mean(), noise_floor() | evals/report.py |
+| main() | render() | headline(), fmt(), fmt_j(), mean(), noise_floor(), base_rate_note() | evals/report.py |
 | `python -m evals.benchmark.leak_scan` | main() | scored_cases(), scan() | evals/benchmark/leak_scan.py |
 | main() | scan() | removed_lines() | evals/benchmark/leak_scan.py |
 | dry_run(), Runner.run_case() | eval_metadata() | — | evals/runner.py |

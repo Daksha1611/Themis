@@ -140,3 +140,18 @@ related:
 
 **Next:** metric redesign and leak masking (owner brief, 2026-10-04).
 **Blockers / questions:** none.
+
+## 2026-10-04: metric redesign, masking, diagnostics
+**Done:**
+- Outstanding Step 7 docs written. Groq's documented daily limit did not bind (219,611 tokens in one session); External Facts updated.
+- Diagnostics:
+  - base rate 81.2%, so location is non-discriminating;
+  - miss breakdown;
+  - coordinate check: no systematic offset, but an old-side convention gap (Q65).
+- [[ADR-025 Detection-first metrics]] and McNemar written and tested against known values (Newcombe's worked example for the J interval).
+- Masking rule `mask-issue-refs-v1`: 7 cases changed and rerun with exactly 7 LLM calls. Leak cases were not advantaged; McNemar p = 1.0.
+- Clean-FP pattern recorded.
+- New report [[baseline-dev-2026-10-04]]; [[baseline-dev-2026-10-03]] kept as superseded. 188 tests pass.
+
+**Next:** owner decisions on Q65 and Q25; M4 not started.
+**Blockers / questions:** Q65.

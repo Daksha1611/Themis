@@ -77,6 +77,7 @@ Outside the vault: `README.md` (repo overview), `docs/flow.md` (what the code do
 - [[ADR-022 CWE Top 25 security taxonomy]]
 - [[ADR-023 Arithmetic-or-numeric logic category]]
 - [[ADR-024 Eval runs pin a single provider and model]]
+- [[ADR-025 Detection-first metrics]]
 
 ## 05 Stack
 - [[Python]]

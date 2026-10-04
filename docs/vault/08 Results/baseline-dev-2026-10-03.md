@@ -11,6 +11,8 @@ related:
   - "[[label-report-dev-2026-10-03]]"
 ---
 
+> **Superseded by [[baseline-dev-2026-10-04]]** ([[ADR-025 Detection-first metrics]]). This report is kept as written. Its headline relied on location matching, which turned out to be non-discriminating on this benchmark (the chance baseline scored higher). The run itself is unchanged and still valid evidence.
+
 # Baseline: dev split, groq/openai/gpt-oss-120b
 
 - Run: `dev-20261003T122301Z-86166c4` (git `86166c4`), finished 2026-10-03T13:23:24+00:00

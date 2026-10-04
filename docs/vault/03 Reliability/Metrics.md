@@ -55,6 +55,24 @@ So one over-represented category (anyio contributes many `concurrency-or-async` 
 
 **Security recall** is reported with raw counts and the statement that it is **not statistically meaningful** in M3 (too few security cases; see [[Benchmark]], Q58).
 
+## Headline metrics ([[ADR-025 Detection-first metrics]], decided 2026-10-04)
+Each headline metric is reported for the reviewer and the chance baseline side by side, with k/n and a 95% interval:
+- **Youden's J** = detection rate (TPR: buggy cases with ≥1 finding) − clean flag rate (FPR: clean cases with ≥1 finding). The interval is Newcombe's hybrid score interval for a difference of two independent proportions. Chance = 0.
+- **Strict category-correct recall.** The chance baseline's value equals the majority-class rate (`type-or-contract`, 34 of 80 kept dev cases).
+- **Precision:** findings on a bug-holding range, over all findings. The chance baseline's precision is computed too.
+- **Clean flag rate,** with the noise floor below.
+
+**Location matching is non-discriminating on this benchmark.** On average 81.2% of a buggy case's changed lines lie inside its bug-holding ranges ±3 (median 100%; 46 of 80 kept cases at 100%), and the chance baseline scores 95% strict location recall against the reviewer's 80% ([[baseline-dev-2026-10-03]]). Location recall at ±3 is reported only as a diagnostic, with this base rate beside it. Strict location recall at ±0 and ±1 is a secondary diagnostic (dev baseline: reviewer 45/80 and 54/80; chance 60/80 and 60/80).
+
+**Run comparisons:** every future ablation compares runs with an **exact McNemar test on paired cases** (`paired_comparison()`, `compare_runs()` in `evals/metrics.py`): detection, strict category-correct recall, and clean flags, each with the discordant counts (b, c) and the two-sided exact p-value. Overlapping confidence intervals are never used to decide.
+
+**Diagnostics** (`evals/diagnostics.py`, in every `summary.json`):
+- the base rate;
+- the causes of strict-location misses;
+- the line-coordinate check (new-side vs old-side numbering, Q65);
+- the clean false-positive pattern;
+- the leak split.
+
 ## Recall tiers, chance baseline (decided 2026-10-03; computed in Step 6)
 Recall is reported in **three tiers**, always all three side by side (Q62, decided 2026-10-03). Each tier allows ±3 lines (Q23).
 - **Lenient:** a finding hits *any* auto-labelled range. A case has up to 23 of these.

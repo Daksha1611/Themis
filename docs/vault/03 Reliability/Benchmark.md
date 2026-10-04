@@ -122,6 +122,23 @@ A clean case is a non-fix commit **none of whose added or modified lines was cha
 - **Affected clean cases:** `480ba4bc4eff750a`, `60ce72ccf8b5f05e`.
 - Mostly comments citing the issue the fix addressed. No case was changed; the owner decides after seeing the numbers.
 
+**Masking rule (owner decision, 2026-10-04; `mask-issue-refs-v1`).** The runner applies it to the removed lines of every case before review:
+- `#123` → `#N`;
+- GitHub issue and PR links → `<issue-link>`;
+- the comment text itself is kept.
+
+Masking removes the memorisation route (the model may know what a specific upstream issue number was about) while keeping the realistic signal (a comment explaining the code). The case files stay unchanged, and `run.json` records the transform. It changes 7 dev cases (6 buggy, 1 clean). Four other leak-scan cases have nothing to mask: 3 contain words only, and one has a link to an organisation page, not an issue.
+
+**Effect, measured** ([[baseline-dev-2026-10-04]]): leak-matched cases were not advantaged before masking. On the 9 buggy leak-scan cases:
+
+| | Detection | Strict category-correct |
+|---|---|---|
+| Before masking | 9/9 | 3/9 |
+| After masking | 8/9 | 3/9 |
+| Other 71 cases | 60/71 | 38/71 |
+
+Paired McNemar between the two runs: p = 1.0 for detection, category-correct recall and clean flags.
+
 **Scored set for eval runs:** kept buggy cases plus all clean cases; dropped cases are never sent to a model. Dev: 80 + 41 = 121 ([[Eval Harness]]).
 
 ## Splits ([[ADR-007 dev-holdout benchmark split]])

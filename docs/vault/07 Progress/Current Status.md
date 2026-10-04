@@ -12,7 +12,7 @@ related:
 
 # Current Status
 
-**Phase:** M3 in progress. Steps 2–3 built (238 cases; SZZ clean rule; frozen splits). The dev split is labelled (Step 3b; [[label-report-dev-2026-10-03]]). The owner verified a stratified 25-case sample: 25/25 agreement on every field. Steps 4–7 are done: cache, runner, metrics, and the dev baseline run ([[baseline-dev-2026-10-03]]). The baseline exposed a metric problem: location matching does not separate the reviewer from chance. **Next: metric redesign (ADR-025)**, then leak masking.
+**Phase:** M3 in progress. Steps 2–3 built (238 cases; SZZ clean rule; frozen splits). The dev split is labelled (Step 3b; [[label-report-dev-2026-10-03]]). The owner verified a stratified 25-case sample: 25/25 agreement on every field. Steps 4–7 are done: cache, runner, metrics, and the dev baseline run ([[baseline-dev-2026-10-03]]). Metrics redesigned ([[ADR-025 Detection-first metrics]]); the current baseline is [[baseline-dev-2026-10-04]]: J 0.435 (chance 0). **Waiting for the owner:** Q65 (line-coordinate convention) and Q25 (targets). M4 not started.
 **Last updated:** 2026-10-03 (dev-split labels)
 
 New sessions start with [[00 Brief]].
@@ -75,6 +75,21 @@ New sessions start with [[00 Brief]].
 - **The chance baseline beats the reviewer on location recall** (strict 95.0% vs 80.0%).
 - Leak scan: 9/80 buggy and 2/41 clean diffs have issue references or telltale words in removed lines.
 
+**Done (metric redesign, 2026-10-04)**
+- Base rate: on average 81.2% of a buggy case's changed lines lie in its bug-holding ranges ±3 (46/80 cases at 100%), so location matching is non-discriminating.
+- Strict-location misses (16):
+  - 10 no findings;
+  - 1 parse failure;
+  - 2 cite removed lines by old-file number;
+  - 2 on changed lines outside ±3;
+  - 1 outside the diff.
+
+  No systematic coordinate offset; the old-side convention gap is Q65.
+- [[ADR-025 Detection-first metrics]]: J with a Newcombe interval, category-correct recall, precision and clean flag rate, all beside the chance baseline; location tolerance ±0/±1/±3 as diagnostics; exact McNemar for every run comparison.
+- Masking (`mask-issue-refs-v1`) changed 7 cases. Exactly 7 LLM calls were made (114 cache hits). Leak-matched cases were not advantaged, and McNemar p = 1.0 on all three measures.
+- Clean false positives: 20 findings on 17 cases; 11 are `type-or-contract`, 14 are medium severity; the 16–30-line bucket is flagged hardest (6/8). Two of the 3 suspicious clean cases were flagged.
+- New baseline: J 0.435 (0.257–0.586) vs chance 0; category-correct 41/80 vs 34/80; precision 74/108 vs 94/243; clean flag rate 17/41 vs 41/41. 188 tests.
+
 **Next**
-- Metric redesign (ADR-025), paired comparison (McNemar), leak masking and a rerun of the 11 affected cases, the clean-FP diagnostic, and a re-report.
+- Owner: Q65 (line-coordinate convention), Q25 (targets after this baseline).
 - Q47 (TestClient), Q48 (large PRs), Q49 (secrets in traces), Q52b (stable webhook URL).

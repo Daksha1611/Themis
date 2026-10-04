@@ -37,6 +37,7 @@ related:
   - Calls `run_baseline_review` with one pinned provider and model, cascade disabled ([[ADR-024 Eval runs pin a single provider and model]]).
   - **Neutral PR title (known eval/production difference):** every eval case gets the same title (`EVAL_PR_TITLE`, "Proposed change"), to prevent label leakage. The real commit subject ("Fix X") would describe the bug, and would tell buggy cases from clean ones. The eval therefore measures **diff-only review**. Production passes the real PR title, so production performance may differ.
 - **Scored set:** kept buggy cases plus all clean cases. Dropped cases are never sent. Dev: 80 + 41 = 121.
+- **Diff transform:** `mask_issue_refs()` (`mask-issue-refs-v1`, recorded in `run.json`; each record carries `diff_masked`) masks issue references in removed lines before review ([[Benchmark]]).
 - **Run order** (Q64): shuffled with a fixed seed (`ORDER_SEED`, recorded in `run.json`), so a stop at the daily budget cannot line up with a repo, category or buggy/clean grouping. `--resume` rebuilds the same order.
   - Each record carries `started_at`, `finished_at` and its `session` (one runner invocation).
   - `run.json` lists the sessions with their stop reason.

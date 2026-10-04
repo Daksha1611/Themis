@@ -19,6 +19,7 @@ related:
 Each question is one bullet starting `**Q<n>.**`, and every number appears once across both sections (`scripts/check_vault.py` checks this). Questions that block current work say so in bold.
 
 ## Still open
+- **Q65. Line-coordinate convention for removed code.** The prompt never says which line numbers to use. 98 of 109 baseline findings use new-file lines, as the labels and GitHub comments do. But when the model criticises removed code, it sometimes cites the removed lines by their **old-file** numbers: 7 findings, causing 2 of the 16 strict-location misses. In production such a finding would be placed on the wrong line or dropped. Fixing it means changing the review path: either the prompt states the convention, or findings on removed lines are mapped. Owner decision ([[Metrics]], [[baseline-dev-2026-10-04]]).
 - **Q63. Run-to-run variance.** Re-run the dev split with the cache disabled to measure variance between identical runs. Costs a full day's quota ([[Metrics]], [[Eval Harness]]).
 - **Q25. Numeric targets.** The shape of success is recorded; numbers are deferred until baseline numbers exist ([[Success Metrics]]).
 - **Q47. TestClient migration.** Migrate from Starlette's `TestClient` (deprecated with httpx) to the newer async test approach before the test count grows further. `fastapi` and `starlette` are pinned until then.

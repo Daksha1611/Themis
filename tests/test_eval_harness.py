@@ -546,12 +546,21 @@ def test_report_renders_every_section_and_flags_a_model_change(
     vault = tmp_path / "vault"
     vault.mkdir()
     monkeypatch.setattr(report, "VAULT_RESULTS", vault)
-    assert report.main([str(run_dir), "--leak", "9/80/2/41"]) == 0
+    assert report.main([str(run_dir)]) == 0
     note = next(vault.glob("baseline-dev-*.md")).read_text()
     assert note.startswith("---\nname: baseline-dev-")
-    for section in ("## Headline", "Chance baseline", "## Caveats", "noise floor", "95% CI"):
+    for section in (
+        "## Headline (ADR-025)",
+        "Youden's J",
+        "Chance baseline",
+        "non-discriminating",
+        "## Diagnostics",
+        "## Caveats",
+        "noise floor",
+        "95% CI",
+    ):
         assert section in note
-    assert "9 of 80 buggy diffs" in note and "different model identifiers" not in note
+    assert "different model identifiers" not in note
 
     summary = json.loads((run_dir / "summary.json").read_text())
     summary["schedule"]["model_identical_across_sessions"] = False

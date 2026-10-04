@@ -1584,3 +1584,68 @@ Location matching cannot separate the reviewer from chance on this benchmark (ch
 - **Benchmark:** the masking rule is recorded.
 - **Eval Harness:** the diff transform is recorded in `run.json`.
 - **Review path:** unchanged; Q65 is the owner's decision.
+
+---
+
+## M3: metric redesign (ADR-025), McNemar, leak masking, diagnostics: completion
+**Date**: 2026-10-04
+**File(s) affected**:
+- As in the pre-work entry.
+- Also: `docs/vault/09 External Facts.md`, the `evals/diagnostics.py` module, and the run directory `evals/results/dev-20261004T085157Z-ad2fc7d/`.
+
+### What I am changing
+**Results:**
+- **Base rate:** mean 81.2%, median 100%, 46 of 80 cases at 100%. Location matching is non-discriminating, and Metrics says so with the number.
+- **Strict-location misses** (16):
+  - 10 no findings;
+  - 1 parse failure;
+  - 2 findings that cite removed lines by old-file number;
+  - 2 on changed lines outside ±3;
+  - 1 outside the diff.
+- **Coordinates:** 98 of 109 findings are new-side, 7 old-side only, 4 outside. That is no systematic offset, so this is not the stop condition. The convention gap is Q65 for the owner.
+- **Headline** (masked baseline):
+
+  | Metric | Reviewer | Chance |
+  |---|---|---|
+  | J | 0.435 (0.257 to 0.586) | 0.000 |
+  | Strict category-correct | 41/80 | 34/80 (majority class) |
+  | Precision | 74/108 | 94/243 |
+  | Clean flag rate | 17/41 | 41/41 |
+- **Location tolerance:** strict location at ±0 / ±1 / ±3 is reviewer 45, 54, 64 of 80 against chance 60, 60, 76.
+- **Masking:**
+  - 7 cases changed (6 buggy, 1 clean); the 4 other leak-scan cases had nothing to mask;
+  - exactly 7 LLM calls, 114 cache hits;
+  - 9 leak-scan buggy cases: detection 9/9 → 8/9, category-correct 3/9 → 3/9 (the other 71: 60/71 and 38/71);
+  - McNemar against the first run: detection b = 1, c = 0, p = 1.0; category b = 1, c = 1, p = 1.0; clean flags 0/0.
+- **Clean false positives:**
+  - 20 findings on 17 cases;
+  - by category: type-or-contract 11, control-flow 4, off-by-one 2, others 1 each;
+  - by severity: medium 14, high 3, low 3;
+  - by size: 16–30 lines 6 of 8 flagged, 1–5 lines 7 of 17;
+  - suspicious clean cases flagged: `3350b7f5` and `3fe0fe03`.
+
+**Departures:**
+1. **7 cases rerun, not 11.** The brief named the 11 leak-scan cases. Only 7 have references to mask, so the other 4 prompts are unchanged and their cached answers stand. Calling them again would only sample model variance.
+2. **The baseline is a full run, not a patched results file.** It ran with the cache: unchanged cases are byte-identical cache hits, and the masked ones are fresh calls. `run.json` records `diff_transform` and every record carries `diff_masked`, so the report states which cases were rerun.
+3. **Old summary left as committed.** The first run's `summary.json` is kept as written; reports recompute older summaries in memory.
+4. **One push with a failing test.** I pushed `ad2fc7d` with the report test still failing, because I had run only a subset of the tests. The next commit fixes it.
+
+### Why I am making this change
+Owner brief, 2026-10-04.
+
+### Alternatives I considered
+Stop at the coordinate finding.
+
+### Reasons I rejected each alternative
+The brief's stop condition is a coordinate bug (a systematic mismatch). The finding is a 6% convention gap confined to removed lines, and it does not affect the detection-first headline, so the work continued and Q65 records it for the owner.
+
+### Trade-offs I am accepting
+The masked cases are single fresh samples (Q63).
+
+### What could go wrong
+Q65 also affects production comment placement, and is undecided.
+
+### How this affects other components
+- **Metrics:** headline changed.
+- **Benchmark:** masking rule.
+- **Open Questions:** Q65.

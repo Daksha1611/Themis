@@ -1,0 +1,28 @@
+{
+ "run_id": "dev-20261004T085157Z-ad2fc7d",
+ "split": "dev",
+ "git_sha": "ad2fc7dece28e169f4193dba75e5beaa9b5a2652",
+ "git_dirty": false,
+ "provider": "groq",
+ "model": "openai/gpt-oss-120b",
+ "temperature": 0.0,
+ "max_tokens": 2048,
+ "eval_pr_title": "Proposed change",
+ "started_at": "2026-10-04T08:51:57+00:00",
+ "limit": null,
+ "cache_mode": "on",
+ "scored_cases": 121,
+ "order_seed": 20261003,
+ "diff_transform": "mask-issue-refs-v1",
+ "sessions": [
+  {
+   "session": 1,
+   "started_at": "2026-10-04T08:51:57+00:00",
+   "already_done": 0,
+   "ended_at": "2026-10-04T08:55:00+00:00",
+   "stop": "complete",
+   "done_after": 121,
+   "provider_calls": 7
+  }
+ ]
+}
