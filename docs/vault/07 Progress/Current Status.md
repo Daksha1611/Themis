@@ -90,6 +90,17 @@ New sessions start with [[00 Brief]].
 - Clean false positives: 20 findings on 17 cases; 11 are `type-or-contract`, 14 are medium severity; the 16–30-line bucket is flagged hardest (6/8). Two of the 3 suspicious clean cases were flagged.
 - New baseline: J 0.435 (0.257–0.586) vs chance 0; category-correct 41/80 vs 34/80; precision 74/108 vs 94/243; clean flag rate 17/41 vs 41/41. 188 tests.
 
+**Done (2026-10-04, while v2 waits for the Groq daily window)**
+- Q63 noise floor: 6/80 detection, 19/80 category-correct, 12/41 clean flags (none significant). It was verified valid: identical review-path code and identical rendered prompts for all 121 cases.
+- Run fingerprint: a code hash (eight review-path modules plus the diff transform) and a prompt hash (rendered prompts). `--resume` refuses on any change and uses the recorded case order. v2's fingerprint was backfilled from `4feea8e`, and it still matches.
+- ADR-026 implemented; baseline v2 stopped at 6/121 on Groq's 200K tokens/day rolling limit, which is now confirmed.
+- M4 groundwork ([[ADR-027 Eval-time repo context]]): a standalone context builder in `app/context/`, not wired into the review path. Retrieval eval [[context-retrieval-dev-2026-10-04]]:
+  - symbol-definition recall 21.2% / 23.7% / 25.0% at 1K / 2K / 4K tokens;
+  - 0 chunks from test, doc, changelog or CI paths;
+  - embedding-cache hit rate 94.6%.
+
 **Next**
-- Owner: Q65 (line-coordinate convention), Q25 (targets after this baseline).
+- Resume v2: `.venv/bin/python -m evals.runner --split dev --resume`, after about 14:10 UTC on 2026-10-05.
+- Then the v2 report: v1 vs the v1 rerun vs v2, the noise floor, McNemar, attribution, the sensitivity line and targets.
+- Owner: whether retrieval needs a symbol-aware step before context is wired in (recall 25% at 4K).
 - Q47 (TestClient), Q48 (large PRs), Q49 (secrets in traces), Q52b (stable webhook URL).

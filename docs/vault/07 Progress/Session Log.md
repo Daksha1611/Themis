@@ -155,3 +155,19 @@ related:
 
 **Next:** owner decisions on Q65 and Q25; M4 not started.
 **Blockers / questions:** Q65.
+
+## 2026-10-04 (2): Q63, ADR-026, fingerprint, M4 groundwork
+**Done:**
+- Q63 noise floor measured and verified valid.
+- ADR-026 built (numbered diff, line rule, line validation, one retry). Baseline v2 stopped at 6/121 on the Groq daily limit (200K rolling; confirmed).
+- Two-hash run fingerprint with a recorded case order; v2 backfilled from `4feea8e` and checked after every commit.
+- Q25 targets, sensitivity line and v1→v2 attribution in the report code.
+- M4 groundwork:
+  - [[ADR-027 Eval-time repo context]];
+  - `app/context/` (tree-sitter chunker, cached MiniLM embeddings, Qdrant hybrid with an IDF sparse modifier and RRF, retriever), standalone, with a test that the review path never imports it;
+  - stack notes for [[torch]], [[qdrant-client]] and [[tree-sitter-python]];
+  - CI installs CPU-only torch.
+- Retrieval eval [[context-retrieval-dev-2026-10-04]]: recall 21–25%, no leakage. 210 tests pass.
+
+**Next:** resume v2 (2026-10-05, after ~14:10 UTC); the v2 report; the owner decides on a symbol-aware retrieval step.
+**Blockers / questions:** Groq's daily window; retrieval design.

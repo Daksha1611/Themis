@@ -1889,3 +1889,38 @@ M4 groundwork while v2 waits for the daily budget.
 ### How this affects other components
 - **Context Builder:** in progress.
 - **Review path:** untouched.
+
+---
+
+## M4 groundwork: completion
+**Date**: 2026-10-04
+**File(s) affected**: as in the M4 pre-work entry, plus `evals/results/context-dev-2026-10-04/` and `docs/vault/08 Results/context-retrieval-dev-2026-10-04.md`
+
+### What I am changing
+**Retrieval eval** (no LLM calls; `f8dd95e`; MiniLM; in-memory Qdrant):
+- 121 scored dev cases; 64 have targets; 156 (case, name) targets in all.
+- Symbol-definition recall: 33/156 (21.2%) at 1K tokens, 37/156 (23.7%) at 2K, 39/156 (25.0%) at 4K.
+- By repo at 4K: click 10/20, anyio 20/67, fastapi 3/24, rich 4/41, marshmallow 2/4.
+- **Leakage:** 0 chunks retrieved from test, doc, changelog or CI paths, and 0 such files indexed. No package path needed the exclusion rule: the package-root scoping already keeps tests out. The rule is a second guard.
+- **Indexing:** mean 2.6 s per snapshot (max 45 s on a repo's first commit); mean 718 chunks; embedding-cache hit rate 94.6% (82,964 hits, 4,699 misses); 368 s wall time in all.
+- **Fingerprint:** v2's fingerprint matched before and after every commit (`b72ef42`, `f8dd95e`).
+
+**Finding:** recall barely grows with budget, so ranking, not budget, is the limit. Pure hybrid similarity on changed lines does not reach the definitions the diff calls. A symbol-aware step (looking up definitions of names referenced in the diff) would likely raise it. I left retrieval pure hybrid on purpose (ADR-015, and so as not to build the metric into the retriever), so this is the owner's decision before context is wired in.
+
+### Why I am making this change
+Owner brief: M4 groundwork, measured before wiring.
+
+### Alternatives I considered
+Add a symbol lookup now.
+
+### Reasons I rejected each alternative
+It changes the retrieval design from ADR-015, so it needs the owner. It would also need to be measured against a metric it was not tuned on.
+
+### Trade-offs I am accepting
+Context is not wired yet.
+
+### What could go wrong
+Name-based matching can count a different definition with the same name as a hit (stated in the report).
+
+### How this affects other components
+The next ablation row (context) waits for v2 and the retrieval decision.

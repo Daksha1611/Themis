@@ -42,7 +42,7 @@ related:
 
 The `ReviewContext` is sanitized by [[Guardrails]] before it reaches the [[Review Graph]].
 
-**In progress (M4 groundwork, 2026-10-04):** standalone in `app/context/`, **not wired into the review path**. Eval-time snapshots: [[ADR-027 Eval-time repo context]].
+**In progress (M4 groundwork, 2026-10-04):** standalone in `app/context/`, **not wired into the review path**. Eval-time snapshots: [[ADR-027 Eval-time repo context]]. First retrieval measurement: [[context-retrieval-dev-2026-10-04]]. Symbol-definition recall is 21–25% at 1K–4K tokens, with no leakage.
 
 **Code location:** `app/context/`.
 
