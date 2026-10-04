@@ -1754,3 +1754,82 @@ Nothing new.
 ### How this affects other components
 - **Ablation Table:** each row costs about a day and a bit.
 - **Prefer cache-only recomputation** for anything that needs no fresh model output.
+
+---
+
+## Noise-floor integrity check; the earlier fingerprint was weaker than specified
+**Date**: 2026-10-04
+**File(s) affected**: `docs/decision.md` (record only; no code change)
+
+### What I am changing
+**The fingerprint gap.** The Step 7 and Q63 briefs required `--resume` to refuse on a review-path fingerprint change. That was never implemented:
+- `run.json` recorded only the git SHA and a dirty flag over all of `app/` and `evals/`;
+- `--resume` checked only the pinned provider and model.
+
+So nothing enforced that the Q63 noise-floor rerun used the same code as baseline v1.
+
+**Verified after the fact** (owner request, no LLM calls), v1 (`ad2fc7d`, run `dev-20261004T085157Z-ad2fc7d`) against the rerun (`1033b35`, run `dev-20261004T130632Z-1033b35`):
+1. **Review-path code:** `git diff ad2fc7d 1033b35` over the eight review-path modules (`app/graph/baseline.py`, `app/llm.py`, `app/github/diff.py`, `app/github/client.py`, `app/schemas.py`, `app/taxonomy.py`, `app/config.py`, `app/observability/tracing.py`) is empty.
+2. **Eval-side prompt construction:** the diff over `evals/runner.py` (neutral title, masking) and `evals/cache.py` is empty, and so is the diff over the case data and labels (`dev.jsonl`, `labels_human.jsonl`).
+3. **Rendered prompts:** every one of the 121 scored cases was rendered through each commit's own code, in separate git worktrees, via the dry-run path (`mask_issue_refs` → `eval_metadata` → `build_messages`). 0 of 121 prompts differ.
+4. **What v1 actually saw:** v1's 114 unmasked cases came from the response cache, and all 121 of v1's prompt keys are present in the cache. So v1's answers, including those first produced by the 2026-10-03 run, were generated from these exact prompts.
+
+**Conclusion:** the noise floor compares two runs with identical review-path code and identical prompts. It is valid. The only difference is the cache: v1 reused answers, and the rerun called the model fresh for every case.
+
+### Why I am making this change
+Owner request, before trusting the noise floor.
+
+### Alternatives I considered
+None.
+
+### Reasons I rejected each alternative
+Not applicable.
+
+### Trade-offs I am accepting
+None.
+
+### What could go wrong
+None now. The real two-hash fingerprint follows (next entry).
+
+### How this affects other components
+Metrics: the noise floor stands.
+
+---
+
+## Run fingerprint: code hash + prompt hash, recorded case order
+**Date**: 2026-10-04
+**File(s) affected**: `evals/runner.py`, `tests/test_eval_harness.py`, `evals/results/dev-20261004T140940Z-4feea8e/run.json` (backfill), Eval Harness, `docs/flow.md`
+
+### What I am changing
+Owner decision (option 1, extended). `run.json` records:
+- `fingerprint.code_hash`: SHA-256 over the eight review-path modules (per-file hashes kept), plus the diff-transform version;
+- `fingerprint.prompt_hash`: SHA-256 over the rendered prompts of the full scored set, via the `--dry-run` path;
+- `case_order`.
+
+`--resume` refuses on a mismatch of either hash, naming the changed files for the code hash. It refuses a run with no fingerprint, and uses the recorded order instead of recomputing it. `--check-fingerprint` verifies the latest open run without calls.
+
+**Backfill for v2** (`dev-20261004T140940Z-4feea8e`, started at `4feea8e` before this existed):
+- **Code hash:** computed from `git show 4feea8e:<file>`.
+- **Prompt hash:** rendered by `4feea8e`'s own code in a git worktree, hashed with the new algorithm.
+- **Case order:** computed with `4feea8e`'s `run_order`.
+- **Agreement:** both hashes equal what current HEAD computes (`a382fa17…` code, `a46ccafd…` prompts), and the recorded order equals the recomputed one.
+- **Remaining cases:** the 6 completed cases are exactly the first 6 of that order, and the 115 remaining cases are identical under the old and new resume logic.
+- **Marking:** v2's `run.json` marks the fingerprint and order as added after the run started.
+
+### Why I am making this change
+The earlier briefs required a fingerprint check that was never implemented. v2 must resume tomorrow on provably the same review path.
+
+### Alternatives I considered
+Hash all of `app/`.
+
+### Reasons I rejected each alternative
+Any unrelated change, such as M4 code in `app/context/`, would block the resume. The code hash covers what the review path imports, and the prompt hash covers everything that shapes the prompts.
+
+### Trade-offs I am accepting
+A change to a review-path module that does not alter behaviour, such as a comment, still blocks a resume. That is deliberate.
+
+### What could go wrong
+A new module imported by the review path must be added to `REVIEW_PATH_MODULES`. That is checked in review, not automatically.
+
+### How this affects other components
+M4 code can live in `app/context/` without touching v2.

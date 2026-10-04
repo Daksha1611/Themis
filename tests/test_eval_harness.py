@@ -709,3 +709,77 @@ def test_attribution_splits_changed_cases_by_cause() -> None:
     result = dx.attribution(cases, before, after, step)
     assert result["changed"] == 4
     assert result["groups"] == {"retry": ["r"], "numbering": ["n"], "both": ["b"], "neither": ["x"]}
+
+
+# --- run fingerprint and recorded order (owner decision, 2026-10-04) --------------------------
+
+
+def interrupted_run(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fake: Callable[..., FakeLiteLLM]
+) -> Path:
+    results = bench(tmp_path, monkeypatch)
+    day = litellm_exceptions.RateLimitError("tokens per day (TPD)", "groq", "m")
+    fake({"groq": day})
+    assert runner.main(["--split", "dev"]) == 3
+    return next(results.iterdir())
+
+
+def test_resume_refuses_when_a_review_path_file_changes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fake: Callable[..., FakeLiteLLM],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    interrupted_run(tmp_path, monkeypatch, fake)
+    real = runner.file_hashes()
+    monkeypatch.setattr(runner, "file_hashes", lambda: {**real, "app/llm.py": "0" * 64})
+    assert runner.main(["--split", "dev", "--resume"]) == 2
+    assert "code hash changed (files: app/llm.py)" in capsys.readouterr().out
+
+
+def test_resume_refuses_when_the_rendered_prompts_change(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fake: Callable[..., FakeLiteLLM],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    interrupted_run(tmp_path, monkeypatch, fake)
+    monkeypatch.setattr(runner, "EVAL_PR_TITLE", "A different title")  # eval-side change
+    assert runner.main(["--split", "dev", "--resume"]) == 2
+    out = capsys.readouterr().out
+    assert "prompt hash changed" in out and "code hash" not in out
+
+
+def test_resume_refuses_a_run_without_a_fingerprint(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fake: Callable[..., FakeLiteLLM]
+) -> None:
+    run_dir = interrupted_run(tmp_path, monkeypatch, fake)
+    meta = json.loads((run_dir / "run.json").read_text())
+    del meta["fingerprint"]
+    (run_dir / "run.json").write_text(json.dumps(meta))
+    assert runner.main(["--split", "dev", "--resume"]) == 2
+
+
+def test_resume_uses_the_recorded_order_not_a_recomputed_one(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fake: Callable[..., FakeLiteLLM]
+) -> None:
+    run_dir = interrupted_run(tmp_path, monkeypatch, fake)
+    recorded = json.loads((run_dir / "run.json").read_text())["case_order"]
+    monkeypatch.setattr(runner, "run_order", lambda cases, seed: list(reversed(cases)))
+    fake({"groq": FINDING})
+    assert runner.main(["--split", "dev", "--resume"]) == 0
+    done = [
+        json.loads(line)["case_id"] for line in (run_dir / "results.jsonl").read_text().splitlines()
+    ]
+    assert done == recorded
+
+
+def test_check_fingerprint_reports_a_match(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fake: Callable[..., FakeLiteLLM],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    interrupted_run(tmp_path, monkeypatch, fake)
+    assert runner.main(["--split", "dev", "--check-fingerprint"]) == 0
+    assert "fingerprint matches" in capsys.readouterr().out

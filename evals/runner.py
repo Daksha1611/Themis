@@ -14,6 +14,7 @@ Exit codes: 0 done, 2 refused (holdout guard, or the dry run says the run does n
 
 import argparse
 import asyncio
+import hashlib
 import json
 import random
 import re
@@ -78,6 +79,76 @@ def mask_issue_refs(diff: str) -> str:
             line = ISSUE_NUMBER.sub("#N", ISSUE_LINK.sub("<issue-link>", line))
         out.append(line)
     return "\n".join(out)
+
+
+# The run fingerprint (owner decision, 2026-10-04): two hashes recorded in run.json and checked
+# by --resume. The code hash covers the modules the review path imports, plus the diff
+# transform; the prompt hash covers the rendered prompts of the full scored set, catching
+# eval-side changes (neutral title, masking, case data, labels) outside those modules.
+REVIEW_PATH_MODULES = (
+    "app/config.py",
+    "app/github/client.py",
+    "app/github/diff.py",
+    "app/graph/baseline.py",
+    "app/llm.py",
+    "app/observability/tracing.py",
+    "app/schemas.py",
+    "app/taxonomy.py",
+)
+
+
+def file_hashes(read: Callable[[str], bytes] = lambda p: Path(p).read_bytes()) -> dict[str, str]:
+    return {path: hashlib.sha256(read(path)).hexdigest() for path in REVIEW_PATH_MODULES}
+
+
+def code_hash(files: dict[str, str], transform: str = "") -> str:
+    payload = "\n".join(f"{path} {digest}" for path, digest in sorted(files.items()))
+    return hashlib.sha256(
+        f"{payload}\ntransform {transform or DIFF_TRANSFORM}".encode()
+    ).hexdigest()
+
+
+def rendered_prompt(case: dict[str, Any]) -> list[dict[str, str]]:
+    """The prompt a case is reviewed with: the same path as --dry-run and run_case."""
+    return build_messages(mask_issue_refs(case["diff"]), eval_metadata(case))
+
+
+def prompt_hash(cases: list[dict[str, Any]]) -> str:
+    digest = hashlib.sha256()
+    for case in sorted(cases, key=lambda c: c["case_id"]):
+        rendered = json.dumps(rendered_prompt(case), sort_keys=True, ensure_ascii=False)
+        digest.update(
+            f"{case['case_id']} {hashlib.sha256(rendered.encode()).hexdigest()}\n".encode()
+        )
+    return digest.hexdigest()
+
+
+def fingerprint(cases: list[dict[str, Any]]) -> dict[str, Any]:
+    files = file_hashes()
+    return {
+        "code_hash": code_hash(files),
+        "code_files": files,
+        "prompt_hash": prompt_hash(cases),
+        "diff_transform": DIFF_TRANSFORM,
+    }
+
+
+def fingerprint_mismatch(recorded: dict[str, Any], current: dict[str, Any]) -> list[str]:
+    """Human-readable reasons the current code or prompts differ from a run's record."""
+    problems = []
+    if recorded["code_hash"] != current["code_hash"]:
+        changed = [
+            p
+            for p in sorted(set(recorded["code_files"]) | set(current["code_files"]))
+            if recorded["code_files"].get(p) != current["code_files"].get(p)
+        ]
+        problems.append(
+            "code hash changed"
+            + (f" (files: {', '.join(changed)})" if changed else " (diff transform)")
+        )
+    if recorded["prompt_hash"] != current["prompt_hash"]:
+        problems.append("prompt hash changed (rendered prompts of the scored set differ)")
+    return problems
 
 
 class BudgetExhausted(Exception):
@@ -348,6 +419,11 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     cache_mode.add_argument("--cache-only", action="store_true", help="fail on any cache miss")
     parser.add_argument("--dry-run", action="store_true", help="estimate tokens; call nothing")
     parser.add_argument("--i-know-this-is-holdout", action="store_true")
+    parser.add_argument(
+        "--check-fingerprint",
+        action="store_true",
+        help="compare the latest open run's recorded fingerprint with the current code; no calls",
+    )
     return parser.parse_args(argv)
 
 
@@ -362,6 +438,18 @@ async def run(args: argparse.Namespace) -> int:
     cases = run_order(scored_cases(args.split, labels), ORDER_SEED)[: args.limit]
     if args.dry_run:
         return 0 if dry_run(cases, settings.llm_max_tokens) else 2
+    if args.check_fingerprint:
+        open_run = latest_open_run(args.split)
+        if open_run is None:
+            print("no open run")
+            return 0
+        recorded = json.loads((open_run / "run.json").read_text()).get("fingerprint")
+        if recorded is None:
+            print(f"{open_run.name}: no recorded fingerprint")
+            return 2
+        problems = fingerprint_mismatch(recorded, fingerprint(scored_cases(args.split, labels)))
+        print(f"{open_run.name}: " + ("; ".join(problems) if problems else "fingerprint matches"))
+        return 2 if problems else 0
 
     cache = None if args.no_cache else ResponseCache(CACHE_PATH, cache_only=args.cache_only)
     pinned = PinnedLLM(settings.eval_provider, settings.eval_model, cache)
@@ -392,6 +480,8 @@ async def run(args: argparse.Namespace) -> int:
             "scored_cases": len(cases),
             "order_seed": ORDER_SEED,
             "diff_transform": DIFF_TRANSFORM,
+            "fingerprint": fingerprint(scored_cases(args.split, labels)),
+            "case_order": [c["case_id"] for c in cases],
             "sessions": [],
         }
         (run_dir / "run.json").write_text(json.dumps(meta, indent=1) + "\n")
@@ -399,7 +489,15 @@ async def run(args: argparse.Namespace) -> int:
     if (meta["provider"], meta["model"]) != (pinned.provider, pinned.model):
         print(f"Refusing to resume {run_dir}: it pins {meta['provider']}/{meta['model']}.")
         return 2
-    cases = run_order(scored_cases(args.split, labels), meta["order_seed"])[: meta["limit"]]
+    scored = scored_cases(args.split, labels)
+    if "fingerprint" not in meta or "case_order" not in meta:
+        print(f"Refusing to resume {run_dir}: it has no recorded fingerprint or case order.")
+        return 2
+    if problems := fingerprint_mismatch(meta["fingerprint"], fingerprint(scored)):
+        print(f"Refusing to resume {run_dir}: " + "; ".join(problems) + ".")
+        return 2
+    by_id = {c["case_id"]: c for c in scored}
+    cases = [by_id[cid] for cid in meta["case_order"]]  # the recorded order, never recomputed
     done = done_ids(run_dir)
     session = len(meta["sessions"]) + 1
     meta["sessions"].append(

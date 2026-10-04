@@ -169,6 +169,7 @@ Built in M3 Steps 4–7. Offline: no webhook, queue or GitHub calls.
 
 - **Entry:** `python -m evals.runner --split dev [...]` → `main(argv)` → `parse_args()` → `run(args)`.
 - **Holdout guard:** `--split holdout` prints `HOLDOUT_WARNING` and returns 2 unless `--i-know-this-is-holdout`.
+- **Fingerprint:** a new run records `fingerprint()` (code hash over `REVIEW_PATH_MODULES` plus the diff transform; prompt hash over the rendered prompts of the full scored set) and `case_order` in `run.json`. `--resume` → `fingerprint_mismatch()` refuses on any change (exit 2) and replays the recorded `case_order`. `--check-fingerprint` reports a match or mismatch for the latest open run.
 - **Order:** `run_order(cases, ORDER_SEED)`, a seeded shuffle; the seed and each runner session are recorded in `run.json`, and each record carries `session`, `started_at`, `finished_at`. `summarize()` adds `schedule()`: cases per session and per UTC day, and model identifiers per session.
 - **Scored set:** `scored_cases(split, load_labels(LABELS))` reads `evals/benchmark/data/<split>.jsonl`. It keeps the clean cases and every buggy case whose latest label record is valid (or unlabelled); dropped cases never reach a provider.
 - **Dry run:** `dry_run(cases, max_tokens)` → `build_messages(diff, eval_metadata(case))`, the review path's own prompt builder, with the neutral `EVAL_PR_TITLE` → `estimate_tokens()` (LiteLLM `token_counter`, tiktoken `cl100k_base`). It prints per-case estimates and checks the per-request ceiling and the daily budget. Returns 2 when the run does not fit. No calls.
@@ -262,6 +263,12 @@ Built in M3 Steps 4–7. Offline: no webhook, queue or GitHub calls.
 | main() | run() | get_settings(), load_labels(), scored_cases(), dry_run(), ResponseCache(), PinnedLLM(), latest_open_run(), git_state(), done_ids(), Runner.run_case(), write_summary() | evals/runner.py |
 | run() | scored_cases() | json.loads() | evals/runner.py |
 | run() | run_order() | random.Random(seed).shuffle() | evals/runner.py |
+| run() | fingerprint() | file_hashes(), code_hash(), prompt_hash() | evals/runner.py |
+| fingerprint() | file_hashes() | hashlib.sha256() over REVIEW_PATH_MODULES | evals/runner.py |
+| fingerprint() | code_hash() | hashlib.sha256() | evals/runner.py |
+| fingerprint() | prompt_hash() | rendered_prompt(), hashlib.sha256() | evals/runner.py |
+| prompt_hash() | rendered_prompt() | mask_issue_refs(), eval_metadata(), build_messages() | evals/runner.py |
+| run() | fingerprint_mismatch() | — | evals/runner.py |
 | summarize() | schedule() | — | evals/metrics.py |
 | evaluate() | youden_j() | math.sqrt() | evals/metrics.py |
 | compare_runs() | case_outcomes() | case_hit(), tier_spans() | evals/metrics.py |
