@@ -35,4 +35,11 @@ related:
 - **Completions decide the day.** The run fits one day only if responses average at most 615 completion tokens. With every response at full `max_tokens`, the total would be 373,443 (187%).
 - Eight earlier production `gpt-oss-120b` generations (Langfuse, read-only) averaged **822 completion tokens** (range 93–1,257). That puts the expected total near 225K, so the dev run most likely spans **two days** via `--resume`.
 
+## Measured: dev baseline run (2026-10-03)
+- The whole dev run (121 cases) finished in **one session**: about 1 hour (12:23–13:23 UTC), 122 provider calls (one per-minute retry).
+- Tokens: 219,611 in all (132,719 prompt, 86,892 completion; mean 718 completion tokens per case).
+- **No daily-limit (TPD) response arrived**, although the total exceeds the 200K tokens/day taken from Groq's docs on 2026-10-01. Either the documented daily limit does not apply as recorded, or it is counted differently. Re-verify before relying on it ([[09 External Facts]]).
+- Pacing by an estimated prompt + `max_tokens` per request kept the run under 8K tokens/minute; one per-minute 429 was retried.
+- Actual prompt tokens ran 5.6% above the `cl100k_base` estimate (132,719 vs 125,635).
+
 **Affects:** [[Benchmark]], [[Eval Harness]], [[CI Quality Gate]], [[LLM Client]]

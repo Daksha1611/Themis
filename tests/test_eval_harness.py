@@ -556,3 +556,86 @@ def test_report_renders_every_section_and_flags_a_model_change(
     summary = json.loads((run_dir / "summary.json").read_text())
     summary["schedule"]["model_identical_across_sessions"] = False
     assert "different model identifiers" in report.render(summary)
+
+
+# --- ADR-025: detection-first metrics, McNemar, diagnostics ----------------------------------
+
+
+@pytest.mark.parametrize(
+    ("b", "c", "p"),
+    [
+        (10, 2, 2 * (1 + 12 + 66) / 4096),  # exact binomial, n = 12
+        (0, 0, 1.0),
+        (5, 5, 1.0),
+        (0, 6, 2 / 64),
+    ],
+)
+def test_mcnemar_exact_known_values(b: int, c: int, p: float) -> None:
+    first = [True] * b + [False] * c + [True, False]  # plus two concordant pairs
+    second = [False] * b + [True] * c + [True, False]
+    result = metrics.mcnemar(first, second)
+    assert (result["b"], result["c"]) == (b, c)
+    assert result["p_value"] == pytest.approx(p)
+
+
+def test_youden_j_matches_newcombe_worked_example() -> None:
+    # Newcombe (1998), method 10: 56/70 vs 48/80 -> 0.2000, 95% CI 0.0524 to 0.3339
+    j = metrics.youden_j(metrics.rate(56, 70), metrics.rate(48, 80))
+    assert j["j"] == pytest.approx(0.2)
+    assert (round(j["low"], 4), round(j["high"], 4)) == (0.0524, 0.3339)
+
+
+def test_chance_flagging_everything_has_j_zero() -> None:
+    j = metrics.youden_j(metrics.rate(80, 80), metrics.rate(41, 41))
+    assert j["j"] == 0 and j["low"] < 0 < j["high"]
+
+
+def test_paired_comparison_uses_only_shared_cases() -> None:
+    first = {"a": {"detected": True, "strict_category": True}, "z": {"flagged": True}}
+    second = {
+        "a": {"detected": False, "strict_category": True},
+        "z": {"flagged": False},
+        "only": {"detected": True, "strict_category": True},
+    }
+    result = metrics.paired_comparison(first, second)
+    assert (result["detected"]["b"], result["detected"]["c"]) == (1, 0)
+    assert result["detected"]["n_pairs"] == 1 and result["flagged"]["b"] == 1
+
+
+def test_diagnostics_coordinates_and_base_rate() -> None:
+    from evals import diagnostics as dx
+
+    sides = dx.diff_sides(DIFF)["pkg/m.py"]
+    assert sides["added"] == {11, 30} and sides["removed_old"] == {11, 30}
+    near_old = {"file": "pkg/m.py", "line_start": 12, "line_end": 12}
+    assert dx.finding_position(near_old, dx.diff_sides(DIFF)).startswith("new-side, context")
+    removed = DIFF.replace("@@ -30,2 +30,2 @@", "@@ -90,2 +30,2 @@")
+    old_only = {"file": "pkg/m.py", "line_start": 90, "line_end": 90}
+    assert dx.finding_position(old_only, dx.diff_sides(removed)).startswith("old-side")
+    case = {"case_id": "a", "kind": "buggy", "diff": DIFF, "labels": SPANS, "size_lines": 4}
+    label = {
+        "valid": True,
+        "category": "control-flow",
+        "primary_range": {"index": 1},
+        "primary_contested_with": [2],
+    }
+    rate = dx.base_rate([case], {"a": label})
+    assert rate["mean"] == 1.0 and rate["all_changed_lines_inside"] == 1
+    records = {"a": {"status": "success", "findings": []}}
+    assert dx.miss_breakdown([case], {"a": label}, records)["causes"] == {
+        "no findings": {"count": 1, "cases": ["a"]}
+    }
+
+
+def test_mask_issue_refs_touches_only_removed_lines() -> None:
+    diff = (
+        "--- a/x.py\n+++ b/x.py\n@@ -1,4 +1,4 @@\n"
+        "-# fixes #1111, see https://github.com/o/r/issues/1111#c2\n"
+        "-color = '&#123;'\n"
+        "+# see #2222\n"
+        " # https://github.com/o/r/pull/3\n"
+    )
+    masked = runner.mask_issue_refs(diff).split("\n")
+    assert masked[3] == "-# fixes #N, see <issue-link>"
+    assert masked[4] == "-color = '&#123;'"  # an HTML entity, not an issue reference
+    assert masked[5:] == diff.split("\n")[5:]  # added and context lines unchanged

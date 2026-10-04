@@ -12,7 +12,7 @@ related:
 
 # Current Status
 
-**Phase:** M3 in progress. Steps 2–3 built (238 cases; SZZ clean rule; frozen splits). The dev split is labelled (Step 3b; [[label-report-dev-2026-10-03]]). The owner verified a stratified 25-case sample: 25/25 agreement on every field. Steps 4–6 are built (cache, runner, metrics; ADR-024 pins one model). **Stopped at the dry run:** the dev run does not fit one day of Groq's free tier (Q64, owner decision).
+**Phase:** M3 in progress. Steps 2–3 built (238 cases; SZZ clean rule; frozen splits). The dev split is labelled (Step 3b; [[label-report-dev-2026-10-03]]). The owner verified a stratified 25-case sample: 25/25 agreement on every field. Steps 4–7 are done: cache, runner, metrics, and the dev baseline run ([[baseline-dev-2026-10-03]]). The baseline exposed a metric problem: location matching does not separate the reviewer from chance. **Next: metric redesign (ADR-025)**, then leak masking.
 **Last updated:** 2026-10-03 (dev-split labels)
 
 New sessions start with [[00 Brief]].
@@ -66,9 +66,15 @@ New sessions start with [[00 Brief]].
 - **Dry run:**
   - 121 cases; prompts 125,635 tokens (63% of 200K/day); the largest request is 3,751 of 8,000, so every case fits.
   - The run fits one day only if completions average ≤615 tokens; past `gpt-oss-120b` completions average ~822. The expected total (~225K) is over one day, so per the brief **no LLM call was made** (Q64).
-- `evals/report.py` and the baseline run wait for Q64.
+
+
+**Done (M3 Step 7: dev baseline, 2026-10-03)**
+- Q64: a two-day run with `--resume` was planned. In the event, the run finished in **one session** (~1 hour, 122 provider calls, 121 cases) with no daily-limit response.
+- Pinned `groq/openai/gpt-oss-120b`; 100% of answered cases came from it, with an identical model ID throughout. The `--cache-only` rerun gave identical metrics with 0 provider calls.
+- Strict category-correct recall 41/80 (51.2%); precision 75/109 (68.8%); clean FP 17/41 (41.5%).
+- **The chance baseline beats the reviewer on location recall** (strict 95.0% vs 80.0%).
+- Leak scan: 9/80 buggy and 2/41 clean diffs have issue references or telltale words in removed lines.
 
 **Next**
-- Owner decides Q64 (two-day run, lower `max_tokens`, or another model).
-- Then M3 Step 7 (baseline run, `--cache-only` reproducibility check, `evals/report.py`): response cache, eval runner, metrics, baseline dev report.
+- Metric redesign (ADR-025), paired comparison (McNemar), leak masking and a rerun of the 11 affected cases, the clean-FP diagnostic, and a re-report.
 - Q47 (TestClient), Q48 (large PRs), Q49 (secrets in traces), Q52b (stable webhook URL).

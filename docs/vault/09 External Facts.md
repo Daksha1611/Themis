@@ -31,7 +31,7 @@ Known changes: `gemini-2.5-flash` was still listed but returned 404 (2026-10-01)
 | Provider | Limit | Source and date | How to re-verify |
 |---|---|---|---|
 | Groq, `openai/gpt-oss-120b` | 1,000 requests/day; **8,000 tokens/minute: the binding constraint** (one large-diff prompt can exceed it alone; the cascade then falls through) | response headers `x-ratelimit-limit-requests`, `x-ratelimit-limit-tokens`, 2026-10-02 | read the headers of any chat completion |
-| Groq, `openai/gpt-oss-120b` | 30 requests/minute; 200,000 tokens/day | Groq rate-limits docs, 2026-10-01 (not in the headers) | Groq's rate-limits docs page |
+| Groq, `openai/gpt-oss-120b` | 30 requests/minute; 200,000 tokens/day | Groq rate-limits docs, 2026-10-01 (not in the headers). **Contradicted 2026-10-03:** the dev baseline used 219,611 tokens in ~1 hour with no daily-limit response; the daily limit is unverified | Groq's rate-limits docs page |
 | Gemini | per-model limits shown only in AI Studio for the project, not in public docs; requests/day reset at midnight Pacific | Gemini docs, 2026-10-01 | AI Studio → the project's rate limits |
 | Mistral, `codestral-2508` | 125 requests/minute; 625,000 tokens/minute | response headers `x-ratelimit-limit-req-minute`, `x-ratelimit-limit-tokens-minute`, 2026-10-02 | read the headers of any chat completion |
 | OpenRouter, `:free` models | about 50 requests/day | OpenRouter docs, 2026-10-01 | OpenRouter's limits docs page |

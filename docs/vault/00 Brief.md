@@ -20,7 +20,7 @@ Themis is a GitHub App that reviews Python pull requests for logic bugs and secu
 
 ## Current milestone: M3, benchmark and eval harness
 **Delivers:** 150–300 labeled cases (reverted bug fixes plus ~30% clean PRs) split 60/40 dev/holdout; a response cache; an eval runner over the real review path; metrics; the first baseline dev report in `08 Results/`.
-**State:** Steps 2–3 built: 238 cases (168 buggy, 70 clean; dev 143 / holdout 95), SZZ clean rule. The dev split is labelled from upstream evidence: 80 of 102 buggy cases kept (Q61 amended; [[label-report-dev-2026-10-03]]). The owner verified a stratified 25-case sample of the labels: 25/25 agreement on validity, category and primary range ([[Benchmark]]). Q62 is decided: three recall tiers ([[Metrics]]). Steps 4–6 are built (cache, runner, metrics; [[ADR-024 Eval runs pin a single provider and model]]). **Next gate:** Q64. The dev dry run does not fit one day of Groq's free tier, so the baseline run (Step 7) waits for the owner's decision. Details: [[Current Status]], [[Benchmark]].
+**State:** Steps 2–3 built: 238 cases (168 buggy, 70 clean; dev 143 / holdout 95), SZZ clean rule. The dev split is labelled from upstream evidence: 80 of 102 buggy cases kept (Q61 amended; [[label-report-dev-2026-10-03]]). The owner verified a stratified 25-case sample of the labels: 25/25 agreement on validity, category and primary range ([[Benchmark]]). Q62 is decided: three recall tiers ([[Metrics]]). Steps 4–7 are done: cache, runner, metrics, and the dev baseline on the pinned model ([[ADR-024 Eval runs pin a single provider and model]], [[baseline-dev-2026-10-03]]). **Next:** metric redesign (location matching is non-discriminating), then leak masking. M4 waits. Details: [[Current Status]], [[Benchmark]].
 
 ## Hard constraints
 - Python repositories only ([[ADR-001 Python-only v1]]).
@@ -40,7 +40,7 @@ Themis is a GitHub App that reviews Python pull requests for logic bugs and secu
 - Outside-world facts (model IDs, free-tier limits, versions) expire: check [[09 External Facts]] and re-verify anything older than 30 days.
 
 ## Open questions blocking work
-- None open. Next gate: the owner's dev labelling pass before Steps 4–7 (cache, runner, metrics, baseline run).
+- None blocking. Q25 (numeric targets) stays open until the redesigned baseline exists.
 - Not M3: **Q58** security benchmark track (M6), **Q59** regression-test validation
 
 All questions: [[Open Questions]].

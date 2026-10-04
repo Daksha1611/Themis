@@ -128,3 +128,15 @@ related:
 
 **Next:** owner decides Q64; then Step 7 (`evals/report.py`, baseline run, cache-only rerun).
 **Blockers / questions:** Q64.
+
+## 2026-10-03 (6): dev baseline run (M3 Step 7)
+**Done:**
+- Q64 closed: two-day plan, shuffled order with a recorded seed, sessions and per-case timestamps, model-consistency check, leak scan (9/80 buggy and 2/41 clean diffs flagged; nothing changed). The neutral PR title is recorded as a known difference between eval and production.
+- Groq's model list was checked live before the run.
+- The run finished in one session: ~1 hour, 122 provider calls, 219,611 tokens, no daily-limit response.
+- Cache-only rerun: identical metrics, 0 provider calls.
+- `evals/report.py` written; report [[baseline-dev-2026-10-03]]. 179 tests pass.
+- **Finding:** the chance baseline's location recall (strict 95%) beats the reviewer's (80%).
+
+**Next:** metric redesign and leak masking (owner brief, 2026-10-04).
+**Blockers / questions:** none.

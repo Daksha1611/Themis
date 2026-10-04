@@ -1465,3 +1465,122 @@ The run's order differs from case-ID order. The order is reproducible from the s
 ### How this affects other components
 - **Eval Harness:** the run order and provenance fields.
 - **Benchmark:** the leak-scan result is recorded.
+
+---
+
+## M3 Step 7: dev baseline run: completion
+**Date**: 2026-10-03 (recorded 2026-10-04)
+**File(s) affected**: as in the Step 7 pre-work entry, plus `docs/vault/09 External Facts.md` and the results in `evals/results/dev-20261003T122301Z-86166c4/` (baseline) and `dev-20261003T132348Z-86166c4/` (cache-only rerun)
+
+### What I am changing
+**Results:**
+- **Run shape:**
+  - 121 cases in one session, 12:23–13:23 UTC;
+  - 122 provider calls (one per-minute retry);
+  - 219,611 tokens.
+- **Provenance:** pinned `groq/openai/gpt-oss-120b`, 100% of answered cases, model ID identical throughout.
+- **Statuses:** 119 success, 1 partial, 1 parse failure.
+- **Reproducibility:** the `--cache-only` rerun gave identical reviewer and chance metrics with 0 provider calls.
+- **Metrics:**
+  - strict category-correct recall 41/80 (51.2%, CI 40.5–61.9%);
+  - precision 75/109 (68.8%);
+  - clean FP 17/41 (41.5%).
+- **The chance baseline beat the reviewer on location recall** (strict 76/80 vs 64/80). That prompted the owner's metric redesign.
+
+**Departures:**
+1. **One day, not two.** Q64 planned two days, but no daily-limit response came. The documented 200K tokens/day did not bind, and External Facts now marks that limit as unverified.
+
+### Why I am making this change
+Recording the outcome of Step 7.
+
+### Alternatives I considered
+None.
+
+### Reasons I rejected each alternative
+Not applicable.
+
+### Trade-offs I am accepting
+Single run; variance is not measured (Q63).
+
+### What could go wrong
+The undocumented daily-limit behaviour may change.
+
+### How this affects other components
+Metrics redesign follows (ADR-025).
+
+---
+
+## M3: metric redesign (ADR-025), McNemar, leak masking, diagnostics: pre-work
+**Date**: 2026-10-04
+**File(s) affected**:
+- Created:
+  - `docs/vault/04 Decisions/ADR-025 Detection-first metrics.md`
+  - tests
+  - a new run directory (masked rerun)
+  - `docs/vault/08 Results/baseline-dev-2026-10-04.md`
+- Edited:
+  - code: `evals/metrics.py`, `evals/runner.py`, `evals/report.py`
+  - docs: Metrics, Benchmark, Eval Harness, Open Questions, Results README, the 2026-10-03 report (marked superseded), `docs/flow.md`, Current Status, Session Log, 00 Brief
+
+### What I am changing
+Owner brief, 2026-10-04.
+
+**1. Diagnostics** (no LLM):
+- **Base rate:** the share of each buggy case's changed lines inside its bug-holding ranges ±3.
+- **Strict-location misses:** classified by cause.
+- **Coordinate check:** every finding is classified as new-side, old-side-only or outside.
+
+Result before any change, from cached results:
+- base rate: mean 81.2%, median 100%, 46 of 80 cases at 100%;
+- misses: 10 no findings, 1 parse failure, 2 on changed lines outside the window, 3 outside the shown lines;
+- coordinates: 98 of 109 findings use new-file lines, 7 cite removed lines by old-file number, 4 are outside the diff.
+
+That is not a systematic offset, so the work continues. The old-side convention gap is recorded as Q65 for the owner, since fixing it means changing the review path.
+
+**2. ADR-025, detection-first headline**, computed for the reviewer and the chance baseline:
+- detection rate (TPR) and clean flag rate (FPR);
+- Youden's J = TPR − FPR, with a Newcombe hybrid-score 95% interval (difference of two independent Wilson intervals);
+- category-correct recall, whose chance value equals the majority-class rate;
+- precision;
+- strict location recall at ±0, ±1 and ±3, with ±3 labelled non-discriminating on this benchmark.
+
+**3. Paired comparisons:** an exact McNemar test (two-sided binomial on the discordant pairs b, c) for comparing two runs on the same cases: detection, strict category-correct recall, and clean flags.
+
+**4. Leak masking:**
+- **The rule:** a versioned diff transform, `mask-issue-refs-v1`, applied by the runner to the `-` lines of every case.
+  - `#123` becomes `#N`;
+  - GitHub issue and PR URLs become `<issue-link>`;
+  - the comment text is kept.
+- **Why:** masking removes the memorisation route (the model may know what a specific upstream issue was about) while keeping the realistic signal (a comment explaining the code).
+- **Which cases:** it changes the prompt of only the cases that contain such references. A full run then hits the cache for every unchanged case and calls the model only for the masked ones.
+- **Provenance:** `run.json` records the transform, and the report states that the baseline includes the masked rerun.
+- **Unchanged cases:** the leak-scan cases whose removed lines contain words only (fix, workaround) have nothing to mask. Their prompts are unchanged, so their cached results stand.
+
+**5. Clean false-positive diagnostic:** category, severity, repo and size of every finding on a clean case, and which suspicious clean cases were flagged.
+
+**6. Re-report:**
+- a new `baseline-dev-2026-10-04.md`;
+- the 2026-10-03 report kept and marked superseded.
+
+### Why I am making this change
+Location matching cannot separate the reviewer from chance on this benchmark (chance strict location recall 95%).
+
+### Alternatives I considered
+1. Edit the case files (`dev.jsonl`) to mask the references.
+2. Use a Wald interval for J.
+
+### Reasons I rejected each alternative
+1. The case files stay the upstream truth. A versioned eval-time transform is recorded per run and applies identically to the holdout later.
+2. Wald intervals behave badly near 0 and 1; Newcombe's method builds on the Wilson intervals already used everywhere.
+
+### Trade-offs I am accepting
+- Masking changes prompts, so the masked cases are fresh samples. Part of any change there is run-to-run variance (Q63, not yet measured).
+
+### What could go wrong
+- With ~7 masked cases, before/after differences will not be statistically meaningful. They are reported with counts.
+
+### How this affects other components
+- **Metrics:** new headline.
+- **Benchmark:** the masking rule is recorded.
+- **Eval Harness:** the diff transform is recorded in `run.json`.
+- **Review path:** unchanged; Q65 is the owner's decision.

@@ -61,6 +61,25 @@ TOO_LARGE = re.compile(
 RETRY_IN = re.compile(r"try again in (?:(\d+)m)?([\d.]+)(ms|s)", re.IGNORECASE)
 
 
+# Diff transform applied to every case before review (owner decision, 2026-10-04): in removed
+# lines, issue/PR numbers and GitHub issue/PR links are masked; the comment text is kept. This
+# removes the memorisation route (the model may know what upstream issue #N was about) while
+# keeping the realistic signal. Versioned: the name is recorded in run.json.
+DIFF_TRANSFORM = "mask-issue-refs-v1"
+ISSUE_LINK = re.compile(r"https?://github\.com/[\w.-]+/[\w.-]+/(?:issues|pull)/\d+[\w/#.-]*")
+ISSUE_NUMBER = re.compile(r"(?<![\w&])#\d+\b")
+
+
+def mask_issue_refs(diff: str) -> str:
+    """Mask issue references in the removed (-) lines only; everything else is unchanged."""
+    out = []
+    for line in diff.split("\n"):
+        if line.startswith("-") and not line.startswith("---"):
+            line = ISSUE_NUMBER.sub("#N", ISSUE_LINK.sub("<issue-link>", line))
+        out.append(line)
+    return "\n".join(out)
+
+
 class BudgetExhausted(Exception):
     """The pinned model's rate-limit budget is spent; checkpoint and resume later."""
 
@@ -108,7 +127,7 @@ def dry_run(
     every response used its full max_tokens."""
     rows = []
     for case in cases:
-        prompt = estimate_tokens(build_messages(case["diff"], eval_metadata(case)))
+        prompt = estimate_tokens(build_messages(mask_issue_refs(case["diff"]), eval_metadata(case)))
         rows.append((case["case_id"], case["kind"], prompt, prompt + max_tokens))
     out(f"Token estimates per case ({TOKENIZER_NOTE}); request = prompt + max_tokens {max_tokens}")
     out("case_id           kind   prompt  request")
@@ -204,7 +223,8 @@ class Runner:
     provider_calls: int = 0
 
     async def run_case(self, case: dict[str, Any]) -> dict[str, Any]:
-        messages = build_messages(case["diff"], eval_metadata(case))
+        diff = mask_issue_refs(case["diff"])
+        messages = build_messages(diff, eval_metadata(case))
         estimate = estimate_tokens(messages)
         key = (
             self.cache.key(
@@ -223,7 +243,7 @@ class Runner:
                 attempts += 1
                 self.provider_calls += 1
             started = time.monotonic()
-            result = await self.review(case["diff"], eval_metadata(case), self.pinned)
+            result = await self.review(diff, eval_metadata(case), self.pinned)
             elapsed_ms = round((time.monotonic() - started) * 1000)
             outcome = classify(result)
             if outcome == "stop:cache-miss":
@@ -274,6 +294,7 @@ class Runner:
             "cost_usd_estimate": response.cost_usd if response else 0.0,
             "latency_ms": latency_ms if response else None,
             "cached": cached,
+            "diff_masked": diff != case["diff"],
             "provider_attempts": attempts,
         }
 
@@ -368,6 +389,7 @@ async def run(args: argparse.Namespace) -> int:
             "cache_mode": "off" if args.no_cache else "only" if args.cache_only else "on",
             "scored_cases": len(cases),
             "order_seed": ORDER_SEED,
+            "diff_transform": DIFF_TRANSFORM,
             "sessions": [],
         }
         (run_dir / "run.json").write_text(json.dumps(meta, indent=1) + "\n")

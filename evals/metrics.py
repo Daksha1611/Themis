@@ -147,6 +147,8 @@ def evaluate(
             outcome[c["case_id"]][tier] = {"location": loc, "category": cat}
         loc, cat = case_hit(findings.get(c["case_id"], []), spans["strict"], category, margin=0)
         outcome[c["case_id"]]["exact"] = {"location": loc, "category": cat}
+        loc, cat = case_hit(findings.get(c["case_id"], []), spans["strict"], category, margin=1)
+        outcome[c["case_id"]]["within1"] = {"location": loc, "category": cat}
 
     def recall(subset: list[dict[str, Any]], tier: str, mode: str) -> dict[str, Any]:
         return rate(sum(outcome[c["case_id"]][tier][mode] for c in subset), len(subset))
@@ -216,8 +218,16 @@ def evaluate(
         for cat, v in per_category.items()
         if cat.startswith(SECURITY_PREFIXES)
     }
+    tpr = rate(sum(bool(findings.get(c["case_id"])) for c in labelled), len(labelled))
+    fpr = rate(sum(bool(findings.get(c["case_id"])) for c in clean), len(clean))
     return {
         "cases": {"buggy": len(buggy), "labelled_buggy": len(labelled), "clean": len(clean)},
+        # ADR-025: detection-first headline. J = TPR - FPR; 0 for a reviewer that flags at random.
+        "detection": {"tpr": tpr, "fpr": fpr, "youden_j": youden_j(tpr, fpr)},
+        "location_tolerance": {
+            f"±{m}": recall(labelled, key, "location")
+            for m, key in ((0, "exact"), (1, "within1"), (MARGIN, "strict"))
+        },
         "recall": recall_tiers,
         "exact_line": {mode: recall(labelled, "exact", mode) for mode in MODES},
         "macro": {
@@ -250,6 +260,58 @@ def evaluate(
         },
         "security": {"per_category": security, "note": "not statistically meaningful"},
     }
+
+
+def youden_j(tpr: dict[str, Any], fpr: dict[str, Any]) -> dict[str, Any]:
+    """J = TPR - FPR with Newcombe's hybrid score 95% interval for a difference of two
+    independent proportions (built from the two Wilson intervals)."""
+    if not tpr["n"] or not fpr["n"]:
+        return {"j": None, "low": None, "high": None}
+    p1, p2 = tpr["rate"], fpr["rate"]
+    j = p1 - p2
+    low = j - math.sqrt((p1 - tpr["low"]) ** 2 + (fpr["high"] - p2) ** 2)
+    high = j + math.sqrt((tpr["high"] - p1) ** 2 + (p2 - fpr["low"]) ** 2)
+    return {"j": j, "low": low, "high": high}
+
+
+def case_outcomes(
+    cases: list[dict[str, Any]],
+    labels: dict[str, dict[str, Any]],
+    findings: dict[str, list[Finding]],
+) -> dict[str, dict[str, bool]]:
+    """Per case: detected / flagged (>=1 finding) and strict category-correct hit (buggy)."""
+    out: dict[str, dict[str, bool]] = {}
+    for c in cases:
+        found = findings.get(c["case_id"], [])
+        label = labels.get(c["case_id"])
+        if c["kind"] == "clean":
+            out[c["case_id"]] = {"flagged": bool(found)}
+        elif label and label.get("valid"):
+            _, cat = case_hit(found, tier_spans(c, label)["strict"], label["category"])
+            out[c["case_id"]] = {"detected": bool(found), "strict_category": cat}
+    return out
+
+
+def mcnemar(first: list[bool], second: list[bool]) -> dict[str, Any]:
+    """Exact McNemar test for paired binary outcomes: b = first only, c = second only;
+    two-sided p = min(1, 2 * P(X <= min(b, c))) with X ~ Binomial(b + c, 1/2)."""
+    b = sum(x and not y for x, y in zip(first, second, strict=True))
+    c = sum(y and not x for x, y in zip(first, second, strict=True))
+    n = b + c
+    tail = sum(math.comb(n, i) for i in range(min(b, c) + 1)) / 2**n if n else 1.0
+    return {"b": b, "c": c, "n_pairs": len(first), "p_value": min(1.0, 2 * tail)}
+
+
+def paired_comparison(
+    first: dict[str, dict[str, bool]], second: dict[str, dict[str, bool]]
+) -> dict[str, Any]:
+    """McNemar on the cases both runs scored: detection, strict category-correct, clean flags.
+    Every ablation comparison uses this, never overlapping intervals (ADR-025)."""
+    out: dict[str, Any] = {}
+    for field in ("detected", "strict_category", "flagged"):
+        ids = sorted(k for k in first.keys() & second.keys() if field in first[k])
+        out[field] = mcnemar([first[k][field] for k in ids], [second[k][field] for k in ids])
+    return out
 
 
 def p95(values: list[float]) -> float | None:
@@ -340,10 +402,21 @@ def summarize(
     reviewer = evaluate(scored, labels, {cid: r["findings"] for cid, r in records.items()})
     top = most_common_category(labels)
     chance = evaluate(scored, labels, {c["case_id"]: chance_findings(c, top) for c in scored})
+    from evals.diagnostics import diagnostics  # noqa: PLC0415 (it imports this module)
+
+    def heads(m: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "youden_j": m["detection"]["youden_j"],
+            "detection_tpr": m["detection"]["tpr"],
+            "clean_fpr": m["detection"]["fpr"],
+            "strict_category_recall": m["recall"]["strict"]["category"],
+            "strict_location_precision": m["precision"]["strict_location"],
+        }
+
+    # ADR-025: detection-first headline, with the chance baseline beside every number
     headline = {
-        "strict_category_recall": reviewer["recall"]["strict"]["category"],
-        "strict_location_precision": reviewer["precision"]["strict_location"],
-        "clean_fp_rate": reviewer["false_positives"]["overall"]["cases_with_finding"],
+        "reviewer": heads(reviewer),
+        "chance": heads(chance),
         "noise_floor": reviewer["false_positives"]["noise_floor"],
     }
     return {
@@ -357,8 +430,24 @@ def summarize(
         "chance_baseline": {"category": top, **chance},
         "operational": operational(records.values()),
         "order_seed": meta.get("order_seed"),
+        "diff_transform": meta.get("diff_transform"),
+        "diagnostics": diagnostics(scored, labels, records),
         "schedule": schedule(meta, list(records.values())),
     }
+
+
+def compare_runs(
+    first: Path, second: Path, cases: list[dict[str, Any]], labels: dict[str, dict[str, Any]]
+) -> dict[str, Any]:
+    """Paired McNemar comparison of two runs on the cases both scored (ADR-025)."""
+    outcomes = []
+    for run_dir in (first, second):
+        records = {r["case_id"]: r for r in load_results(run_dir)}
+        scored = [c for c in cases if c["case_id"] in records]
+        outcomes.append(
+            case_outcomes(scored, labels, {cid: r["findings"] for cid, r in records.items()})
+        )
+    return paired_comparison(outcomes[0], outcomes[1])
 
 
 def write_summary(
