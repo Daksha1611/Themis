@@ -2,7 +2,7 @@
 name: Context Builder
 description: "Gives the reviewer the diff plus related repo code, using tree-sitter chunks and Qdrant hybrid search."
 type: component
-status: planned
+status: in-progress
 tags: [component]
 related:
   - "[[Job Queue]]"
@@ -42,6 +42,8 @@ related:
 
 The `ReviewContext` is sanitized by [[Guardrails]] before it reaches the [[Review Graph]].
 
-**Planned code location:** `app/context/`.
+**In progress (M4 groundwork, 2026-10-04):** standalone in `app/context/`, **not wired into the review path**. Eval-time snapshots: [[ADR-027 Eval-time repo context]].
 
-**Dependencies:** [[tree-sitter]], [[Qdrant]], [[sentence-transformers]], [[GitHub Integration]]. Decisions: [[ADR-004 Qdrant hybrid search]], [[ADR-014 Incremental repo indexing]], [[ADR-015 Local embeddings and Qdrant native hybrid search]], [[ADR-001 Python-only v1]].
+**Code location:** `app/context/`.
+
+**Dependencies:** [[tree-sitter]] with [[tree-sitter-python]], [[Qdrant]] via [[qdrant-client]], [[sentence-transformers]] on [[torch]] (CPU), [[GitHub Integration]]. Decisions: [[ADR-004 Qdrant hybrid search]], [[ADR-014 Incremental repo indexing]], [[ADR-015 Local embeddings and Qdrant native hybrid search]], [[ADR-001 Python-only v1]].

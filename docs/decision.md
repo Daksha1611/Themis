@@ -1833,3 +1833,59 @@ A new module imported by the review path must be added to `REVIEW_PATH_MODULES`.
 
 ### How this affects other components
 M4 code can live in `app/context/` without touching v2.
+
+---
+
+## M4 groundwork: standalone context builder and retrieval eval (ADR-027): pre-work
+**Date**: 2026-10-04
+**File(s) affected**:
+- Created:
+  - `app/context/` (chunker, embedder and cache, hybrid index, retriever, eval snapshot builder)
+  - `evals/context_eval.py`, tests
+  - `docs/vault/04 Decisions/ADR-027 Eval-time repo context.md`
+  - `docs/vault/08 Results/context-retrieval-dev-<date>.md`
+  - stack notes as needed
+- Edited:
+  - `pyproject.toml` (an optional `context` extra), `.github/workflows/ci.yml` (CPU-only torch)
+  - Context Builder, Finding Schema (`ReviewContext`), the stack notes, `docs/flow.md` (marked `[NOT YET WIRED]`), Current Status, Session Log
+
+### What I am changing
+Owner brief: M4 groundwork while v2 waits, standalone only.
+
+**Rules:**
+- Nothing in the review path imports `app/context/`.
+- The v2 fingerprint is checked after every commit (`--check-fingerprint`).
+- No LLM calls, no holdout access, no changes to the review path, prompt, taxonomy, LLM client, case data or labels.
+
+**Components:**
+- **Chunker:** tree-sitter, per function and class, with methods carrying their class name.
+- **Embeddings:** `all-MiniLM-L6-v2` via sentence-transformers on CPU-only torch, with a content-hash cache.
+- **Index:** Qdrant hybrid search (dense + sparse with an IDF modifier, fused by RRF), using qdrant-client's in-memory mode in tests and in the eval. The running Qdrant service is never used.
+- **Retriever:** `ReviewContext`-shaped chunks within a token budget.
+- **Snapshot builder:** fix-commit tree, package source only.
+
+**Evaluation:** symbol-definition recall at 1K, 2K and 4K tokens, per repo and per category, plus a leakage check, indexing time and the embedding-cache hit rate.
+
+**Dependencies** (approved in ADR-004 and ADR-015 as planned; versions checked and recorded): tree-sitter, tree-sitter-python, sentence-transformers, torch (CPU), qdrant-client. They go in an optional `context` extra. CI installs CPU torch from the PyTorch CPU index first, and tests use a deterministic fake embedder, so CI never downloads the model.
+
+### Why I am making this change
+M4 groundwork while v2 waits for the daily budget.
+
+### Alternatives I considered
+1. fastembed for the sparse vectors.
+2. The running Qdrant service for the eval.
+
+### Reasons I rejected each alternative
+1. A new, unapproved dependency. Code-aware term counts with Qdrant's IDF modifier do the job.
+2. The brief requires tests to stay off the real collections. In-memory mode needs no service for the eval either.
+
+### Trade-offs I am accepting
+- Symbol-definition recall measures retrieval only, not review quality.
+
+### What could go wrong
+- The tree-sitter language-loading API changed across releases; it is checked against the installed version.
+- torch adds weight to installs; CPU wheels keep it down.
+
+### How this affects other components
+- **Context Builder:** in progress.
+- **Review path:** untouched.

@@ -79,6 +79,7 @@ Outside the vault: `README.md` (repo overview), `docs/flow.md` (what the code do
 - [[ADR-024 Eval runs pin a single provider and model]]
 - [[ADR-025 Detection-first metrics]]
 - [[ADR-026 Numbered diffs and validated output]]
+- [[ADR-027 Eval-time repo context]]
 
 ## 05 Stack
 - [[Python]]

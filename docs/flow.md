@@ -80,7 +80,18 @@ Error paths:
 
 ## 3. Context building
 
-**No repo context in M2: diff only.** The Context Builder (tree-sitter, Qdrant) is `[NOT YET BUILT]`.
+**The review path uses no repo context: diff only.** The Context Builder in `app/context/` is built but `[NOT YET WIRED]`: nothing in the webhook, worker, review graph or LLM client imports it (ADR-027). It is exercised only by tests and by `evals/context_eval.py`.
+
+**Context builder (`app/context/`, M4 groundwork, `[NOT YET WIRED]`):**
+- **Chunking:** `chunk_source(path, source)` in `chunker.py` → `parse()` (tree-sitter, `Language(tree_sitter_python.language())`). One `Chunk(path, symbol, kind, start_line, end_line, code)` per top-level function, one per class header (up to its first method), and one per method (`Class.method`).
+- **Sparse vectors:** `sparse_vector(text)` in `sparse.py` → `terms()` (identifiers kept whole and split into their snake_case and camelCase parts) → `term_index()` (SHA-256 prefix, 31 bits); the values are term counts.
+- **Embeddings:** `SentenceTransformerEmbedder.encode()` (`all-MiniLM-L6-v2`, CPU, loaded lazily) behind `CachedEmbedder.encode()` → `EmbeddingCache.key()` (SHA-256 of model and text), `get_many()`, `put_many()` (SQLite, float32 blobs). Only cache misses are embedded.
+- **Index:** `HybridIndex` in `index.py` creates a Qdrant collection with a dense `COSINE` vector and a sparse vector with the `IDF` modifier. `add(chunks)` upserts dense and sparse vectors with the chunk as payload. `search(query, limit)` runs `query_points()` with a dense and a sparse `Prefetch` fused by `FusionQuery(RRF)`.
+- **Retrieval:** `retrieve(index, diff, budget)` in `retriever.py` → `hunks(diff)`, giving one query per hunk (scope text plus changed lines) → `HybridIndex.search()`.
+  - Chunks overlapping any hunk's old-side range in the same file are skipped.
+  - The rest are ranked by their best score and added greedily until `budget` tokens are used (`count_tokens()`, LiteLLM `token_counter`).
+  - ↳ `RetrievedContext(related_chunks=[RelatedChunk(path, symbol, code, score, reason, start_line, end_line, tokens)], token_budget, token_budget_used)`.
+- **Eval snapshot** (`evals/context_eval.py`, no LLM calls): `snapshot(repo, commit)` reads the package-source tree at the fix commit with `git ls-tree` and `git cat-file --batch`; `EXCLUDED` drops tests, docs, changelog and CI paths. Then `chunk_source()` (cached per blob), an in-memory `HybridIndex`, and `retrieve()` at each budget. `referenced()` collects the identifiers on the changed lines, and `summarize()` pools symbol-definition recall per repo and category, with the leakage check.
 
 Diff fetch: `fetch_pr_diff(token, repo_full_name, pr_number)` in `app/github/diff.py`:
 1. → `gh.get_client()` → `GET https://api.github.com/repos/{repo}/pulls/{pr_number}` with `Accept: application/vnd.github.v3.diff` ! GitHub API call.
@@ -259,6 +270,22 @@ Built in M3 Steps 4–7. Offline: no webhook, queue or GitHub calls.
 | observe(), init_tracing(), shutdown_tracing() | get_langfuse() | Langfuse() | app/observability/tracing.py |
 | lifespan(), startup() | init_tracing() | get_langfuse() | app/observability/tracing.py |
 | lifespan(), shutdown() | shutdown_tracing() | get_langfuse(), Langfuse.shutdown() | app/observability/tracing.py |
+| evals/context_eval.py (not wired) | chunk_source() | parse() | app/context/chunker.py |
+| chunk_source(), evals/context_eval.py | parse() | Parser.parse() | app/context/chunker.py |
+| HybridIndex.add(), HybridIndex.search() | sparse_vector() | terms(), term_index() | app/context/sparse.py |
+| sparse_vector() | terms() | — | app/context/sparse.py |
+| sparse_vector() | term_index() | hashlib.sha256() | app/context/sparse.py |
+| CachedEmbedder.encode() | SentenceTransformerEmbedder.encode() | SentenceTransformer.encode() | app/context/embeddings.py |
+| HybridIndex.add(), HybridIndex.search() | Embedder.encode() | protocol (CachedEmbedder, SentenceTransformerEmbedder, test fakes) | app/context/embeddings.py |
+| HybridIndex.add(), HybridIndex.search() | CachedEmbedder.encode() | EmbeddingCache.key(), EmbeddingCache.get_many(), SentenceTransformerEmbedder.encode(), EmbeddingCache.put_many() | app/context/embeddings.py |
+| CachedEmbedder.encode() | EmbeddingCache.key() | hashlib.sha256() | app/context/embeddings.py |
+| CachedEmbedder.encode() | EmbeddingCache.get_many() | sqlite3 SELECT | app/context/embeddings.py |
+| CachedEmbedder.encode() | EmbeddingCache.put_many() | sqlite3 INSERT | app/context/embeddings.py |
+| evals/context_eval.py (not wired) | HybridIndex.add() | Embedder.encode(), sparse_vector(), QdrantClient.upsert() | app/context/index.py |
+| retrieve() | HybridIndex.search() | Embedder.encode(), sparse_vector(), QdrantClient.query_points() | app/context/index.py |
+| evals/context_eval.py (not wired) | retrieve() | hunks(), HybridIndex.search(), count_tokens() | app/context/retriever.py |
+| retrieve(), evals/context_eval.py | hunks() | — | app/context/retriever.py |
+| retrieve() | count_tokens() | litellm.token_counter() | app/context/retriever.py |
 | `python -m evals.runner` | main() | parse_args(), run() | evals/runner.py |
 | main() | run() | get_settings(), load_labels(), scored_cases(), dry_run(), ResponseCache(), PinnedLLM(), latest_open_run(), git_state(), done_ids(), Runner.run_case(), write_summary() | evals/runner.py |
 | run() | scored_cases() | json.loads() | evals/runner.py |

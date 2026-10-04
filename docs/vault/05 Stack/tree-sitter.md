@@ -2,12 +2,12 @@
 name: tree-sitter
 description: "tree-sitter: function-level code chunking for the repo index."
 type: tech
-status: planned
+status: in-progress
 tags: [tech]
 related:
   - "[[Context Builder]]"
   - "[[ADR-004 Qdrant hybrid search]]"
-version:
+version: 0.26.0 (pinned in the context extra; read via importlib.metadata 2026-10-04)
 ---
 
 # tree-sitter
