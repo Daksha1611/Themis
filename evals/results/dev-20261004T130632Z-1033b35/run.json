@@ -18,7 +18,11 @@
   {
    "session": 1,
    "started_at": "2026-10-04T13:06:32+00:00",
-   "already_done": 0
+   "already_done": 0,
+   "ended_at": "2026-10-04T14:08:53+00:00",
+   "stop": "complete",
+   "done_after": 121,
+   "provider_calls": 123
   }
  ]
 }
