@@ -38,8 +38,17 @@ related:
 ## Measured: dev baseline run (2026-10-03)
 - The whole dev run (121 cases) finished in **one session**: about 1 hour (12:23–13:23 UTC), 122 provider calls (one per-minute retry).
 - Tokens: 219,611 in all (132,719 prompt, 86,892 completion; mean 718 completion tokens per case).
-- **No daily-limit (TPD) response arrived**, although the total exceeds the 200K tokens/day taken from Groq's docs on 2026-10-01. Either the documented daily limit does not apply as recorded, or it is counted differently. Re-verify before relying on it ([[09 External Facts]]).
+- No daily-limit (TPD) response arrived during this run, although the total exceeded 200K. The window was fresh. The limit was confirmed on 2026-10-04 (below).
 - Pacing by an estimated prompt + `max_tokens` per request kept the run under 8K tokens/minute; one per-minute 429 was retried.
 - Actual prompt tokens ran 5.6% above the `cl100k_base` estimate (132,719 vs 125,635).
+
+## Established: the daily limit binds (2026-10-04)
+- **Groq's 200K tokens/day limit is real and enforced on a rolling 24-hour window.** The v1 no-cache rerun used about 220K tokens between 13:06 and 14:06 UTC. The v2 run that followed stopped after 6 cases with Groq's own message: "tokens per day (TPD): Limit 200000, Used 197971". The first baseline run (2026-10-03) had not hit the limit, because it ran on a fresh window.
+- **A full dev run now costs about 220–230K tokens,** so each full dev run takes slightly more than one day's budget. The numbered v2 prompt adds about 13% in prompt tokens.
+- **Planning consequences:**
+  - each ablation row costs roughly a day and a bit of elapsed time;
+  - two full runs cannot share one day;
+  - **prefer cache-only recomputation wherever a question can be answered without new calls:** metric changes, diagnostics, sensitivity lines and attribution all recompute from `results.jsonl` and the response cache;
+  - new LLM calls are reserved for questions that need fresh model output.
 
 **Affects:** [[Benchmark]], [[Eval Harness]], [[CI Quality Gate]], [[LLM Client]]

@@ -1714,3 +1714,43 @@ The owner chose numbering in the prompt, so the model reads line numbers rather 
 - **Review Graph / baseline:** new prompt, numbered diff, validation and retry. Production comments now get correct line numbers.
 - **Metrics:** noise-floor rule, sensitivity line, targets.
 - **Ablation Table:** starts with v1 → v2.
+
+---
+
+## M3: Q63 noise floor recorded; Groq daily limit confirmed
+**Date**: 2026-10-04
+**File(s) affected**:
+- Metrics, Open Questions (Q63), Free Tier Throughput, External Facts
+- `evals/results/dev-20261004T130632Z-1033b35/` (the rerun, committed in `4feea8e`)
+
+### What I am changing
+**Q63 noise floor**, from cached results (no LLM calls). v1 (`ad2fc7d`) against its no-cache rerun (`1033b35`, same review-path code), exact McNemar:
+- detection: b = 1, c = 5, p = 0.219 (6/80 changed);
+- strict category-correct: b = 12, c = 7, p = 0.359 (19/80);
+- clean flags: b = 4, c = 8, p = 0.388 (12/41).
+
+An ablation step counts only if it is significant and exceeds these disagreement counts.
+
+**Groq daily limit:**
+- **Confirmed:** 200K tokens/day on a rolling 24-hour window. The v2 run stopped after 6 cases with a TPD 429 ("Used 197971"), checkpointed for `--resume`.
+- **Cost:** a full dev run costs ~220–230K tokens, slightly more than one day.
+- **External Facts:** the row is corrected (the 2026-10-03 "unverified" note came from a run on a fresh window).
+
+### Why I am making this change
+Owner request: report the noise floor before v2 completes, and record the throughput facts.
+
+### Alternatives I considered
+None.
+
+### Reasons I rejected each alternative
+Not applicable.
+
+### Trade-offs I am accepting
+v2 completes tomorrow.
+
+### What could go wrong
+Nothing new.
+
+### How this affects other components
+- **Ablation Table:** each row costs about a day and a bit.
+- **Prefer cache-only recomputation** for anything that needs no fresh model output.

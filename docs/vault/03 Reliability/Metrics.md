@@ -64,6 +64,23 @@ Each headline metric is reported for the reviewer and the chance baseline side b
 
 **Location matching is non-discriminating on this benchmark.** On average 81.2% of a buggy case's changed lines lie inside its bug-holding ranges ±3 (median 100%; 46 of 80 kept cases at 100%), and the chance baseline scores 95% strict location recall against the reviewer's 80% ([[baseline-dev-2026-10-03]]). Location recall at ±3 is reported only as a diagnostic, with this base rate beside it. Strict location recall at ±0 and ±1 is a secondary diagnostic (dev baseline: reviewer 45/80 and 54/80; chance 60/80 and 60/80).
 
+**Run-to-run noise floor (Q63, measured 2026-10-04).** Dev baseline v1 (`dev-20261004T085157Z-ad2fc7d`) was rerun with the cache disabled, with identical configuration and review-path code (`dev-20261004T130632Z-1033b35`). Exact McNemar on paired cases:
+
+| Measure | b (v1 only) | c (rerun only) | Disagreements | p |
+|---|---|---|---|---|
+| Detection | 1 | 5 | 6 of 80 | 0.219 |
+| Strict category-correct | 12 | 7 | 19 of 80 | 0.359 |
+| Clean flags | 4 | 8 | 12 of 41 | 0.388 |
+
+The cases that changed:
+- **Detection:** `49f5dbda`, `0696a0d8`, `16c2d787`, `2ecb47b4`, `400cff6a`, `94ad4f8f`.
+- **Category-correct:** `194526c7`, `2109faa4`, `2568041f`, `26ad0796`, `446f5800`, `4c2f8833`, `4cf91dda`, `54b9a5ed`, `5664ca68`, `7313edb9`, `7a28a9ad`, `8c629dc0`, `0696a0d8`, `08e903fe`, `1b8df974`, `245e9b3e`, `3f489da1`, `42b0172a`, `a0f3c34e`.
+- **Clean flags:** `3350b7f5`, `62dc9c3f`, `8a97c216`, `9ed7d664`, `1368e5b1`, `20c38e9f`, `239a866c`, `39cd6fa4`, `3fd64fd6`, `50898036`, `60185407`, `77494657`.
+
+None is significant, as expected for identical runs. But temperature 0 is not deterministic here: about a quarter of category-correct outcomes and nearly a third of clean-case flags flip between identical runs.
+
+**Ablation rule (Q63):** a later change counts only if it is McNemar-significant (p < 0.05) against the previous row **and** its disagreement count b + c exceeds the noise floor for that measure: 6 for detection, 19 for category-correct, 12 for clean flags.
+
 **Run comparisons:** every future ablation compares runs with an **exact McNemar test on paired cases** (`paired_comparison()`, `compare_runs()` in `evals/metrics.py`): detection, strict category-correct recall, and clean flags, each with the discordant counts (b, c) and the two-sided exact p-value. Overlapping confidence intervals are never used to decide.
 
 **Diagnostics** (`evals/diagnostics.py`, in every `summary.json`):
