@@ -1976,3 +1976,59 @@ Structural lookup can fill small budgets entirely, crowding out semantic chunks.
 ### How this affects other components
 - **Context Builder:** retrieval order.
 - **ReviewContext:** `source`, `via` and `ambiguous` fields.
+
+---
+
+## ADR-028 structural lookup; M4 ablation plan: completion
+**Date**: 2026-10-05
+**File(s) affected**: as in the pre-work entry, plus `evals/results/context-dev-2026-10-05/` and `docs/vault/08 Results/context-retrieval-dev-2026-10-05.md` (the 2026-10-04 note kept, marked superseded)
+
+### What I am changing
+**Results** (no LLM calls):
+- **Resolution coverage:** 89/156 (57.1%) at 1K, 91/156 (58.3%) at 2K, 99/156 (63.5%) at 4K, up from 21–25% with pure hybrid.
+- **Remaining misses at 4K** (57):
+  - 34: the name is not bound to a package definition at that point (mostly a local or parameter sharing a name with a definition elsewhere, so the target count overstates true misses);
+  - 6: an attribute on an object of unknown type;
+  - 5: not a resolvable reference;
+  - 5: a `self` attribute that is not a method;
+  - 3: no method of that name;
+  - 2: resolved but over budget;
+  - 2: other.
+- **Caller coverage:** 368/942 (39.1%), 503/942 (53.4%), 685/942 (72.7%).
+- **Composition:**
+
+  | Budget | Definitions | Callers | Semantic |
+  |---|---|---|---|
+  | 1K | 9.3% | 39.7% | 48.5% |
+  | 2K | 6.1% | 34.7% | 57.0% |
+  | 4K | 4.8% | 25.6% | 66.9% |
+- **Leakage:** 0 retrieved chunks and 0 indexed files from excluded paths.
+- **Dry run:**
+  - 1K: 1.89 days of Groq quota per run;
+  - 2K: 2.53 days;
+  - 4K: 3.80 days, with 23 cases over the 8K per-request ceiling.
+
+  Default: 1K.
+- **Fingerprint:** v2's fingerprint matched after every commit.
+
+**M4 ablation plan,** recorded in Eval Harness and Metrics before any context run:
+- McNemar against the noise floor;
+- the falsification split: 64 cases that reference external definitions vs 57 that do not, with gains predicted to concentrate in the 64.
+
+### Why I am making this change
+Owner decision on ADR-028.
+
+### Alternatives I considered
+A default budget of 2K.
+
+### Reasons I rejected each alternative
+It adds only 1.2 points of definition coverage for 0.64 more days of quota per run. Caller coverage is the reason to test 2K next if 1K shows no gain.
+
+### Trade-offs I am accepting
+At 1K, callers fill 40% of the budget, but only 39% of call sites are covered.
+
+### What could go wrong
+- The final prompt rendering of context is not decided, so the estimates assume one header line per chunk.
+
+### How this affects other components
+The M4 ablation is ready to run after v2.

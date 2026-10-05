@@ -69,7 +69,15 @@ related:
   - the **57 cases that do not.**
 
   **Prediction:** if context genuinely helps, the gains concentrate in the 64. Gains spread equally across both groups would point to noise or a side effect of the longer prompt, not to the context's content.
-- **Token budget:** the dry run (`python -m evals.runner --split dev --dry-run --context-budget N`) reports the context-enabled prompt totals and the days of Groq quota per run. The default is the smallest budget whose coverage is close to the 4K result.
+- **Token budget:** the dry run (`python -m evals.runner --split dev --dry-run --context-budget N`) reports the context-enabled prompt totals and the days of Groq quota per run. The default is the smallest budget whose coverage is close to the 4K result. Measured 2026-10-05 (v2 prompts plus context blocks; completions at v1's mean of 718 tokens per case):
+
+  | Budget | Context tokens | Prompt total | Largest request | Days of Groq quota | Resolution coverage | Caller coverage |
+  |---|---|---|---|---|---|---|
+  | **1K (default)** | 149,119 | 290,753 | 5,550 | **1.89** | 89/156 (57.1%) | 368/942 (39.1%) |
+  | 2K | 278,381 | 420,015 | 6,587 | 2.53 | 91/156 (58.3%) | 503/942 (53.4%) |
+  | 4K | 531,067 | 672,701 | 9,007: **23 cases exceed the 8K per-request ceiling** | 3.80 | 99/156 (63.5%) | 685/942 (72.7%) |
+
+  **Default: 1K.** Its definition coverage is within 6.4 points of 4K's, and 4K is not runnable on the pinned model (per-request limit). The trade-off is caller coverage, which grows with budget (39% → 73%). If v2 + context at 1K shows no gain, 2K is the next row to test, before concluding that context does not help.
 - **Run order:** after baseline v2 completes; context is wired into the review path only for this row.
 
 **Not built yet:** threshold sweeps and injection pairs (later milestones).

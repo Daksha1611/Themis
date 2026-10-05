@@ -171,3 +171,18 @@ related:
 
 **Next:** resume v2 (2026-10-05, after ~14:10 UTC); the v2 report; the owner decides on a symbol-aware retrieval step.
 **Blockers / questions:** Groq's daily window; retrieval design.
+
+## 2026-10-05: ADR-028 structural lookup; M4 ablation plan
+**Done:**
+- [[ADR-028 Structural lookup plus hybrid search]] (amends ADR-015): definitions of referenced names, then callers of changed functions, then hybrid search. `app/context/structure.py`; `RelatedChunk` gains `source`, `via` and `ambiguous`.
+- Re-evaluation [[context-retrieval-dev-2026-10-05]], no LLM calls:
+  - resolution coverage 57–64% (was 21–25%);
+  - caller coverage 39–73%;
+  - composition at 1K: definitions 9%, callers 40%, semantic 49%;
+  - 0 leakage.
+- M4 ablation plan and falsification prediction recorded before any run.
+- Context-aware dry run: 1K = 1.89 days of quota, 2K = 2.53, 4K = 3.80 (and over the per-request ceiling for 23 cases); default 1K.
+- v2 fingerprint unchanged after every commit. 212 tests pass.
+
+**Next:** resume v2; the v2 report; then the v2 + context ablation at 1K.
+**Blockers / questions:** Groq's daily window.

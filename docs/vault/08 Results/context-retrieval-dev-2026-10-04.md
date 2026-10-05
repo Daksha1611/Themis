@@ -10,6 +10,8 @@ related:
   - "[[Eval Harness]]"
 ---
 
+> **Superseded by [[context-retrieval-dev-2026-10-05]]** (structural lookup, [[ADR-028 Structural lookup plus hybrid search]]). Kept as written: the pure-hybrid result that motivated ADR-028.
+
 # Context retrieval: dev split
 
 Retrieval quality of the M4 context builder ([[ADR-027 Eval-time repo context]], [[Context Builder]]), measured with **no LLM calls**. Not wired into the review path.
