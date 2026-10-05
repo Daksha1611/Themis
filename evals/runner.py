@@ -190,8 +190,14 @@ def estimate_tokens(messages: list[dict[str, str]]) -> int:
     return int(litellm.token_counter(model="gpt-4o", messages=messages))
 
 
+COMPLETION_TOKENS_PER_CASE = 718  # mean measured in dev baseline v1 (2026-10-03)
+
+
 def dry_run(
-    cases: list[dict[str, Any]], max_tokens: int, out: Callable[[str], None] = print
+    cases: list[dict[str, Any]],
+    max_tokens: int,
+    out: Callable[[str], None] = print,
+    extra: dict[str, int] | None = None,
 ) -> bool:
     """Build every prompt and report token estimates without calling anything. True if every
     request fits the per-request ceiling and the whole run fits one day's token budget even if
@@ -199,6 +205,7 @@ def dry_run(
     rows = []
     for case in cases:
         prompt = estimate_tokens(build_messages(mask_issue_refs(case["diff"]), eval_metadata(case)))
+        prompt += (extra or {}).get(case["case_id"], 0)
         rows.append((case["case_id"], case["kind"], prompt, prompt + max_tokens))
     out(f"Token estimates per case ({TOKENIZER_NOTE}); request = prompt + max_tokens {max_tokens}")
     out("case_id           kind   prompt  request")
@@ -218,6 +225,11 @@ def dry_run(
         f"{prompt_total} ({prompt_total / TOKENS_PER_DAY:.0%}); worst case with full "
         f"max_tokens {worst_total} ({worst_total / TOKENS_PER_DAY:.0%}); "
         f"requests {len(rows)}"
+    )
+    expected = prompt_total + COMPLETION_TOKENS_PER_CASE * len(rows)
+    out(
+        f"expected total with v1's mean {COMPLETION_TOKENS_PER_CASE} completion tokens per case: "
+        f"{expected} = {expected / TOKENS_PER_DAY:.2f} days of Groq quota"
     )
     fits_request = not over
     fits_day = worst_total <= TOKENS_PER_DAY and len(rows) <= REQUESTS_PER_DAY
@@ -418,6 +430,11 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     cache_mode.add_argument("--no-cache", action="store_true", help="neither read nor write")
     cache_mode.add_argument("--cache-only", action="store_true", help="fail on any cache miss")
     parser.add_argument("--dry-run", action="store_true", help="estimate tokens; call nothing")
+    parser.add_argument(
+        "--context-budget",
+        type=int,
+        help="with --dry-run: add each case's retrieved-context block at this token budget",
+    )
     parser.add_argument("--i-know-this-is-holdout", action="store_true")
     parser.add_argument(
         "--check-fingerprint",
@@ -437,7 +454,13 @@ async def run(args: argparse.Namespace) -> int:
     labels = load_labels(LABELS)
     cases = run_order(scored_cases(args.split, labels), ORDER_SEED)[: args.limit]
     if args.dry_run:
-        return 0 if dry_run(cases, settings.llm_max_tokens) else 2
+        extra = None
+        if args.context_budget:
+            from evals.context_eval import context_block_tokens  # noqa: PLC0415 (heavy)
+
+            extra = context_block_tokens(cases, args.context_budget)
+            print(f"context blocks at {args.context_budget} tokens: total {sum(extra.values())}")
+        return 0 if dry_run(cases, settings.llm_max_tokens, extra=extra) else 2
     if args.check_fingerprint:
         open_run = latest_open_run(args.split)
         if open_run is None:

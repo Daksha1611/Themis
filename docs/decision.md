@@ -1924,3 +1924,55 @@ Name-based matching can count a different definition with the same name as a hit
 
 ### How this affects other components
 The next ablation row (context) waits for v2 and the retrieval decision.
+
+---
+
+## ADR-028 structural lookup plus hybrid search; M4 ablation plan: pre-work
+**Date**: 2026-10-04
+**File(s) affected**:
+- Created: `app/context/structure.py`, ADR-028
+- Edited:
+  - code: `app/context/retriever.py`, `evals/context_eval.py`, `evals/runner.py` (`--dry-run --context-budget`), tests
+  - docs: ADR-015 (banner), Context Builder, Finding Schema, Eval Harness, Metrics, `docs/flow.md`, the retrieval report, Current Status, Session Log
+
+### What I am changing
+**Retrieval** (owner decision): the budget is filled in this order:
+1. definitions of referenced names (tree-sitter plus import analysis; ambiguous candidates marked);
+2. callers of changed functions;
+3. hybrid semantic search.
+
+Each chunk records `source` and `via`.
+
+**Re-evaluation** (no LLM calls):
+- symbol-definition recall, now a resolution-coverage check, with miss reasons counted;
+- caller coverage;
+- budget composition by source;
+- the leakage check again.
+
+**M4 ablation plan,** recorded before the run:
+- v2 vs v2 + context, McNemar against the noise floor;
+- a falsification split: 64 cases that reference external definitions vs 57 that do not;
+- the context-enabled token cost per run, from the dry run.
+
+**Constraints:** v2's fingerprint is checked after every commit. No LLM calls, no holdout access, nothing wired into the review path.
+
+### Why I am making this change
+Pure hybrid search found 21–25% of the referenced definitions, so ranking was the limit.
+
+### Alternatives I considered
+1. Raise the hybrid `per_hunk` limit.
+2. Use a code-specific embedding model.
+
+### Reasons I rejected each alternative
+1. A bigger candidate pool still ranks by similarity, not reference.
+2. Same reason, and a model change means re-indexing.
+
+### Trade-offs I am accepting
+Name-based call matching for callers can include same-named functions; these are marked ambiguous.
+
+### What could go wrong
+Structural lookup can fill small budgets entirely, crowding out semantic chunks. The budget composition shows how much.
+
+### How this affects other components
+- **Context Builder:** retrieval order.
+- **ReviewContext:** `source`, `via` and `ambiguous` fields.

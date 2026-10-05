@@ -80,6 +80,7 @@ Outside the vault: `README.md` (repo overview), `docs/flow.md` (what the code do
 - [[ADR-025 Detection-first metrics]]
 - [[ADR-026 Numbered diffs and validated output]]
 - [[ADR-027 Eval-time repo context]]
+- [[ADR-028 Structural lookup plus hybrid search]]
 
 ## 05 Stack
 - [[Python]]

@@ -62,6 +62,16 @@ related:
 
 - **Report** (`evals/report.py`): `python -m evals.report evals/results/<run_id>` writes `08 Results/baseline-<split>-<date>.md`, with every rate as k/n and a Wilson interval, the chance baseline beside each recall tier, and a required Caveats section.
 
+## M4 ablation plan: v2 vs v2 + context (recorded 2026-10-05, before any context run)
+- **Comparison:** baseline v2 against v2 + repo context ([[ADR-027 Eval-time repo context]], [[ADR-028 Structural lookup plus hybrid search]]) on the same dev cases, pinned model, cache on. Exact McNemar on paired cases for detection, strict category-correct recall and clean flags, judged against the run-to-run noise floor ([[Metrics]], Q63): a change counts only if significant **and** its disagreement count exceeds the floor.
+- **Falsification split, stated before the run.** Results are reported separately for:
+  - the **64 cases that reference external definitions:** at least one function, method or class referenced on a changed line is defined in the package outside the diff (case IDs: `evals/results/context-dev-2026-10-04/results.jsonl`, records with non-empty `targets`);
+  - the **57 cases that do not.**
+
+  **Prediction:** if context genuinely helps, the gains concentrate in the 64. Gains spread equally across both groups would point to noise or a side effect of the longer prompt, not to the context's content.
+- **Token budget:** the dry run (`python -m evals.runner --split dev --dry-run --context-budget N`) reports the context-enabled prompt totals and the days of Groq quota per run. The default is the smallest budget whose coverage is close to the 4K result.
+- **Run order:** after baseline v2 completes; context is wired into the review path only for this row.
+
 **Not built yet:** threshold sweeps and injection pairs (later milestones).
 
 **Code location:** `evals/runner.py`, `evals/cache.py`, `evals/metrics.py`, `evals/report.py`.

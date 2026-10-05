@@ -173,3 +173,61 @@ def test_the_review_path_does_not_import_the_context_builder() -> None:
         [sys.executable, "-c", code], capture_output=True, text=True, check=True
     )
     assert out.stdout.strip() == "False"
+
+
+# --- ADR-028: structural lookup ---------------------------------------------------------------
+
+PKG = {
+    "src/pkg/__init__.py": "from .core import Runner as Runner\n",
+    "src/pkg/util.py": ("def helper(x):\n    return x\n\n\ndef other():\n    return helper(1)\n"),
+    "src/pkg/core.py": (
+        "from . import util\n"
+        "from .util import helper as h\n\n\n"
+        "class Base:\n    def shared(self):\n        return 0\n\n\n"
+        "class Runner(Base):\n"
+        "    def run(self, value):\n"
+        "        h(value)\n"
+        "        util.other()\n"
+        "        self.shared()\n"
+        "        return self.step(value)\n\n"
+        "    def step(self, value):\n        return value\n\n\n"
+        "def caller():\n    return Runner().step(2)\n"
+    ),
+}
+
+
+def test_resolves_aliases_module_attributes_and_inherited_self_methods() -> None:
+    from app.context.structure import PackageIndex, Reference
+
+    index = PackageIndex(PKG, "src/pkg/")
+    line = 12  # inside Runner.run
+    assert (
+        index.resolve("src/pkg/core.py", line, Reference("h", "name")).chunks[0].symbol == "helper"
+    )
+    module = index.resolve("src/pkg/core.py", line, Reference("other", "module_attr", "util"))
+    assert module.chunks[0].symbol == "other"
+    inherited = index.resolve("src/pkg/core.py", line, Reference("shared", "self"))
+    assert inherited.chunks[0].symbol == "Base.shared"
+    unknown = index.resolve("src/pkg/core.py", line, Reference("missing", "attr"))
+    assert not unknown.chunks and "no method of that name" in unknown.reason
+
+
+def test_retrieve_puts_definitions_then_callers_before_semantic_chunks() -> None:
+    from app.context.structure import PackageIndex
+
+    structure = PackageIndex(PKG, "src/pkg/")
+    index = HybridIndex(QdrantClient(":memory:"), "s", FakeEmbedder())
+    index.add([c for chunks in structure.chunks.values() for c in chunks])
+    diff = (
+        "diff --git a/src/pkg/core.py b/src/pkg/core.py\n--- a/src/pkg/core.py\n"
+        "+++ b/src/pkg/core.py\n@@ -17,2 +17,2 @@ class Runner(Base):\n"
+        "     def step(self, value):\n-        return value\n+        return h(value)\n"
+    )
+    context = retrieve(index, diff, budget=400, count=lambda t: len(t.split()), structure=structure)
+    sources = [(c.source, c.symbol, c.via) for c in context.related_chunks]
+    assert sources[0] == ("definition", "helper", "h")
+    callers = [s for s in sources if s[0] == "caller"]
+    assert ("caller", "Runner.run", "step") in callers and ("caller", "caller", "step") in callers
+    first_semantic = next(i for i, s in enumerate(sources) if s[0] == "semantic")
+    assert all(s[0] != "semantic" for s in sources[:first_semantic])
+    assert "Runner.step" not in [s[1] for s in sources]  # the diff's own region

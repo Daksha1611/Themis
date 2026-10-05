@@ -83,6 +83,8 @@ None is significant, as expected for identical runs. But temperature 0 is not de
 
 **Run comparisons:** every future ablation compares runs with an **exact McNemar test on paired cases** (`paired_comparison()`, `compare_runs()` in `evals/metrics.py`): detection, strict category-correct recall, and clean flags, each with the discordant counts (b, c) and the two-sided exact p-value. Overlapping confidence intervals are never used to decide.
 
+**M4 ablation:** v2 vs v2 + context, McNemar against the noise floor, reported separately for the 64 cases that reference external definitions and the 57 that do not, with the predicted pattern stated before the run ([[Eval Harness]]).
+
 **Diagnostics** (`evals/diagnostics.py`, in every `summary.json`):
 - the base rate;
 - the causes of strict-location misses;

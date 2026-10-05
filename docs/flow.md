@@ -87,7 +87,15 @@ Error paths:
 - **Sparse vectors:** `sparse_vector(text)` in `sparse.py` → `terms()` (identifiers kept whole and split into their snake_case and camelCase parts) → `term_index()` (SHA-256 prefix, 31 bits); the values are term counts.
 - **Embeddings:** `SentenceTransformerEmbedder.encode()` (`all-MiniLM-L6-v2`, CPU, loaded lazily) behind `CachedEmbedder.encode()` → `EmbeddingCache.key()` (SHA-256 of model and text), `get_many()`, `put_many()` (SQLite, float32 blobs). Only cache misses are embedded.
 - **Index:** `HybridIndex` in `index.py` creates a Qdrant collection with a dense `COSINE` vector and a sparse vector with the `IDF` modifier. `add(chunks)` upserts dense and sparse vectors with the chunk as payload. `search(query, limit)` runs `query_points()` with a dense and a sparse `Prefetch` fused by `FusionQuery(RRF)`.
-- **Retrieval:** `retrieve(index, diff, budget)` in `retriever.py` → `hunks(diff)`, giving one query per hunk (scope text plus changed lines) → `HybridIndex.search()`.
+- **Structural lookup** (ADR-028): `PackageIndex(files, package_root)` in `structure.py`.
+  - **Loading:** `_load()` parses every file once, records top-level definitions per module, methods per class and by name, base classes, and the import table (`_imports()`: aliases, relative imports, `from pkg import submodule`).
+  - **Resolving:** `resolve(path, line, Reference)` handles `self`/`cls` → `enclosing_class()` → `_method()` (through in-package bases); `module_attr` → `_lookup()` in the imported module; `name` → same module, else `_imported()` (one re-export hop). An `attr` on an unknown object → every method of that name, up to `MAX_CANDIDATES` = 3, marked ambiguous; more is unresolved with a reason.
+  - **Callers:** `call_sites(name)` finds every call whose callee's final name (`_final_name()`) matches; `enclosing_chunk()` gives the chunk around a line.
+  - **References:** `references(tree, lines, imported_modules)` extracts `Reference(name, kind, owner)` from the changed lines.
+- **Retrieval:** `retrieve(index, diff, budget, structure=None)` in `retriever.py`.
+  - With a `PackageIndex`, `structural(structure, diff)` runs first. It goes `changes(diff)` (per hunk: removed old-side lines, added text) → `references()` on the removed lines in the base tree and on the added lines as a snippet → `PackageIndex.resolve()`, giving the **definitions**. Then the functions or methods the diff changes → `call_sites()` → `enclosing_chunk()`, giving the **callers**.
+  - Then `hunks(diff)` gives one query per hunk (scope text plus changed lines) → `HybridIndex.search()`, giving the **semantic** chunks.
+  - The budget is filled in the order definitions, callers, semantic. Each `RelatedChunk` carries `source`, `via` and `ambiguous`.
   - Chunks overlapping any hunk's old-side range in the same file are skipped.
   - The rest are ranked by their best score and added greedily until `budget` tokens are used (`count_tokens()`, LiteLLM `token_counter`).
   - ↳ `RetrievedContext(related_chunks=[RelatedChunk(path, symbol, code, score, reason, start_line, end_line, tokens)], token_budget, token_budget_used)`.
@@ -285,6 +293,19 @@ Built in M3 Steps 4–7. Offline: no webhook, queue or GitHub calls.
 | retrieve() | HybridIndex.search() | Embedder.encode(), sparse_vector(), QdrantClient.query_points() | app/context/index.py |
 | evals/context_eval.py (not wired) | retrieve() | hunks(), HybridIndex.search(), count_tokens() | app/context/retriever.py |
 | retrieve(), evals/context_eval.py | hunks() | — | app/context/retriever.py |
+| retrieve(), evals/context_eval.py | structural() | changes(), references(), PackageIndex.resolve(), PackageIndex.call_sites(), PackageIndex.enclosing_chunk() | app/context/retriever.py |
+| structural() | changes() | — | app/context/retriever.py |
+| structural() | references() | — | app/context/structure.py |
+| PackageIndex() | PackageIndex._load() | parse(), chunk_source(), PackageIndex._imports() | app/context/structure.py |
+| PackageIndex._load() | PackageIndex._imports() | — | app/context/structure.py |
+| structural() | PackageIndex.resolve() | PackageIndex.enclosing_class(), PackageIndex._method(), PackageIndex._lookup(), PackageIndex._imported() | app/context/structure.py |
+| PackageIndex.resolve(), PackageIndex._method() | PackageIndex._lookup() | — | app/context/structure.py |
+| PackageIndex.resolve(), PackageIndex._method() | PackageIndex._imported() | PackageIndex._lookup() | app/context/structure.py |
+| PackageIndex.resolve() | PackageIndex._method() | PackageIndex._lookup(), PackageIndex._imported() | app/context/structure.py |
+| PackageIndex.resolve() | PackageIndex.enclosing_class() | — | app/context/structure.py |
+| structural(), evals/context_eval.py | PackageIndex.call_sites() | _final_name() | app/context/structure.py |
+| PackageIndex.call_sites() | _final_name() | — | app/context/structure.py |
+| structural() | PackageIndex.enclosing_chunk() | — | app/context/structure.py |
 | retrieve() | count_tokens() | litellm.token_counter() | app/context/retriever.py |
 | `python -m evals.runner` | main() | parse_args(), run() | evals/runner.py |
 | main() | run() | get_settings(), load_labels(), scored_cases(), dry_run(), ResponseCache(), PinnedLLM(), latest_open_run(), git_state(), done_ids(), Runner.run_case(), write_summary() | evals/runner.py |

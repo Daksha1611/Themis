@@ -26,7 +26,7 @@ related:
 **Responsibilities**
 - Get the PR diff from [[GitHub Integration]]
 - Maintain a repo index: code chunked by function with [[tree-sitter]], stored in [[Qdrant]]
-- Retrieve related code with hybrid search: dense embeddings from a local [[sentence-transformers]] model (`all-MiniLM-L6-v2` to start) plus Qdrant native sparse vectors, fused with Reciprocal Rank Fusion. No separate BM25 index.
+- Retrieve related code in priority order ([[ADR-028 Structural lookup plus hybrid search]]): definitions of names the diff references (tree-sitter plus import analysis), then callers of functions the diff changes, then hybrid search for the remaining budget. Hybrid search uses dense embeddings from a local [[sentence-transformers]] model (`all-MiniLM-L6-v2` to start) plus Qdrant native sparse vectors, fused with Reciprocal Rank Fusion. No separate BM25 index.
 
 **Index lifecycle** ([[ADR-014 Incremental repo indexing]])
 - On install: full index of the default branch

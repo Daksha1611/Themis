@@ -13,6 +13,8 @@ related:
 
 # ADR-015 Local embeddings and Qdrant native hybrid search
 
+> **Amended by [[ADR-028 Structural lookup plus hybrid search]]** (2026-10-04): hybrid search now fills only the token budget left after structural lookup (definitions of referenced names, then callers of changed functions).
+
 ## Context
 [[ADR-004 Qdrant hybrid search]] chose hybrid search (BM25 + embeddings) without saying where embeddings come from or how BM25 is implemented.
 

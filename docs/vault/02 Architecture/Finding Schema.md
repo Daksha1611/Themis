@@ -40,7 +40,7 @@ Defined in `app/schemas.py` (M2).
 This split is central to the project's thesis. An LLM's self-reported confidence is poorly calibrated, so Themis never lets it decide what gets posted. The LLM's number is kept as `raw_llm_confidence` so the eval harness can measure how badly calibrated it is; the decision-making `confidence` comes only from the trained precision filter. If the LLM's output includes a `confidence` key, it is discarded.
 
 ## `ReviewContext` (in progress)
-**Partly in code, not wired** (M4 groundwork, [[ADR-027 Eval-time repo context]]): `app/context/retriever.py` defines `RetrievedContext` (`related_chunks`, `token_budget`, `token_budget_used`) and `RelatedChunk` (`path`, `symbol`, `code`, `score`, `reason`, `start_line`, `end_line`, `tokens`). The full `ReviewContext` is assembled when context is wired into the review path. Planned fields:
+**Partly in code, not wired** (M4 groundwork, [[ADR-027 Eval-time repo context]]): `app/context/retriever.py` defines `RetrievedContext` (`related_chunks`, `token_budget`, `token_budget_used`) and `RelatedChunk` (`path`, `symbol`, `code`, `score`, `reason`, `start_line`, `end_line`, `tokens`, plus `source`: `definition` / `caller` / `semantic`, `via`: the name behind a structural chunk, and `ambiguous`; [[ADR-028 Structural lookup plus hybrid search]]). The full `ReviewContext` is assembled when context is wired into the review path. Planned fields:
 - `pr_metadata`
 - `changed_files`: path, hunks, full file content when small
 - `related_chunks`: path, symbol name, code, retrieval score, reason retrieved

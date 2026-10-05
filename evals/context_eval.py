@@ -29,7 +29,8 @@ from qdrant_client import QdrantClient
 from app.context.chunker import Chunk, chunk_source, parse
 from app.context.embeddings import CachedEmbedder, EmbeddingCache, SentenceTransformerEmbedder
 from app.context.index import HybridIndex
-from app.context.retriever import hunks, retrieve
+from app.context.retriever import count_tokens, hunks, retrieve, structural
+from app.context.structure import PackageIndex
 from evals.benchmark.label import LABELS, load_labels
 from evals.benchmark.verify_repos import SELECTED
 from evals.metrics import rate
@@ -156,7 +157,9 @@ def evaluate_case(
         ]
     index = HybridIndex(QdrantClient(":memory:"), "snapshot", embedder)
     index.add(chunks)
+    structure = PackageIndex({p: src for p, (_, src) in files.items()}, SELECTED[case["repo"]])
     index_seconds = time.monotonic() - started
+    found = structural(structure, case["diff"])
 
     regions = [(p, s, e) for p, s, e, _ in hunks(case["diff"])]
     outside = [
@@ -166,16 +169,50 @@ def evaluate_case(
     ]
     defined = {short(c.symbol) for c in outside}
     targets = sorted(referenced(case["diff"], files) & defined)
+    resolved = {ref.name for _, ref, res in found.resolutions if res.chunks}
+    reasons: dict[str, str] = {}
+    for _, ref, res in found.resolutions:
+        if not res.chunks and ref.name not in reasons:
+            reasons[ref.name] = res.reason
+    # ground truth for caller coverage: every call site of a changed function outside the diff
+    changed = {f.symbol.rsplit(".", 1)[-1] for f in found.changed_functions}
+    call_sites = sorted(
+        {
+            (path, line)
+            for name in changed
+            for path, line in structure.call_sites(name)
+            if not any(path == p and s <= line <= e for p, s, e in regions)
+        }
+    )
     per_budget: dict[str, Any] = {}
     leaks: list[str] = []
     for budget in budgets:
-        context = retrieve(index, case["diff"], budget)
+        context = retrieve(index, case["diff"], budget, structure=structure)
         got = {short(c.symbol) for c in context.related_chunks}
         leaks += [c.path for c in context.related_chunks if EXCLUDED.search(c.path)]
+        spans = [(c.path, c.start_line, c.end_line) for c in context.related_chunks]
+        misses = {}
+        for t in targets:
+            if t in got:
+                continue
+            if t in resolved:
+                misses[t] = "resolved, but did not fit the budget"
+            else:
+                misses[t] = reasons.get(
+                    t, "not a resolvable reference (keyword argument, import name or string)"
+                )
+        composition: dict[str, int] = defaultdict(int)
+        for c in context.related_chunks:
+            composition[c.source] += c.tokens
         per_budget[str(budget)] = {
             "hits": [t for t in targets if t in got],
+            "misses": misses,
             "chunks": len(context.related_chunks),
             "tokens": context.token_budget_used,
+            "composition": dict(composition),
+            "call_sites_covered": sum(
+                any(p == path and s <= line <= e for p, s, e in spans) for path, line in call_sites
+            ),
         }
     return {
         "case_id": case["case_id"],
@@ -187,9 +224,37 @@ def evaluate_case(
         "indexed_excluded": [p for p in files if EXCLUDED.search(p)],
         "index_seconds": round(index_seconds, 2),
         "targets": targets,
+        "changed_functions": sorted(changed),
+        "call_sites": len(call_sites),
         "budgets": per_budget,
         "leaks": sorted(set(leaks)),
     }
+
+
+def context_block_tokens(cases: list[dict[str, Any]], budget: int) -> dict[str, int]:
+    """Tokens a retrieved-context block would add to each case's prompt at `budget`: the chunks
+    plus one header line per chunk (`# path:start-end symbol (reason)`). The final rendering is
+    decided when context is wired in; this is the estimate the dry run uses."""
+    embedder = CachedEmbedder(SentenceTransformerEmbedder(), EmbeddingCache(EMBEDDING_CACHE))
+    out: dict[str, int] = {}
+    chunk_cache: dict[str, list[Chunk]] = {}
+    for case in cases:
+        files, _ = snapshot(case["repo"], case["commit"])
+        chunks = [
+            c
+            for path, (blob, source) in files.items()
+            for c in chunk_cache.setdefault(blob, chunk_source(path, source))
+        ]
+        index = HybridIndex(QdrantClient(":memory:"), "snapshot", embedder)
+        index.add(chunks)
+        structure = PackageIndex({p: src for p, (_, src) in files.items()}, SELECTED[case["repo"]])
+        context = retrieve(index, case["diff"], budget, structure=structure)
+        headers = sum(
+            count_tokens(f"# {c.path}:{c.start_line}-{c.end_line} {c.symbol} ({c.reason})")
+            for c in context.related_chunks
+        )
+        out[case["case_id"]] = context.token_budget_used + headers
+    return out
 
 
 def summarize(
@@ -206,7 +271,36 @@ def summarize(
     for r in results:
         groups["repo"][r["repo"]].append(r)
         groups["category"][categories.get(r["case_id"], r["kind"])].append(r)
+
+    def callers(subset: list[dict[str, Any]], budget: int) -> dict[str, Any]:
+        covered = sum(r["budgets"][str(budget)]["call_sites_covered"] for r in subset)
+        return rate(covered, sum(r["call_sites"] for r in subset))
+
+    def composition(budget: int) -> dict[str, float]:
+        shares: dict[str, list[float]] = defaultdict(list)
+        for r in results:
+            b = r["budgets"][str(budget)]
+            if b["tokens"]:
+                for source in ("definition", "caller", "semantic"):
+                    shares[source].append(b["composition"].get(source, 0) / budget)
+        return {k: sum(v) / len(v) for k, v in shares.items()} if shares else {}
+
+    def miss_reasons(budget: int) -> dict[str, int]:
+        counts: dict[str, int] = defaultdict(int)
+        for r in results:
+            for reason in r["budgets"][str(budget)]["misses"].values():
+                counts[reason] += 1
+        return dict(sorted(counts.items(), key=lambda x: -x[1]))
+
     return {
+        "caller_coverage": {str(b): callers(results, b) for b in budgets},
+        "caller_cases": sum(bool(r["call_sites"]) for r in results),
+        "composition": {str(b): composition(b) for b in budgets},
+        "miss_reasons": {str(b): miss_reasons(b) for b in budgets},
+        "falsification_split": {
+            "with_targets": sorted(r["case_id"] for r in results if r["targets"]),
+            "without_targets": sorted(r["case_id"] for r in results if not r["targets"]),
+        },
         "cases": len(results),
         "cases_with_targets": sum(bool(r["targets"]) for r in results),
         "targets": sum(len(r["targets"]) for r in results),
@@ -233,7 +327,12 @@ def summarize(
     }
 
 
-def render(s: dict[str, Any], budgets: tuple[int, ...], meta: dict[str, Any]) -> str:
+def render(
+    s: dict[str, Any],
+    budgets: tuple[int, ...],
+    meta: dict[str, Any],
+    previous: dict[str, Any] | None = None,
+) -> str:
     def cell(r: dict[str, Any]) -> str:
         if not r["n"]:
             return "n/a"
@@ -243,27 +342,43 @@ def render(s: dict[str, Any], budgets: tuple[int, ...], meta: dict[str, Any]) ->
     sep = "|---|" + "---|" * len(budgets)
     lk = s["leakage"]
     out = [
-        "# Context retrieval: dev split",
+        "# Context retrieval: dev split (structural lookup + hybrid)",
         "",
-        "Retrieval quality of the M4 context builder ([[ADR-027 Eval-time repo context]], "
-        "[[Context Builder]]), measured with **no LLM calls**. Not wired into the review path.",
+        "Retrieval of the M4 context builder with structural lookup ([[ADR-028 Structural lookup "
+        "plus hybrid search]], [[ADR-027 Eval-time repo context]]), measured with **no LLM "
+        "calls**. Not wired into the review path.",
         "",
         f"- Generated {meta['generated']} by `python -m evals.context_eval --split dev` at git "
         f"`{meta['git_sha'][:7]}`; embedder `{meta['embedder']}`; in-memory Qdrant",
-        f"- Cases: {s['cases']} scored dev cases; {s['cases_with_targets']} have at least one "
-        f"target; {s['targets']} targets in all",
-        "- **Symbol-definition recall:** of the functions, methods and classes referenced in a "
-        "diff's changed lines that are defined in the package snapshot outside the diff itself, "
-        "the share whose definition is retrieved within the token budget. Pooled over "
-        "(case, name) pairs; 95% Wilson intervals.",
+        f"- Cases: {s['cases']} scored dev cases; {s['cases_with_targets']} reference at least "
+        f"one external definition ({s['targets']} targets in all); {s['caller_cases']} change a "
+        "function that has in-package call sites",
         "",
-        "## Overall",
+        "> **Symbol-definition recall is now a resolution-coverage check, not evidence of "
+        "usefulness.** Structural lookup retrieves definitions of referenced names by "
+        "construction, so a high number shows the resolver and the budget work. Whether context "
+        "helps the review is measured only by the M4 ablation (v2 vs v2 + context, McNemar, "
+        "falsification split; [[Eval Harness]]).",
+        "",
+        "## Symbol-definition recall (resolution coverage)",
         "",
         head,
         sep,
-        "| All cases | " + " | ".join(cell(s["overall"][str(b)]) for b in budgets) + " |",
+    ]
+    if previous:
+        out.append(
+            "| Pure hybrid (2026-10-04, superseded) | "
+            + " | ".join(cell(previous["overall"][str(b)]) for b in budgets)
+            + " |"
+        )
+    out.append(
+        "| **Structural + hybrid** | "
+        + " | ".join(cell(s["overall"][str(b)]) for b in budgets)
+        + " |"
+    )
+    out += [
         "",
-        "## By repo",
+        "By repo (structural + hybrid):",
         "",
         head,
         sep,
@@ -272,7 +387,36 @@ def render(s: dict[str, Any], budgets: tuple[int, ...], meta: dict[str, Any]) ->
             for g, v in s["by_repo"].items()
         ),
         "",
-        "## By category",
+        f"## Remaining misses at {budgets[-1]} tokens",
+        "",
+        "| Reason | Targets |",
+        "|---|---|",
+        *(f"| {reason} | {n} |" for reason, n in s["miss_reasons"][str(budgets[-1])].items()),
+        "",
+        "## Caller coverage",
+        "",
+        "For diffs that modify a function: the share of its in-package call sites (matched by "
+        "the callee's name, outside the diff) whose enclosing function or method is in the "
+        "context.",
+        "",
+        head,
+        sep,
+        "| Call sites | " + " | ".join(cell(s["caller_coverage"][str(b)]) for b in budgets) + " |",
+        "",
+        "## Budget composition",
+        "",
+        "Average share of the token budget per source (cases with any context):",
+        "",
+        "| Source | " + " | ".join(f"{b} tokens" for b in budgets) + " |",
+        sep,
+        *(
+            f"| {source} | "
+            + " | ".join(f"{s['composition'][str(b)].get(source, 0):.1%}" for b in budgets)
+            + " |"
+            for source in ("definition", "caller", "semantic")
+        ),
+        "",
+        "## By category (structural + hybrid)",
         "",
         head,
         sep,
@@ -286,8 +430,6 @@ def render(s: dict[str, Any], budgets: tuple[int, ...], meta: dict[str, Any]) ->
         f"- Chunks retrieved from test, doc, changelog or CI paths, across all cases and budgets: "
         f"**{lk['retrieved_from_excluded_paths']}**",
         f"- Files indexed from such paths: **{lk['indexed_from_excluded_paths']}**",
-        f"- Package paths skipped by the exclusion rule: "
-        f"{', '.join(f'`{p}`' for p in lk['package_paths_excluded_by_rule']) or 'none'}",
         "",
         "## Indexing",
         "",
@@ -298,10 +440,10 @@ def render(s: dict[str, Any], budgets: tuple[int, ...], meta: dict[str, Any]) ->
         "",
         "## Caveats",
         "",
-        "- Symbol-definition recall measures retrieval only, not whether the context helps the "
-        "review. That is the next ablation row, after baseline v2.",
         "- A referenced name counts as retrieved if any definition with that name is retrieved; "
         "names defined several times can match a different definition.",
+        "- Call sites are matched by the callee's name, without type information, so a method "
+        "name shared by several classes yields callers of all of them (marked ambiguous).",
         "- Dense embeddings truncate chunks at 256 tokens; sparse vectors cover the whole chunk.",
     ]
     return "\n".join(out) + "\n"
@@ -346,14 +488,19 @@ def main(argv: list[str] | None = None) -> int:
     (out_dir / "summary.json").write_text(json.dumps({**meta, **summary}, indent=1) + "\n")
     name = f"context-retrieval-{args.split}-{stamp}"
     front = (
-        f'---\nname: {name}\ndescription: "Symbol-definition recall of the M4 context builder '
-        f"on the {args.split} split at several token budgets, with the leakage check; no LLM "
-        'calls."\ntype: reliability\nstatus: done\ntags: [reliability, results]\nrelated:\n'
+        f"---\nname: {name}\n"
+        'description: "Resolution coverage, caller coverage and budget composition of the M4 '
+        f"context builder (structural lookup + hybrid) on the {args.split} split, with the "
+        'leakage check; no LLM calls."\ntype: reliability\nstatus: done\n'
+        "tags: [reliability, results]\nrelated:\n"
+        '  - "[[ADR-028 Structural lookup plus hybrid search]]"\n'
         '  - "[[ADR-027 Eval-time repo context]]"\n  - "[[Context Builder]]"\n'
         '  - "[[Eval Harness]]"\n---\n\n'
     )
+    previous_path = RESULTS / "context-dev-2026-10-04" / "summary.json"
+    previous = json.loads(previous_path.read_text()) if previous_path.exists() else None
     if args.limit is None:
-        (VAULT_RESULTS / f"{name}.md").write_text(front + render(summary, budgets, meta))
+        (VAULT_RESULTS / f"{name}.md").write_text(front + render(summary, budgets, meta, previous))
     print(json.dumps(summary["overall"], indent=1))
     print(json.dumps(summary["leakage"], indent=1))
     return 0
