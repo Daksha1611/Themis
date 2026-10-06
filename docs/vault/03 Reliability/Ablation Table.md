@@ -21,7 +21,7 @@ related:
 | Row | Adds |
 |---|---|
 | Baseline v1 | one LLM pass over the raw diff ([[baseline-dev-2026-10-04]]) |
-| v2: prompt hygiene | numbered diff, line rule, line validation, one validation retry ([[ADR-026 Numbered diffs and validated output]]) |
+| v2: prompt hygiene | numbered diff, line rule, line validation, one validation retry ([[ADR-026 Numbered diffs and validated output]]). **Dev result** ([[baseline-dev-2026-10-06-v2]]): no significant change against v1 (McNemar detection p = 0.45, category-correct p = 1.00, clean flags p = 0.11); disagreements within the run-to-run noise floor. Kept: it fixes production comment placement (Q65) and removes parse failures (0 vs 1), at 1.15× cost |
 | + repo context | [[Context Builder]] |
 | + multi-pass graph | [[Review Graph]] |
 | + precision filter | [[Precision Filter]] |

@@ -99,8 +99,11 @@ New sessions start with [[00 Brief]].
   - 0 chunks from test, doc, changelog or CI paths;
   - embedding-cache hit rate 94.6%.
 
+**Done (baseline v2, 2026-10-06)**
+- v2 complete (121 cases over three sessions; fingerprint matched throughout). [[baseline-dev-2026-10-06-v2]]: v1 → v2 not significant on any measure, and within run-to-run noise. Retries 4, invalid-line drops 2, parse failures 0. Cost 1.15× baseline, p95 latency 5.2 s.
+
 **Next**
-- Resume v2: `.venv/bin/python -m evals.runner --split dev --resume`, after about 14:10 UTC on 2026-10-05.
+- (done) Resume v2: `.venv/bin/python -m evals.runner --split dev --resume`, after about 14:10 UTC on 2026-10-05.
 - Then the v2 report: v1 vs the v1 rerun vs v2, the noise floor, McNemar, attribution, the sensitivity line and targets.
 - Structural lookup added ([[ADR-028 Structural lookup plus hybrid search]]): resolution coverage 57.1% / 58.3% / 63.5% at 1K / 2K / 4K; caller coverage 39% / 53% / 73%; 0 leakage. The M4 ablation plan, with the falsification prediction (64 vs 57 cases), is recorded in [[Eval Harness]]. Default context budget 1K (1.89 days of Groq quota per run; 4K exceeds the per-request ceiling).
 - Q47 (TestClient), Q48 (large PRs), Q49 (secrets in traces), Q52b (stable webhook URL).

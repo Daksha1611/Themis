@@ -12,6 +12,8 @@ related:
   - "[[label-report-dev-2026-10-03]]"
 ---
 
+> **Superseded by [[baseline-dev-2026-10-06-v2]]**, which shows v1, its no-cache rerun and v2 side by side. This report (baseline v1) is kept as written.
+
 # Baseline: dev split, groq/openai/gpt-oss-120b
 
 - Run: `dev-20261004T085157Z-ad2fc7d` (git `ad2fc7d`), finished 2026-10-04T08:55:00+00:00

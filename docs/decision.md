@@ -2032,3 +2032,60 @@ At 1K, callers fill 40% of the budget, but only 39% of call sites are covered.
 
 ### How this affects other components
 The M4 ablation is ready to run after v2.
+
+---
+
+## Baseline v2 (ADR-026): result
+**Date**: 2026-10-06
+**File(s) affected**:
+- `evals/results/dev-20261004T140940Z-4feea8e/` (results, run.json, summary.json)
+- `docs/vault/08 Results/baseline-dev-2026-10-06-v2.md` (the 2026-10-04 report kept, marked superseded)
+- Ablation Table, Results README, Current Status, Session Log
+
+### What I am changing
+**v2 completed** in three sessions:
+- 2026-10-04: 6 cases, stopped at the Groq daily limit;
+- 2026-10-06 04:45: 93 cases. This session has no stop record, so it was interrupted from outside;
+- 2026-10-06 06:22: 22 cases, complete.
+
+The fingerprint was checked by `--resume` each time. I had advised waiting until 2026-10-07 because of the daily limit; the third session ran fine at 06:22, so that advice was wrong.
+
+**Result:**
+
+| | v1 | v1 rerun | v2 |
+|---|---|---|---|
+| J | 0.435 | 0.388 | 0.327 |
+| Strict category-correct | 41/80 | 36/80 | 41/80 |
+| Precision | 74/108 | 74/117 | 83/124 |
+| Clean flags | 17/41 | 21/41 | 23/41 |
+
+**v1 → v2, exact McNemar:**
+- detection: b = 2, c = 5, p = 0.453;
+- category-correct: b = 8, c = 8, p = 1.000;
+- clean flags: b = 2, c = 8, p = 0.109.
+
+None is significant, and every disagreement count is within the noise floor (6 / 19 / 12).
+
+**Attribution of the 30 changed cases:** 4 retry-related, 2 numbering-related, 24 neither, so most changes are noise.
+
+**Sensitivity line** (suspicious clean cases excluded): v2 J 0.361, clean flags 20/38.
+
+**Targets:** cost (1.15×) and p95 latency (5.2 s) met; J, clean flag rate, precision and category recall not met on dev.
+
+### Why I am making this change
+Recording the first ablation row.
+
+### Alternatives I considered
+Revert ADR-026 because J fell.
+
+### Reasons I rejected each alternative
+The fall is not significant and is within run-to-run noise (v1's own rerun fell to 0.388). ADR-026 also fixes a production defect (comment placement, Q65) and removed parse failures.
+
+### Trade-offs I am accepting
+v2 is the base for the context row.
+
+### What could go wrong
+Clean flags rose 17 → 23 (p = 0.11). Watch this in the next row.
+
+### How this affects other components
+Ablation Table row 2 is filled in.

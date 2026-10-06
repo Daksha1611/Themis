@@ -1,0 +1,2109 @@
+{
+ "schema_version": 1,
+ "run_id": "dev-20261004T140940Z-4feea8e",
+ "split": "dev",
+ "git_sha": "4feea8ed1234623dbb4b4d06c26ec43ce62e8ffb",
+ "git_dirty": false,
+ "provider": "groq",
+ "model": "openai/gpt-oss-120b",
+ "temperature": 0.0,
+ "max_tokens": 2048,
+ "started_at": "2026-10-04T14:09:40+00:00",
+ "cache_mode": "on",
+ "finished_at": "2026-10-06T06:33:25+00:00",
+ "match": {
+  "margin_lines": 3,
+  "rule": "same file, line ranges overlap"
+ },
+ "headline": {
+  "reviewer": {
+   "youden_j": {
+    "j": 0.32652439024390234,
+    "low": 0.16122582845927455,
+    "high": 0.4858803519179399
+   },
+   "detection_tpr": {
+    "k": 71,
+    "n": 80,
+    "rate": 0.8875,
+    "low": 0.7998158913432244,
+    "high": 0.9396738130517298
+   },
+   "clean_fpr": {
+    "k": 23,
+    "n": 41,
+    "rate": 0.5609756097560976,
+    "low": 0.41040265151757305,
+    "high": 0.7011009522789018
+   },
+   "strict_category_recall": {
+    "k": 41,
+    "n": 80,
+    "rate": 0.5125,
+    "low": 0.4049314460370689,
+    "high": 0.6189230605563166
+   },
+   "strict_location_precision": {
+    "k": 83,
+    "n": 124,
+    "rate": 0.6693548387096774,
+    "low": 0.5825561512650286,
+    "high": 0.7459754065377523
+   }
+  },
+  "chance": {
+   "youden_j": {
+    "j": 0.0,
+    "low": -0.04581973626457503,
+    "high": 0.0856704488689074
+   },
+   "detection_tpr": {
+    "k": 80,
+    "n": 80,
+    "rate": 1.0,
+    "low": 0.954180263735425,
+    "high": 1.0
+   },
+   "clean_fpr": {
+    "k": 41,
+    "n": 41,
+    "rate": 1.0,
+    "low": 0.9143295511310926,
+    "high": 1.0
+   },
+   "strict_category_recall": {
+    "k": 34,
+    "n": 80,
+    "rate": 0.425,
+    "low": 0.3225638801480733,
+    "high": 0.534309080291613
+   },
+   "strict_location_precision": {
+    "k": 94,
+    "n": 243,
+    "rate": 0.3868312757201646,
+    "low": 0.3278098097151064,
+    "high": 0.44937523526920736
+   }
+  },
+  "noise_floor": {
+   "note": "dev clean cases marked suspicious; up to this share of the FP rate may be label noise",
+   "k": 3,
+   "n": 41,
+   "rate": 0.07317073170731707,
+   "low": 0.025197373252564128,
+   "high": 0.19427740017211298
+  },
+  "sensitivity_without_suspicious_clean": {
+   "reviewer": {
+    "excluded": [
+     "1368e5b14e17732e",
+     "3350b7f5558de194",
+     "3fe0fe03cd5c9e75"
+    ],
+    "clean_fpr": {
+     "k": 20,
+     "n": 38,
+     "rate": 0.5263157894736842,
+     "low": 0.37258710742710854,
+     "high": 0.675212211910584
+    },
+    "strict_location_precision": {
+     "k": 83,
+     "n": 121,
+     "rate": 0.6859504132231405,
+     "low": 0.5986092903996338,
+     "high": 0.7618474804203492
+    },
+    "youden_j": {
+     "j": 0.3611842105263158,
+     "low": 0.18838766100798496,
+     "high": 0.5235252541725053
+    }
+   },
+   "chance": {
+    "excluded": [
+     "1368e5b14e17732e",
+     "3350b7f5558de194",
+     "3fe0fe03cd5c9e75"
+    ],
+    "clean_fpr": {
+     "k": 38,
+     "n": 38,
+     "rate": 1.0,
+     "low": 0.90818706741616,
+     "high": 1.0
+    },
+    "strict_location_precision": {
+     "k": 94,
+     "n": 234,
+     "rate": 0.4017094017094017,
+     "low": 0.3409715675238621,
+     "high": 0.46562240089881923
+    },
+    "youden_j": {
+     "j": 0.0,
+     "low": -0.04581973626457503,
+     "high": 0.09181293258384005
+    }
+   },
+   "criterion": "clean cases marked suspicious during labelling, before any run"
+  }
+ },
+ "reviewer": {
+  "cases": {
+   "buggy": 80,
+   "labelled_buggy": 80,
+   "clean": 41
+  },
+  "detection": {
+   "tpr": {
+    "k": 71,
+    "n": 80,
+    "rate": 0.8875,
+    "low": 0.7998158913432244,
+    "high": 0.9396738130517298
+   },
+   "fpr": {
+    "k": 23,
+    "n": 41,
+    "rate": 0.5609756097560976,
+    "low": 0.41040265151757305,
+    "high": 0.7011009522789018
+   },
+   "youden_j": {
+    "j": 0.32652439024390234,
+    "low": 0.16122582845927455,
+    "high": 0.4858803519179399
+   }
+  },
+  "location_tolerance": {
+   "\u00b10": {
+    "k": 65,
+    "n": 80,
+    "rate": 0.8125,
+    "low": 0.7134147429619243,
+    "high": 0.8829479218727162
+   },
+   "\u00b11": {
+    "k": 65,
+    "n": 80,
+    "rate": 0.8125,
+    "low": 0.7134147429619243,
+    "high": 0.8829479218727162
+   },
+   "\u00b13": {
+    "k": 67,
+    "n": 80,
+    "rate": 0.8375,
+    "low": 0.7415689513651668,
+    "high": 0.9025027266562451
+   }
+  },
+  "recall": {
+   "lenient": {
+    "location": {
+     "k": 71,
+     "n": 80,
+     "rate": 0.8875,
+     "low": 0.7998158913432244,
+     "high": 0.9396738130517298
+    },
+    "category": {
+     "k": 44,
+     "n": 80,
+     "rate": 0.55,
+     "low": 0.4411931301173402,
+     "high": 0.6542248962562024
+    }
+   },
+   "strict": {
+    "location": {
+     "k": 67,
+     "n": 80,
+     "rate": 0.8375,
+     "low": 0.7415689513651668,
+     "high": 0.9025027266562451
+    },
+    "category": {
+     "k": 41,
+     "n": 80,
+     "rate": 0.5125,
+     "low": 0.4049314460370689,
+     "high": 0.6189230605563166
+    }
+   },
+   "primary": {
+    "location": {
+     "k": 64,
+     "n": 80,
+     "rate": 0.8,
+     "low": 0.6995355220341885,
+     "high": 0.8729726362070666
+    },
+    "category": {
+     "k": 41,
+     "n": 80,
+     "rate": 0.5125,
+     "low": 0.4049314460370689,
+     "high": 0.6189230605563166
+    }
+   }
+  },
+  "exact_line": {
+   "location": {
+    "k": 65,
+    "n": 80,
+    "rate": 0.8125,
+    "low": 0.7134147429619243,
+    "high": 0.8829479218727162
+   },
+   "category": {
+    "k": 40,
+    "n": 80,
+    "rate": 0.5,
+    "low": 0.392972274311075,
+    "high": 0.6070277256889249
+   }
+  },
+  "macro": {
+   "floor": 5,
+   "categories": {
+    "concurrency-or-async": 9,
+    "control-flow": 17,
+    "error-handling": 7,
+    "type-or-contract": 34
+   },
+   "strict_location": 0.8703314659197012,
+   "strict_category": 0.5350140056022409
+  },
+  "per_category": {
+   "CWE-20": {
+    "n": 1,
+    "strict_location": {
+     "k": 1,
+     "n": 1,
+     "rate": 1.0,
+     "low": 0.20654329147389294,
+     "high": 1.0
+    },
+    "strict_category": {
+     "k": 0,
+     "n": 1,
+     "rate": 0.0,
+     "low": 0.0,
+     "high": 0.7934567085261071
+    }
+   },
+   "CWE-400": {
+    "n": 1,
+    "strict_location": {
+     "k": 0,
+     "n": 1,
+     "rate": 0.0,
+     "low": 0.0,
+     "high": 0.7934567085261071
+    },
+    "strict_category": {
+     "k": 0,
+     "n": 1,
+     "rate": 0.0,
+     "low": 0.0,
+     "high": 0.7934567085261071
+    }
+   },
+   "arithmetic-or-numeric": {
+    "n": 2,
+    "strict_location": {
+     "k": 1,
+     "n": 2,
+     "rate": 0.5,
+     "low": 0.09452865480086611,
+     "high": 0.905471345199134
+    },
+    "strict_category": {
+     "k": 0,
+     "n": 2,
+     "rate": 0.0,
+     "low": 0.0,
+     "high": 0.6576280471103807
+    }
+   },
+   "concurrency-or-async": {
+    "n": 9,
+    "strict_location": {
+     "k": 8,
+     "n": 9,
+     "rate": 0.8888888888888888,
+     "low": 0.5649937852319398,
+     "high": 0.9801096286728695
+    },
+    "strict_category": {
+     "k": 3,
+     "n": 9,
+     "rate": 0.3333333333333333,
+     "low": 0.12058159868274292,
+     "high": 0.6458026525009103
+    }
+   },
+   "control-flow": {
+    "n": 17,
+    "strict_location": {
+     "k": 16,
+     "n": 17,
+     "rate": 0.9411764705882353,
+     "low": 0.730174547964372,
+     "high": 0.9895398693548358
+    },
+    "strict_category": {
+     "k": 11,
+     "n": 17,
+     "rate": 0.6470588235294118,
+     "low": 0.4129996672121183,
+     "high": 0.8269051385609512
+    }
+   },
+   "error-handling": {
+    "n": 7,
+    "strict_location": {
+     "k": 6,
+     "n": 7,
+     "rate": 0.8571428571428571,
+     "low": 0.4868654966809702,
+     "high": 0.9743210440510253
+    },
+    "strict_category": {
+     "k": 4,
+     "n": 7,
+     "rate": 0.5714285714285714,
+     "low": 0.2504542304090258,
+     "high": 0.8417830777373732
+    }
+   },
+   "null-or-none-handling": {
+    "n": 4,
+    "strict_location": {
+     "k": 4,
+     "n": 4,
+     "rate": 1.0,
+     "low": 0.5100999795960008,
+     "high": 1.0
+    },
+    "strict_category": {
+     "k": 2,
+     "n": 4,
+     "rate": 0.5,
+     "low": 0.15003570882017145,
+     "high": 0.8499642911798285
+    }
+   },
+   "off-by-one-or-boundary": {
+    "n": 3,
+    "strict_location": {
+     "k": 3,
+     "n": 3,
+     "rate": 1.0,
+     "low": 0.4384939195509822,
+     "high": 1.0
+    },
+    "strict_category": {
+     "k": 0,
+     "n": 3,
+     "rate": 0.0,
+     "low": 0.0,
+     "high": 0.5615060804490177
+    }
+   },
+   "resource-leak": {
+    "n": 2,
+    "strict_location": {
+     "k": 1,
+     "n": 2,
+     "rate": 0.5,
+     "low": 0.09452865480086611,
+     "high": 0.905471345199134
+    },
+    "strict_category": {
+     "k": 1,
+     "n": 2,
+     "rate": 0.5,
+     "low": 0.09452865480086611,
+     "high": 0.905471345199134
+    }
+   },
+   "type-or-contract": {
+    "n": 34,
+    "strict_location": {
+     "k": 27,
+     "n": 34,
+     "rate": 0.7941176470588235,
+     "low": 0.6320128389178602,
+     "high": 0.8965060397764867
+    },
+    "strict_category": {
+     "k": 20,
+     "n": 34,
+     "rate": 0.5882352941176471,
+     "low": 0.42221304146519273,
+     "high": 0.7363426221431114
+    }
+   }
+  },
+  "recall_by_repo": {
+   "Textualize/rich": {
+    "k": 4,
+    "n": 7,
+    "rate": 0.5714285714285714,
+    "low": 0.2504542304090258,
+    "high": 0.8417830777373732
+   },
+   "agronholm/anyio": {
+    "k": 9,
+    "n": 25,
+    "rate": 0.36,
+    "low": 0.20247656431735636,
+    "high": 0.5548184539895337
+   },
+   "fastapi/fastapi": {
+    "k": 14,
+    "n": 23,
+    "rate": 0.6086956521739131,
+    "low": 0.40785179603745997,
+    "high": 0.7784262201761787
+   },
+   "marshmallow-code/marshmallow": {
+    "k": 4,
+    "n": 8,
+    "rate": 0.5,
+    "low": 0.2152125268244419,
+    "high": 0.7847874731755581
+   },
+   "pallets/click": {
+    "k": 10,
+    "n": 17,
+    "rate": 0.5882352941176471,
+    "low": 0.3600507438551554,
+    "high": 0.7838921396086861
+   }
+  },
+  "recall_by_size": {
+   "1-5": {
+    "k": 19,
+    "n": 30,
+    "rate": 0.6333333333333333,
+    "low": 0.4551324643360493,
+    "high": 0.7812629779598231
+   },
+   "16-30": {
+    "k": 5,
+    "n": 16,
+    "rate": 0.3125,
+    "low": 0.14164435051961052,
+    "high": 0.5559606813326594
+   },
+   "31-60": {
+    "k": 4,
+    "n": 10,
+    "rate": 0.4,
+    "low": 0.16817758120350967,
+    "high": 0.6873304525498135
+   },
+   "6-15": {
+    "k": 13,
+    "n": 24,
+    "rate": 0.5416666666666666,
+    "low": 0.3507455355310663,
+    "high": 0.7210894164831857
+   }
+  },
+  "precision": {
+   "strict_location": {
+    "k": 83,
+    "n": 124,
+    "rate": 0.6693548387096774,
+    "low": 0.5825561512650286,
+    "high": 0.7459754065377523
+   },
+   "strict_category": {
+    "k": 49,
+    "n": 124,
+    "rate": 0.3951612903225806,
+    "low": 0.313505613184297,
+    "high": 0.4831177081758861
+   },
+   "lenient_location": {
+    "k": 96,
+    "n": 124,
+    "rate": 0.7741935483870968,
+    "low": 0.6930081708536336,
+    "high": 0.838900065588964
+   },
+   "lenient_category": {
+    "k": 55,
+    "n": 124,
+    "rate": 0.4435483870967742,
+    "low": 0.3591080039637906,
+    "high": 0.5313814767686157
+   }
+  },
+  "findings": {
+   "total": 124,
+   "on_clean": 28
+  },
+  "false_positives": {
+   "overall": {
+    "cases_with_finding": {
+     "k": 23,
+     "n": 41,
+     "rate": 0.5609756097560976,
+     "low": 0.41040265151757305,
+     "high": 0.7011009522789018
+    },
+    "mean_findings": 0.6829268292682927
+   },
+   "by_size": {
+    "1-5": {
+     "cases_with_finding": {
+      "k": 8,
+      "n": 17,
+      "rate": 0.47058823529411764,
+      "low": 0.26164801196088106,
+      "high": 0.6903710268845051
+     },
+     "mean_findings": 0.5882352941176471
+    },
+    "16-30": {
+     "cases_with_finding": {
+      "k": 4,
+      "n": 8,
+      "rate": 0.5,
+      "low": 0.2152125268244419,
+      "high": 0.7847874731755581
+     },
+     "mean_findings": 0.625
+    },
+    "31-60": {
+     "cases_with_finding": {
+      "k": 2,
+      "n": 3,
+      "rate": 0.6666666666666666,
+      "low": 0.20765495512648788,
+      "high": 0.9385096847238393
+     },
+     "mean_findings": 0.6666666666666666
+    },
+    "6-15": {
+     "cases_with_finding": {
+      "k": 9,
+      "n": 13,
+      "rate": 0.6923076923076923,
+      "low": 0.4236888781333764,
+      "high": 0.873195028383819
+     },
+     "mean_findings": 0.8461538461538461
+    }
+   },
+   "by_repo": {
+    "Textualize/rich": {
+     "cases_with_finding": {
+      "k": 5,
+      "n": 10,
+      "rate": 0.5,
+      "low": 0.2365895936154873,
+      "high": 0.7634104063845127
+     },
+     "mean_findings": 0.5
+    },
+    "agronholm/anyio": {
+     "cases_with_finding": {
+      "k": 6,
+      "n": 8,
+      "rate": 0.75,
+      "low": 0.40926987910258916,
+      "high": 0.9285223111419724
+     },
+     "mean_findings": 1.0
+    },
+    "fastapi/fastapi": {
+     "cases_with_finding": {
+      "k": 6,
+      "n": 11,
+      "rate": 0.5454545454545454,
+      "low": 0.2800877556899882,
+      "high": 0.7872904245601196
+     },
+     "mean_findings": 0.7272727272727273
+    },
+    "marshmallow-code/marshmallow": {
+     "cases_with_finding": {
+      "k": 1,
+      "n": 2,
+      "rate": 0.5,
+      "low": 0.09452865480086611,
+      "high": 0.905471345199134
+     },
+     "mean_findings": 0.5
+    },
+    "pallets/click": {
+     "cases_with_finding": {
+      "k": 5,
+      "n": 10,
+      "rate": 0.5,
+      "low": 0.2365895936154873,
+      "high": 0.7634104063845127
+     },
+     "mean_findings": 0.6
+    }
+   },
+   "noise_floor": {
+    "note": "dev clean cases marked suspicious; up to this share of the FP rate may be label noise",
+    "k": 3,
+    "n": 41,
+    "rate": 0.07317073170731707,
+    "low": 0.025197373252564128,
+    "high": 0.19427740017211298
+   }
+  },
+  "security": {
+   "per_category": {
+    "CWE-20": {
+     "k": 0,
+     "n": 1,
+     "rate": 0.0,
+     "low": 0.0,
+     "high": 0.7934567085261071
+    },
+    "CWE-400": {
+     "k": 0,
+     "n": 1,
+     "rate": 0.0,
+     "low": 0.0,
+     "high": 0.7934567085261071
+    }
+   },
+   "note": "not statistically meaningful"
+  }
+ },
+ "chance_baseline": {
+  "category": "type-or-contract",
+  "cases": {
+   "buggy": 80,
+   "labelled_buggy": 80,
+   "clean": 41
+  },
+  "detection": {
+   "tpr": {
+    "k": 80,
+    "n": 80,
+    "rate": 1.0,
+    "low": 0.954180263735425,
+    "high": 1.0
+   },
+   "fpr": {
+    "k": 41,
+    "n": 41,
+    "rate": 1.0,
+    "low": 0.9143295511310926,
+    "high": 1.0
+   },
+   "youden_j": {
+    "j": 0.0,
+    "low": -0.04581973626457503,
+    "high": 0.0856704488689074
+   }
+  },
+  "location_tolerance": {
+   "\u00b10": {
+    "k": 60,
+    "n": 80,
+    "rate": 0.75,
+    "low": 0.6451511899886555,
+    "high": 0.8319389418790569
+   },
+   "\u00b11": {
+    "k": 60,
+    "n": 80,
+    "rate": 0.75,
+    "low": 0.6451511899886555,
+    "high": 0.8319389418790569
+   },
+   "\u00b13": {
+    "k": 76,
+    "n": 80,
+    "rate": 0.95,
+    "low": 0.878375474489178,
+    "high": 0.9803867628727043
+   }
+  },
+  "recall": {
+   "lenient": {
+    "location": {
+     "k": 80,
+     "n": 80,
+     "rate": 1.0,
+     "low": 0.954180263735425,
+     "high": 1.0
+    },
+    "category": {
+     "k": 34,
+     "n": 80,
+     "rate": 0.425,
+     "low": 0.3225638801480733,
+     "high": 0.534309080291613
+    }
+   },
+   "strict": {
+    "location": {
+     "k": 76,
+     "n": 80,
+     "rate": 0.95,
+     "low": 0.878375474489178,
+     "high": 0.9803867628727043
+    },
+    "category": {
+     "k": 34,
+     "n": 80,
+     "rate": 0.425,
+     "low": 0.3225638801480733,
+     "high": 0.534309080291613
+    }
+   },
+   "primary": {
+    "location": {
+     "k": 71,
+     "n": 80,
+     "rate": 0.8875,
+     "low": 0.7998158913432244,
+     "high": 0.9396738130517298
+    },
+    "category": {
+     "k": 32,
+     "n": 80,
+     "rate": 0.4,
+     "low": 0.29961659273441493,
+     "high": 0.5095473545185001
+    }
+   }
+  },
+  "exact_line": {
+   "location": {
+    "k": 60,
+    "n": 80,
+    "rate": 0.75,
+    "low": 0.6451511899886555,
+    "high": 0.8319389418790569
+   },
+   "category": {
+    "k": 24,
+    "n": 80,
+    "rate": 0.3,
+    "low": 0.21064429162615705,
+    "high": 0.407683602879673
+   }
+  },
+  "macro": {
+   "floor": 5,
+   "categories": {
+    "concurrency-or-async": 9,
+    "control-flow": 17,
+    "error-handling": 7,
+    "type-or-contract": 34
+   },
+   "strict_location": 0.9218020541549953,
+   "strict_category": 0.25
+  },
+  "per_category": {
+   "CWE-20": {
+    "n": 1,
+    "strict_location": {
+     "k": 1,
+     "n": 1,
+     "rate": 1.0,
+     "low": 0.20654329147389294,
+     "high": 1.0
+    },
+    "strict_category": {
+     "k": 0,
+     "n": 1,
+     "rate": 0.0,
+     "low": 0.0,
+     "high": 0.7934567085261071
+    }
+   },
+   "CWE-400": {
+    "n": 1,
+    "strict_location": {
+     "k": 1,
+     "n": 1,
+     "rate": 1.0,
+     "low": 0.20654329147389294,
+     "high": 1.0
+    },
+    "strict_category": {
+     "k": 0,
+     "n": 1,
+     "rate": 0.0,
+     "low": 0.0,
+     "high": 0.7934567085261071
+    }
+   },
+   "arithmetic-or-numeric": {
+    "n": 2,
+    "strict_location": {
+     "k": 2,
+     "n": 2,
+     "rate": 1.0,
+     "low": 0.3423719528896193,
+     "high": 1.0
+    },
+    "strict_category": {
+     "k": 0,
+     "n": 2,
+     "rate": 0.0,
+     "low": 0.0,
+     "high": 0.6576280471103807
+    }
+   },
+   "concurrency-or-async": {
+    "n": 9,
+    "strict_location": {
+     "k": 8,
+     "n": 9,
+     "rate": 0.8888888888888888,
+     "low": 0.5649937852319398,
+     "high": 0.9801096286728695
+    },
+    "strict_category": {
+     "k": 0,
+     "n": 9,
+     "rate": 0.0,
+     "low": 0.0,
+     "high": 0.2991527535509594
+    }
+   },
+   "control-flow": {
+    "n": 17,
+    "strict_location": {
+     "k": 16,
+     "n": 17,
+     "rate": 0.9411764705882353,
+     "low": 0.730174547964372,
+     "high": 0.9895398693548358
+    },
+    "strict_category": {
+     "k": 0,
+     "n": 17,
+     "rate": 0.0,
+     "low": 0.0,
+     "high": 0.18432366037156456
+    }
+   },
+   "error-handling": {
+    "n": 7,
+    "strict_location": {
+     "k": 6,
+     "n": 7,
+     "rate": 0.8571428571428571,
+     "low": 0.4868654966809702,
+     "high": 0.9743210440510253
+    },
+    "strict_category": {
+     "k": 0,
+     "n": 7,
+     "rate": 0.0,
+     "low": 0.0,
+     "high": 0.35433884297520657
+    }
+   },
+   "null-or-none-handling": {
+    "n": 4,
+    "strict_location": {
+     "k": 4,
+     "n": 4,
+     "rate": 1.0,
+     "low": 0.5100999795960008,
+     "high": 1.0
+    },
+    "strict_category": {
+     "k": 0,
+     "n": 4,
+     "rate": 0.0,
+     "low": 0.0,
+     "high": 0.48990002040399916
+    }
+   },
+   "off-by-one-or-boundary": {
+    "n": 3,
+    "strict_location": {
+     "k": 3,
+     "n": 3,
+     "rate": 1.0,
+     "low": 0.4384939195509822,
+     "high": 1.0
+    },
+    "strict_category": {
+     "k": 0,
+     "n": 3,
+     "rate": 0.0,
+     "low": 0.0,
+     "high": 0.5615060804490177
+    }
+   },
+   "resource-leak": {
+    "n": 2,
+    "strict_location": {
+     "k": 1,
+     "n": 2,
+     "rate": 0.5,
+     "low": 0.09452865480086611,
+     "high": 0.905471345199134
+    },
+    "strict_category": {
+     "k": 0,
+     "n": 2,
+     "rate": 0.0,
+     "low": 0.0,
+     "high": 0.6576280471103807
+    }
+   },
+   "type-or-contract": {
+    "n": 34,
+    "strict_location": {
+     "k": 34,
+     "n": 34,
+     "rate": 1.0,
+     "low": 0.8984820937803899,
+     "high": 1.0
+    },
+    "strict_category": {
+     "k": 34,
+     "n": 34,
+     "rate": 1.0,
+     "low": 0.8984820937803899,
+     "high": 1.0
+    }
+   }
+  },
+  "recall_by_repo": {
+   "Textualize/rich": {
+    "k": 2,
+    "n": 7,
+    "rate": 0.2857142857142857,
+    "low": 0.08221716570901552,
+    "high": 0.6410709098517873
+   },
+   "agronholm/anyio": {
+    "k": 4,
+    "n": 25,
+    "rate": 0.16,
+    "low": 0.06403347608577989,
+    "high": 0.34654013980238163
+   },
+   "fastapi/fastapi": {
+    "k": 14,
+    "n": 23,
+    "rate": 0.6086956521739131,
+    "low": 0.40785179603745997,
+    "high": 0.7784262201761787
+   },
+   "marshmallow-code/marshmallow": {
+    "k": 3,
+    "n": 8,
+    "rate": 0.375,
+    "low": 0.13684175946152105,
+    "high": 0.6942621454161982
+   },
+   "pallets/click": {
+    "k": 11,
+    "n": 17,
+    "rate": 0.6470588235294118,
+    "low": 0.4129996672121183,
+    "high": 0.8269051385609512
+   }
+  },
+  "recall_by_size": {
+   "1-5": {
+    "k": 16,
+    "n": 30,
+    "rate": 0.5333333333333333,
+    "low": 0.36142013281525043,
+    "high": 0.6976787277587176
+   },
+   "16-30": {
+    "k": 5,
+    "n": 16,
+    "rate": 0.3125,
+    "low": 0.14164435051961052,
+    "high": 0.5559606813326594
+   },
+   "31-60": {
+    "k": 2,
+    "n": 10,
+    "rate": 0.2,
+    "low": 0.05668094798069328,
+    "high": 0.5098431532792767
+   },
+   "6-15": {
+    "k": 11,
+    "n": 24,
+    "rate": 0.4583333333333333,
+    "low": 0.27891058351681425,
+    "high": 0.6492544644689338
+   }
+  },
+  "precision": {
+   "strict_location": {
+    "k": 94,
+    "n": 243,
+    "rate": 0.3868312757201646,
+    "low": 0.3278098097151064,
+    "high": 0.44937523526920736
+   },
+   "strict_category": {
+    "k": 44,
+    "n": 243,
+    "rate": 0.18106995884773663,
+    "low": 0.13773878235668463,
+    "high": 0.23432816259910885
+   },
+   "lenient_location": {
+    "k": 154,
+    "n": 243,
+    "rate": 0.6337448559670782,
+    "low": 0.5715243735665246,
+    "high": 0.6918023914520135
+   },
+   "lenient_category": {
+    "k": 64,
+    "n": 243,
+    "rate": 0.26337448559670784,
+    "low": 0.21198516608547,
+    "high": 0.3221290188817316
+   }
+  },
+  "findings": {
+   "total": 243,
+   "on_clean": 89
+  },
+  "false_positives": {
+   "overall": {
+    "cases_with_finding": {
+     "k": 41,
+     "n": 41,
+     "rate": 1.0,
+     "low": 0.9143295511310926,
+     "high": 1.0
+    },
+    "mean_findings": 2.1707317073170733
+   },
+   "by_size": {
+    "1-5": {
+     "cases_with_finding": {
+      "k": 17,
+      "n": 17,
+      "rate": 1.0,
+      "low": 0.8156763396284354,
+      "high": 1.0
+     },
+     "mean_findings": 1.1176470588235294
+    },
+    "16-30": {
+     "cases_with_finding": {
+      "k": 8,
+      "n": 8,
+      "rate": 1.0,
+      "low": 0.6755843804891231,
+      "high": 1.0
+     },
+     "mean_findings": 3.5
+    },
+    "31-60": {
+     "cases_with_finding": {
+      "k": 3,
+      "n": 3,
+      "rate": 1.0,
+      "low": 0.4384939195509822,
+      "high": 1.0
+     },
+     "mean_findings": 3.0
+    },
+    "6-15": {
+     "cases_with_finding": {
+      "k": 13,
+      "n": 13,
+      "rate": 1.0,
+      "low": 0.7718981569447084,
+      "high": 1.0
+     },
+     "mean_findings": 2.5384615384615383
+    }
+   },
+   "by_repo": {
+    "Textualize/rich": {
+     "cases_with_finding": {
+      "k": 10,
+      "n": 10,
+      "rate": 1.0,
+      "low": 0.7224598312333834,
+      "high": 1.0
+     },
+     "mean_findings": 2.4
+    },
+    "agronholm/anyio": {
+     "cases_with_finding": {
+      "k": 8,
+      "n": 8,
+      "rate": 1.0,
+      "low": 0.6755843804891231,
+      "high": 1.0
+     },
+     "mean_findings": 2.625
+    },
+    "fastapi/fastapi": {
+     "cases_with_finding": {
+      "k": 11,
+      "n": 11,
+      "rate": 1.0,
+      "low": 0.7411599827511859,
+      "high": 1.0
+     },
+     "mean_findings": 1.9090909090909092
+    },
+    "marshmallow-code/marshmallow": {
+     "cases_with_finding": {
+      "k": 2,
+      "n": 2,
+      "rate": 1.0,
+      "low": 0.3423719528896193,
+      "high": 1.0
+     },
+     "mean_findings": 3.5
+    },
+    "pallets/click": {
+     "cases_with_finding": {
+      "k": 10,
+      "n": 10,
+      "rate": 1.0,
+      "low": 0.7224598312333834,
+      "high": 1.0
+     },
+     "mean_findings": 1.6
+    }
+   },
+   "noise_floor": {
+    "note": "dev clean cases marked suspicious; up to this share of the FP rate may be label noise",
+    "k": 3,
+    "n": 41,
+    "rate": 0.07317073170731707,
+    "low": 0.025197373252564128,
+    "high": 0.19427740017211298
+   }
+  },
+  "security": {
+   "per_category": {
+    "CWE-20": {
+     "k": 0,
+     "n": 1,
+     "rate": 0.0,
+     "low": 0.0,
+     "high": 0.7934567085261071
+    },
+    "CWE-400": {
+     "k": 0,
+     "n": 1,
+     "rate": 0.0,
+     "low": 0.0,
+     "high": 0.7934567085261071
+    }
+   },
+   "note": "not statistically meaningful"
+  }
+ },
+ "operational": {
+  "cases": 121,
+  "answered": 121,
+  "status": {
+   "success": 121
+  },
+  "failures": {},
+  "parse_error_rate": {
+   "k": 0,
+   "n": 121,
+   "rate": 0.0,
+   "low": 0.0,
+   "high": 0.03077179401737882
+  },
+  "validation_retries": 4,
+  "invalid_line_findings": 2,
+  "cost_usd_estimate": {
+   "note": "LiteLLM list-price estimate; actual free-tier spend is $0",
+   "mean_per_case": 0.0006535698347107438,
+   "total": 0.07908195
+  },
+  "latency_ms": {
+   "mean": 2691.1074380165287,
+   "p95": 5220.0
+  },
+  "tokens": {
+   "prompt": 157549,
+   "completion": 98592,
+   "estimated_prompt": 141634,
+   "actual_prompt_answered": 157549
+  },
+  "cache": {
+   "cached_cases": 0,
+   "hit_rate": {
+    "k": 0,
+    "n": 121,
+    "rate": 0.0,
+    "low": 0.0,
+    "high": 0.03077179401737882
+   },
+   "provider_attempts": 125
+  },
+  "provider_models": {
+   "groq/openai/gpt-oss-120b": 121
+  },
+  "pinned_share": {
+   "k": 121,
+   "n": 121,
+   "rate": 1.0,
+   "low": 0.9692282059826209,
+   "high": 0.9999999999999998
+  }
+ },
+ "order_seed": 20261003,
+ "diff_transform": "mask-issue-refs-v1",
+ "diagnostics": {
+  "base_rate": {
+   "cases": 80,
+   "mean": 0.8115122159617127,
+   "median": 1.0,
+   "all_changed_lines_inside": 46,
+   "distribution": {
+    "100%": 46,
+    "75-99%": 7,
+    "50-74%": 14,
+    "<50%": 13
+   }
+  },
+  "strict_location_misses": {
+   "misses": 13,
+   "causes": {
+    "findings on changed lines, outside the \u00b13 window": {
+     "count": 3,
+     "cases": [
+      "2109faa46125df3d",
+      "08e903fe777a642c",
+      "4cf91dda2d9a58e3"
+     ]
+    },
+    "findings on context lines, outside the \u00b13 window": {
+     "count": 1,
+     "cases": [
+      "5dd6a5f8d949c1df"
+     ]
+    },
+    "no findings": {
+     "count": 9,
+     "cases": [
+      "24517970965f73df",
+      "514024d672807316",
+      "26ad079673af9382",
+      "400cff6a304c125b",
+      "8d2bb2c2fcb58432",
+      "4ffca0ce378367c6",
+      "94ad4f8fb317b04e",
+      "36b1a3b76394efc3",
+      "c3ee72768a1488f2"
+     ]
+    }
+   }
+  },
+  "coordinates": {
+   "findings": 124,
+   "positions": {
+    "new-side, on an added line": 100,
+    "ambiguous: new-side context or old-side removed line": 13,
+    "new-side, context line": 11
+   },
+   "cases_off_new_side": []
+  },
+  "clean_false_positives": {
+   "flagged_cases": 23,
+   "findings": 28,
+   "by_category": {
+    "type-or-contract": 14,
+    "control-flow": 7,
+    "null-or-none-handling": 2,
+    "off-by-one-or-boundary": 1,
+    "concurrency-or-async": 1,
+    "arithmetic-or-numeric": 1,
+    "error-handling": 1,
+    "CWE-20": 1
+   },
+   "by_severity": {
+    "medium": 15,
+    "high": 11,
+    "low": 2
+   },
+   "flagged_by_repo": {
+    "Textualize/rich": "5/10",
+    "agronholm/anyio": "6/8",
+    "fastapi/fastapi": "6/11",
+    "marshmallow-code/marshmallow": "1/2",
+    "pallets/click": "5/10"
+   },
+   "flagged_by_size": {
+    "1-5": "8/17",
+    "16-30": "4/8",
+    "31-60": "2/3",
+    "6-15": "9/13"
+   },
+   "suspicious_flagged": [
+    "1368e5b14e17732e",
+    "3350b7f5558de194",
+    "3fe0fe03cd5c9e75"
+   ],
+   "cases": [
+    {
+     "case_id": "5d27635f3e801b03",
+     "repo": "agronholm/anyio",
+     "size": 14,
+     "suspicious": false,
+     "findings": [
+      {
+       "category": "type-or-contract",
+       "severity": "medium",
+       "message": "Function `_interp_call` is annotated to return a `tuple[Any, bool]` but the implementation does not return a tuple on all code paths, which can result in `None`"
+      }
+     ]
+    },
+    {
+     "case_id": "9cd294903fcceb5b",
+     "repo": "pallets/click",
+     "size": 17,
+     "suspicious": false,
+     "findings": [
+      {
+       "category": "type-or-contract",
+       "severity": "high",
+       "message": "The method now returns None instead of the sentinel UNSET, but other parts of the code still compare the result to UNSET, causing incorrect control flow and mis"
+      },
+      {
+       "category": "control-flow",
+       "severity": "high",
+       "message": "The condition `if value is UNSET:` is still used after `lookup_default` was changed to return None for missing entries, so the fallback to the default map will "
+      }
+     ]
+    },
+    {
+     "case_id": "3350b7f5558de194",
+     "repo": "Textualize/rich",
+     "size": 22,
+     "suspicious": true,
+     "findings": [
+      {
+       "category": "control-flow",
+       "severity": "high",
+       "message": "clear_live() unconditionally pops from self._live_stack, which may be empty (e.g., when a nested Live instance calls stop without having been pushed). This can "
+      }
+     ]
+    },
+    {
+     "case_id": "1f90b835c3c8b8cb",
+     "repo": "fastapi/fastapi",
+     "size": 6,
+     "suspicious": false,
+     "findings": [
+      {
+       "category": "type-or-contract",
+       "severity": "medium",
+       "message": "Signature is obtained from the original callable while globals are taken from the unwrapped function, which can lead to mismatched annotation resolution or inco"
+      }
+     ]
+    },
+    {
+     "case_id": "431c4d64a4f54bad",
+     "repo": "agronholm/anyio",
+     "size": 2,
+     "suspicious": false,
+     "findings": [
+      {
+       "category": "off-by-one-or-boundary",
+       "severity": "medium",
+       "message": "Changing the size check from '<' to '<=' alters the boundary condition, allowing the temporary file to reach exactly _max_size before triggering a rollover. Thi"
+      }
+     ]
+    },
+    {
+     "case_id": "21fcf125bd292fed",
+     "repo": "pallets/click",
+     "size": 3,
+     "suspicious": false,
+     "findings": [
+      {
+       "category": "type-or-contract",
+       "severity": "high",
+       "message": "The variable 'dt' is used but never defined, causing a NameError during cleanup."
+      }
+     ]
+    },
+    {
+     "case_id": "3fe0fe03cd5c9e75",
+     "repo": "pallets/click",
+     "size": 28,
+     "suspicious": true,
+     "findings": [
+      {
+       "category": "type-or-contract",
+       "severity": "high",
+       "message": "The added block changes `self.default` from a boolean `True` to `self.flag_value`, which may be a non-boolean value. Downstream code for flag handling expects `"
+      }
+     ]
+    },
+    {
+     "case_id": "480ba4bc4eff750a",
+     "repo": "Textualize/rich",
+     "size": 52,
+     "suspicious": false,
+     "findings": [
+      {
+       "category": "type-or-contract",
+       "severity": "high",
+       "message": "Panel.fit is called with multiple positional arguments; the second string is interpreted as the title argument, which conflicts with the explicit title keyword,"
+      }
+     ]
+    },
+    {
+     "case_id": "3b361014049295e9",
+     "repo": "agronholm/anyio",
+     "size": 9,
+     "suspicious": false,
+     "findings": [
+      {
+       "category": "type-or-contract",
+       "severity": "high",
+       "message": "The version check uses sys.version_info >= (3, 13) to decide whether to import TypeVar from typing, but TypeVar default arguments were introduced in Python 3.12"
+      },
+      {
+       "category": "type-or-contract",
+       "severity": "high",
+       "message": "The TypeVar definition adds a 'default=None' argument, which is not supported by typing_extensions.TypeVar on Python versions prior to 3.12, causing a runtime e"
+      }
+     ]
+    },
+    {
+     "case_id": "0a246f476fa7b269",
+     "repo": "fastapi/fastapi",
+     "size": 2,
+     "suspicious": false,
+     "findings": [
+      {
+       "category": "control-flow",
+       "severity": "medium",
+       "message": "Using assert for input validation may be disabled with Python -O, allowing a dataclass type to be processed and causing dataclasses.asdict to raise an unexpecte"
+      },
+      {
+       "category": "control-flow",
+       "severity": "medium",
+       "message": "Using assert for input validation may be stripped in optimized mode, letting a dataclass class slip through and causing dataclasses.asdict to fail at runtime."
+      }
+     ]
+    },
+    {
+     "case_id": "13a874d6aa499272",
+     "repo": "Textualize/rich",
+     "size": 16,
+     "suspicious": false,
+     "findings": [
+      {
+       "category": "concurrency-or-async",
+       "severity": "medium",
+       "message": "The module\u2011level _id_generator (itertools.count) is shared across threads without synchronization; concurrent calls to next(_id_generator) can produce duplicate"
+      }
+     ]
+    },
+    {
+     "case_id": "3fd64fd644e3e89e",
+     "repo": "pallets/click",
+     "size": 13,
+     "suspicious": false,
+     "findings": [
+      {
+       "category": "type-or-contract",
+       "severity": "medium",
+       "message": "The callback previously received the internal UNSET sentinel to distinguish between an omitted value and an explicit None. Converting UNSET to None before invok"
+      }
+     ]
+    },
+    {
+     "case_id": "cb520e2dad24d58f",
+     "repo": "agronholm/anyio",
+     "size": 9,
+     "suspicious": false,
+     "findings": [
+      {
+       "category": "control-flow",
+       "severity": "high",
+       "message": "An if statement is placed inside the import parentheses block, which is syntactically invalid and will cause a SyntaxError, preventing the conditional TypeAlias"
+      }
+     ]
+    },
+    {
+     "case_id": "1368e5b14e17732e",
+     "repo": "agronholm/anyio",
+     "size": 7,
+     "suspicious": true,
+     "findings": [
+      {
+       "category": "arithmetic-or-numeric",
+       "severity": "medium",
+       "message": "Allowing total_tokens to be set to 0 may cause division\u2011by\u2011zero errors in other parts of CapacityLimiter that assume total_tokens is at least 1."
+      }
+     ]
+    },
+    {
+     "case_id": "62dc9c3f5126f706",
+     "repo": "fastapi/fastapi",
+     "size": 2,
+     "suspicious": false,
+     "findings": [
+      {
+       "category": "type-or-contract",
+       "severity": "medium",
+       "message": "Importing IncEx from pydantic.main replaces the original Union definition; if the imported IncEx differs in type or is unavailable, code may raise ImportError o"
+      },
+      {
+       "category": "type-or-contract",
+       "severity": "medium",
+       "message": "Removal of the local IncEx Union definition may break code that relies on that specific type annotation, leading to type mismatches or NameError if the import i"
+      }
+     ]
+    },
+    {
+     "case_id": "20c38e9f71d460b5",
+     "repo": "pallets/click",
+     "size": 1,
+     "suspicious": false,
+     "findings": [
+      {
+       "category": "null-or-none-handling",
+       "severity": "low",
+       "message": "sys.stderr may be None or lack a flush() method, causing an AttributeError when called unconditionally"
+      }
+     ]
+    },
+    {
+     "case_id": "239a866ce1f91049",
+     "repo": "Textualize/rich",
+     "size": 31,
+     "suspicious": false,
+     "findings": [
+      {
+       "category": "control-flow",
+       "severity": "medium",
+       "message": "When a variation selector is processed and `last_measured_character` is falsy, the code still accesses `spans[-1]` and updates it, which can corrupt span bounda"
+      }
+     ]
+    },
+    {
+     "case_id": "abb9b5578ed6b5e2",
+     "repo": "fastapi/fastapi",
+     "size": 2,
+     "suspicious": false,
+     "findings": [
+      {
+       "category": "null-or-none-handling",
+       "severity": "medium",
+       "message": "The added check compares annotation to type(None) but annotations can be the literal None, so the condition will miss that case and fail to return None as inten"
+      }
+     ]
+    },
+    {
+     "case_id": "97ba9f5a10b0a4ec",
+     "repo": "fastapi/fastapi",
+     "size": 6,
+     "suspicious": false,
+     "findings": [
+      {
+       "category": "error-handling",
+       "severity": "high",
+       "message": "The removal of the `import sys` statement may cause a NameError if `sys` (e.g., `sys.version_info`) is referenced later in the module, breaking runtime behavior"
+      }
+     ]
+    },
+    {
+     "case_id": "500cdfe7c2040208",
+     "repo": "fastapi/fastapi",
+     "size": 2,
+     "suspicious": false,
+     "findings": [
+      {
+       "category": "CWE-20",
+       "severity": "high",
+       "message": "Using assert for input validation means the check can be disabled with the -O flag, potentially allowing unsupported query parameter types to pass unchecked."
+      }
+     ]
+    },
+    {
+     "case_id": "5089803ebaf4be59",
+     "repo": "marshmallow-code/marshmallow",
+     "size": 10,
+     "suspicious": false,
+     "findings": [
+      {
+       "category": "type-or-contract",
+       "severity": "medium",
+       "message": "copy_containers only recursively copies lists and dicts, leaving other mutable objects (e.g., custom objects, sets) unchanged and does not handle cyclic referen"
+      }
+     ]
+    },
+    {
+     "case_id": "4ea00f7ff7853bec",
+     "repo": "Textualize/rich",
+     "size": 2,
+     "suspicious": false,
+     "findings": [
+      {
+       "category": "control-flow",
+       "severity": "medium",
+       "message": "The condition was changed from checking for the variation selector character (\"\\ufe0f\") to only checking last_measured_character, causing the width adjustment b"
+      }
+     ]
+    },
+    {
+     "case_id": "6018540745d6183d",
+     "repo": "agronholm/anyio",
+     "size": 14,
+     "suspicious": false,
+     "findings": [
+      {
+       "category": "type-or-contract",
+       "severity": "medium",
+       "message": "The import of AsyncGenerator and Sequence was removed, but other parts of this module may still reference those names (e.g., in type hints), causing a NameError"
+      },
+      {
+       "category": "type-or-contract",
+       "severity": "low",
+       "message": "The public import of ConnectionStrategy was removed, breaking the anyio.abc namespace for callers that expect ConnectionStrategy to be available."
+      }
+     ]
+    }
+   ]
+  },
+  "leak_split": {
+   "leak-scan matches": {
+    "cases": [
+     "0696a0d863b0b8fe",
+     "13af3bc86e736afc",
+     "1febecd36c0d6c24",
+     "2106f137b8772e1c",
+     "2e327bebc7bbf91b",
+     "446f5800db554d12",
+     "472aeb4f89993281",
+     "4f9af0ec1c05847f",
+     "a3e5f5b90622d8e2"
+    ],
+    "detection": {
+     "k": 9,
+     "n": 9,
+     "rate": 1.0,
+     "low": 0.7008472464490406,
+     "high": 1.0
+    },
+    "strict_category_recall": {
+     "k": 4,
+     "n": 9,
+     "rate": 0.4444444444444444,
+     "low": 0.188775429471914,
+     "high": 0.7333526542559703
+    }
+   },
+   "others": {
+    "cases": [
+     "02be6e70827429cc",
+     "08e903fe777a642c",
+     "0a92cff1f660b781",
+     "10a13a17768817c4",
+     "1182525f5df99d56",
+     "16c2d787b571890c",
+     "18cd304d2ad2f182",
+     "194526c7337634d7",
+     "1aa90df70bff24f2",
+     "1b8df9743a9872e2",
+     "1c45442908d2c032",
+     "1d84415378e02a0d",
+     "2109faa46125df3d",
+     "24517970965f73df",
+     "245e9b3e56783615",
+     "2568041febc6d104",
+     "26ad079673af9382",
+     "26afe1d7b39897e3",
+     "2ecb47b433d60707",
+     "2f3455b68b4272fd",
+     "342caecb6c1280a4",
+     "344c15e1caa72891",
+     "36b1a3b76394efc3",
+     "37dbdbb16e673734",
+     "38372b2a4d8d3f3e",
+     "3be1b544fcdcba98",
+     "3f3b2b392213b84c",
+     "3f489da11486b473",
+     "400cff6a304c125b",
+     "42b0172a905fe7e4",
+     "49f5dbda529ea26b",
+     "4c2f88339677cd86",
+     "4cf91dda2d9a58e3",
+     "4ffca0ce378367c6",
+     "514024d672807316",
+     "54573819b6b69409",
+     "54b9a5edb3e0b3e5",
+     "5664ca68e610b908",
+     "5ba3cce2f306d1a3",
+     "5dd6a5f8d949c1df",
+     "5f11ad246e7fccc3",
+     "607429995bc51ef7",
+     "627b823cf40be1b8",
+     "62b55510c2e7a91c",
+     "63059556113202eb",
+     "63d258e2087630a9",
+     "640a9464ffee2f85",
+     "643a1022b78698af",
+     "65b6c657c6cd6062",
+     "6cb709b15ab447bc",
+     "7313edb9e374be2d",
+     "7a28a9adf0d7d761",
+     "7a740666a81c4d60",
+     "7cce4b3d5f490b93",
+     "7d32314464ad7d0b",
+     "7eb8966db1053148",
+     "7ec3ae5c5e31d3a2",
+     "83fe864a3b6f3d56",
+     "875eb0a1ccea21d2",
+     "87d874f06de81a94",
+     "8819f84710a6b33b",
+     "8c629dc0a90265b9",
+     "8d2bb2c2fcb58432",
+     "94ad4f8fb317b04e",
+     "953384b97cf8b26e",
+     "9bbc6d42af258208",
+     "a0f3c34e0be57622",
+     "b975c6579fe20c4c",
+     "c3ee72768a1488f2",
+     "c6961eb7d54408f7",
+     "d777dbbda423e6fc"
+    ],
+    "detection": {
+     "k": 62,
+     "n": 71,
+     "rate": 0.8732394366197183,
+     "low": 0.7763068112503156,
+     "high": 0.9318554942054735
+    },
+    "strict_category_recall": {
+     "k": 37,
+     "n": 71,
+     "rate": 0.5211267605633803,
+     "low": 0.4068579625004498,
+     "high": 0.6332266962989344
+    }
+   }
+  }
+ },
+ "schedule": {
+  "sessions": [
+   {
+    "session": 1,
+    "started_at": "2026-10-04T14:09:40+00:00",
+    "already_done": 0,
+    "ended_at": "2026-10-04T14:12:50+00:00",
+    "stop": "rate-limit budget",
+    "done_after": 6,
+    "provider_calls": 8
+   },
+   {
+    "session": 2,
+    "started_at": "2026-10-06T04:45:02+00:00",
+    "already_done": 6
+   },
+   {
+    "session": 3,
+    "started_at": "2026-10-06T06:22:20+00:00",
+    "already_done": 99,
+    "ended_at": "2026-10-06T06:33:25+00:00",
+    "stop": "complete",
+    "done_after": 121,
+    "provider_calls": 23
+   }
+  ],
+  "cases_by_session": {
+   "1": [
+    "d777dbbda423e6fc",
+    "7ec3ae5c5e31d3a2",
+    "9ed7d664a569e506",
+    "1182525f5df99d56",
+    "76643ec16f5e47d9",
+    "37dbdbb16e673734"
+   ],
+   "2": [
+    "87d874f06de81a94",
+    "63059556113202eb",
+    "24517970965f73df",
+    "5ba3cce2f306d1a3",
+    "5d27635f3e801b03",
+    "5dd6a5f8d949c1df",
+    "1aa90df70bff24f2",
+    "9cd294903fcceb5b",
+    "875eb0a1ccea21d2",
+    "2109faa46125df3d",
+    "60ce72ccf8b5f05e",
+    "65b6c657c6cd6062",
+    "8c629dc0a90265b9",
+    "42b0172a905fe7e4",
+    "446f5800db554d12",
+    "1d84415378e02a0d",
+    "77494657c8dc1856",
+    "59a78299376400a5",
+    "38372b2a4d8d3f3e",
+    "3350b7f5558de194",
+    "7313edb9e374be2d",
+    "1febecd36c0d6c24",
+    "10a13a17768817c4",
+    "9bbc6d42af258208",
+    "a0f3c34e0be57622",
+    "1f90b835c3c8b8cb",
+    "5664ca68e610b908",
+    "431c4d64a4f54bad",
+    "953384b97cf8b26e",
+    "54b9a5edb3e0b3e5",
+    "21fcf125bd292fed",
+    "3fe0fe03cd5c9e75",
+    "245e9b3e56783615",
+    "3f489da11486b473",
+    "4f9af0ec1c05847f",
+    "54573819b6b69409",
+    "1797fd79fbe131da",
+    "02be6e70827429cc",
+    "480ba4bc4eff750a",
+    "c6961eb7d54408f7",
+    "514024d672807316",
+    "5f11ad246e7fccc3",
+    "3b361014049295e9",
+    "8819f84710a6b33b",
+    "0a246f476fa7b269",
+    "26afe1d7b39897e3",
+    "8a97c216e28edb90",
+    "26ad079673af9382",
+    "400cff6a304c125b",
+    "4c2f88339677cd86",
+    "7a28a9adf0d7d761",
+    "13a874d6aa499272",
+    "83fe864a3b6f3d56",
+    "6cb709b15ab447bc",
+    "13af3bc86e736afc",
+    "265e4beaaadec8e3",
+    "1c45442908d2c032",
+    "676e4c62c66a9498",
+    "3fd64fd644e3e89e",
+    "cb520e2dad24d58f",
+    "a3e5f5b90622d8e2",
+    "7d32314464ad7d0b",
+    "22f516a69984ad2c",
+    "472aeb4f89993281",
+    "643a1022b78698af",
+    "2ecb47b433d60707",
+    "344c15e1caa72891",
+    "1368e5b14e17732e",
+    "2106f137b8772e1c",
+    "7eb8966db1053148",
+    "39cd6fa4ec358034",
+    "4720e8730929e72e",
+    "342caecb6c1280a4",
+    "62dc9c3f5126f706",
+    "7a740666a81c4d60",
+    "20c38e9f71d460b5",
+    "2568041febc6d104",
+    "08e903fe777a642c",
+    "36277dc098110d59",
+    "62b55510c2e7a91c",
+    "b975c6579fe20c4c",
+    "8d2bb2c2fcb58432",
+    "239a866ce1f91049",
+    "abb9b5578ed6b5e2",
+    "4cf91dda2d9a58e3",
+    "54f970f52d0e5a73",
+    "231ecd59766a6054",
+    "640a9464ffee2f85",
+    "0d67d0c6ff64f2a4",
+    "4ffca0ce378367c6",
+    "97ba9f5a10b0a4ec",
+    "194526c7337634d7",
+    "7cce4b3d5f490b93"
+   ],
+   "3": [
+    "627b823cf40be1b8",
+    "18cd304d2ad2f182",
+    "3be1b544fcdcba98",
+    "49f5dbda529ea26b",
+    "63d258e2087630a9",
+    "04866c4d3aa40e3d",
+    "0a92cff1f660b781",
+    "2f3455b68b4272fd",
+    "500cdfe7c2040208",
+    "3f3b2b392213b84c",
+    "607429995bc51ef7",
+    "16c2d787b571890c",
+    "5089803ebaf4be59",
+    "2e327bebc7bbf91b",
+    "4ea00f7ff7853bec",
+    "94ad4f8fb317b04e",
+    "1b8df9743a9872e2",
+    "36b1a3b76394efc3",
+    "00ab575cd9de588d",
+    "c3ee72768a1488f2",
+    "6018540745d6183d",
+    "0696a0d863b0b8fe"
+   ]
+  },
+  "cases_by_utc_day": {
+   "2026-10-04": [
+    "d777dbbda423e6fc",
+    "7ec3ae5c5e31d3a2",
+    "9ed7d664a569e506",
+    "1182525f5df99d56",
+    "76643ec16f5e47d9",
+    "37dbdbb16e673734"
+   ],
+   "2026-10-06": [
+    "87d874f06de81a94",
+    "63059556113202eb",
+    "24517970965f73df",
+    "5ba3cce2f306d1a3",
+    "5d27635f3e801b03",
+    "5dd6a5f8d949c1df",
+    "1aa90df70bff24f2",
+    "9cd294903fcceb5b",
+    "875eb0a1ccea21d2",
+    "2109faa46125df3d",
+    "60ce72ccf8b5f05e",
+    "65b6c657c6cd6062",
+    "8c629dc0a90265b9",
+    "42b0172a905fe7e4",
+    "446f5800db554d12",
+    "1d84415378e02a0d",
+    "77494657c8dc1856",
+    "59a78299376400a5",
+    "38372b2a4d8d3f3e",
+    "3350b7f5558de194",
+    "7313edb9e374be2d",
+    "1febecd36c0d6c24",
+    "10a13a17768817c4",
+    "9bbc6d42af258208",
+    "a0f3c34e0be57622",
+    "1f90b835c3c8b8cb",
+    "5664ca68e610b908",
+    "431c4d64a4f54bad",
+    "953384b97cf8b26e",
+    "54b9a5edb3e0b3e5",
+    "21fcf125bd292fed",
+    "3fe0fe03cd5c9e75",
+    "245e9b3e56783615",
+    "3f489da11486b473",
+    "4f9af0ec1c05847f",
+    "54573819b6b69409",
+    "1797fd79fbe131da",
+    "02be6e70827429cc",
+    "480ba4bc4eff750a",
+    "c6961eb7d54408f7",
+    "514024d672807316",
+    "5f11ad246e7fccc3",
+    "3b361014049295e9",
+    "8819f84710a6b33b",
+    "0a246f476fa7b269",
+    "26afe1d7b39897e3",
+    "8a97c216e28edb90",
+    "26ad079673af9382",
+    "400cff6a304c125b",
+    "4c2f88339677cd86",
+    "7a28a9adf0d7d761",
+    "13a874d6aa499272",
+    "83fe864a3b6f3d56",
+    "6cb709b15ab447bc",
+    "13af3bc86e736afc",
+    "265e4beaaadec8e3",
+    "1c45442908d2c032",
+    "676e4c62c66a9498",
+    "3fd64fd644e3e89e",
+    "cb520e2dad24d58f",
+    "a3e5f5b90622d8e2",
+    "7d32314464ad7d0b",
+    "22f516a69984ad2c",
+    "472aeb4f89993281",
+    "643a1022b78698af",
+    "2ecb47b433d60707",
+    "344c15e1caa72891",
+    "1368e5b14e17732e",
+    "2106f137b8772e1c",
+    "7eb8966db1053148",
+    "39cd6fa4ec358034",
+    "4720e8730929e72e",
+    "342caecb6c1280a4",
+    "62dc9c3f5126f706",
+    "7a740666a81c4d60",
+    "20c38e9f71d460b5",
+    "2568041febc6d104",
+    "08e903fe777a642c",
+    "36277dc098110d59",
+    "62b55510c2e7a91c",
+    "b975c6579fe20c4c",
+    "8d2bb2c2fcb58432",
+    "239a866ce1f91049",
+    "abb9b5578ed6b5e2",
+    "4cf91dda2d9a58e3",
+    "54f970f52d0e5a73",
+    "231ecd59766a6054",
+    "640a9464ffee2f85",
+    "0d67d0c6ff64f2a4",
+    "4ffca0ce378367c6",
+    "97ba9f5a10b0a4ec",
+    "194526c7337634d7",
+    "7cce4b3d5f490b93",
+    "627b823cf40be1b8",
+    "18cd304d2ad2f182",
+    "3be1b544fcdcba98",
+    "49f5dbda529ea26b",
+    "63d258e2087630a9",
+    "04866c4d3aa40e3d",
+    "0a92cff1f660b781",
+    "2f3455b68b4272fd",
+    "500cdfe7c2040208",
+    "3f3b2b392213b84c",
+    "607429995bc51ef7",
+    "16c2d787b571890c",
+    "5089803ebaf4be59",
+    "2e327bebc7bbf91b",
+    "4ea00f7ff7853bec",
+    "94ad4f8fb317b04e",
+    "1b8df9743a9872e2",
+    "36b1a3b76394efc3",
+    "00ab575cd9de588d",
+    "c3ee72768a1488f2",
+    "6018540745d6183d",
+    "0696a0d863b0b8fe"
+   ]
+  },
+  "models_by_session": {
+   "1": {
+    "groq/openai/gpt-oss-120b": 6
+   },
+   "2": {
+    "groq/openai/gpt-oss-120b": 93
+   },
+   "3": {
+    "groq/openai/gpt-oss-120b": 22
+   }
+  },
+  "model_identical_across_sessions": true
+ }
+}

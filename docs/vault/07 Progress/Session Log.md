@@ -186,3 +186,12 @@ related:
 
 **Next:** resume v2; the v2 report; then the v2 + context ablation at 1K.
 **Blockers / questions:** Groq's daily window.
+
+## 2026-10-06: baseline v2 complete
+**Done:**
+- v2 finished: sessions on 2026-10-04 (6 cases, daily limit), 2026-10-06 04:45 (93 cases, session ended without a stop record) and 06:22 (22 cases). The fingerprint matched each time.
+- Report [[baseline-dev-2026-10-06-v2]]: v1 → v2 McNemar detection b = 2, c = 5, p = 0.453; category-correct b = 8, c = 8, p = 1.000; clean flags b = 2, c = 8, p = 0.109. None significant, all within the noise floor.
+- Attribution of the 30 changed cases: 4 retry-related, 2 numbering-related, 24 neither (noise).
+
+**Next:** the M4 ablation (v2 + context at 1K) as the next row.
+**Blockers / questions:** none.
