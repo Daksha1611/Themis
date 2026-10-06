@@ -2089,3 +2089,43 @@ Clean flags rose 17 → 23 (p = 0.11). Watch this in the next row.
 
 ### How this affects other components
 Ablation Table row 2 is filled in.
+
+---
+
+## M4 ablation held: noise floor investigation first: pre-work
+**Date**: 2026-10-06
+**File(s) affected**:
+- Created: `evals/probe.py`, `evals/results/probe-<date>/`, tests
+- Edited: Eval Harness (long runs under `systemd-inhibit`), decision.md
+
+### What I am changing
+**Owner decision: do not start the M4 ablation yet.** The v2 report's most important finding is the noise floor. Two identical runs disagreed on 19 of 80 category-correct outcomes and 12 of 41 clean flags. At that noise level, the v2 vs v2 + context comparison is likely underpowered: a real effect could be invisible, and a noise swing could look like one.
+
+Investigation first, with nothing implemented beyond measurement:
+1. **Audit** which sampling parameters reach Groq on the pinned eval path (temperature, top_p, seed, max_tokens, reasoning effort): what LiteLLM forwards or drops for `groq/openai/gpt-oss-120b`, checked against Groq's current docs. No calls.
+2. **Determinism probe** (~60–90 calls), response cache bypassed for the probe only:
+   - 10 dev cases whose outcome flipped between v1 and its rerun, stratified across repos, buggy and clean;
+   - each called 3 times under: A (current configuration), B (A plus a fixed seed), C (B plus lower reasoning effort);
+   - any setting the audit shows is not forwarded is skipped.
+3. **Power analysis** (no calls): the minimum detectable effect of an exact McNemar test at α = 0.05 and 80% power, from the measured discordance and again under the best probe setting.
+4. **Recommendation** among a more deterministic v3, an aggregated k-run design, or running M4 as underpowered, with each option's quota cost. The owner decides.
+
+**Long runs** are wrapped in `systemd-inhibit --what=sleep:idle` inside tmux or nohup, so a laptop suspend cannot interrupt them (v2's 04:45 session ended without a stop record).
+
+### Why I am making this change
+A comparison that cannot detect a plausible effect wastes about two days of quota and invites misreading.
+
+### Alternatives I considered
+Run M4 now.
+
+### Reasons I rejected each alternative
+The owner decided against it, for the reason above.
+
+### Trade-offs I am accepting
+M4 is delayed by the investigation.
+
+### What could go wrong
+The probe's 10 cases are selected for flipping, so they over-represent unstable cases. The power analysis scales from them by ratio, and states that assumption.
+
+### How this affects other components
+None until the owner decides.

@@ -42,6 +42,9 @@ related:
   - the **prompt hash:** SHA-256 over the rendered prompts of the full scored set, built through the `--dry-run` path. It catches eval-side changes outside those modules: the neutral title, masking, case data and labels.
 
   Per-file hashes are kept, along with the `case_order`. `--resume` refuses on any mismatch, naming which hash changed and, for the code, which files. It uses the recorded case order and never recomputes it. A run without a recorded fingerprint cannot be resumed. `--check-fingerprint` compares the latest open run with the current code and makes no calls.
+- **Long runs survive suspend** (owner decision, 2026-10-06): every long run (eval runs, resumes, probes) is started under `systemd-inhibit --what=sleep:idle` inside tmux or nohup, so a laptop suspend or a closed terminal cannot interrupt it. v2's 2026-10-06 04:45 session ended without a stop record, and `--resume` recovered it. Example:
+
+  `nohup systemd-inhibit --what=sleep:idle --who=themis --why="eval run" .venv/bin/python -m evals.runner --split dev --resume > run.log 2>&1 &`
 - **Diff transform:** `mask_issue_refs()` (`mask-issue-refs-v1`, recorded in `run.json`; each record carries `diff_masked`) masks issue references in removed lines before review ([[Benchmark]]).
 - **Run order** (Q64): shuffled with a fixed seed (`ORDER_SEED`, recorded in `run.json`), so a stop at the daily budget cannot line up with a repo, category or buggy/clean grouping. `--resume` rebuilds the same order.
   - Each record carries `started_at`, `finished_at` and its `session` (one runner invocation).
