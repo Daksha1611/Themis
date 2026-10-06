@@ -480,8 +480,12 @@ def render(
         "- **Leakage profile:** 92% of buggy cases are after mid-2025; `Textualize/rich` has the "
         "weakest date profile ([[Benchmark Leakage]]). Issue references in removed lines are "
         "masked (`mask-issue-refs-v1`).",
-        "- **Single run:** run-to-run variance is not measured yet (Q63). The masked cases are "
-        "fresh samples, so part of any change on them is that variance.",
+        "- **Runs are not reproducible.** Repeating the same run with the same settings gives "
+        "different answers on many cases: the provider serves each request from a different "
+        "backend build, so even a fixed seed does not repeat an answer. Two identical runs "
+        "disagreed on 19 of 80 category outcomes and 12 of 41 clean-case flags. A single run is "
+        "therefore directional only; configurations are compared over 3 runs each "
+        "([[ADR-029 Aggregated evaluation]]).",
         "- **Diff-only review:** every eval case gets a neutral PR title to prevent label "
         "leakage; production passes the real title, so production performance may differ "
         "([[Eval Harness]]).",

@@ -90,5 +90,69 @@ def main() -> int:
     return 0
 
 
+# --- k-run aggregation (ADR-029): paired permutation test on per-case means ------------------
+
+
+def case_mixture(both_true: int, both_false: int, flipped: int) -> tuple[int, int, int]:
+    """Stable-true, stable-false and unstable case counts implied by two identical runs.
+
+    An unstable case is modelled as a coin flip per call (p = 0.5): two calls disagree with
+    probability 1/2, so U = 2 * flipped unstable cases, and the U/2 that agreed are removed from
+    the stable counts in proportion (half agreed true, half false)."""
+    unstable = min(2 * flipped, flipped + both_true + both_false)
+    agreed_unstable = unstable - flipped
+    stable_true = max(0, both_true - agreed_unstable // 2)
+    stable_false = max(0, both_false - (agreed_unstable - agreed_unstable // 2))
+    return stable_true, stable_false, unstable
+
+
+def permutation_power(
+    mixture: tuple[int, int, int],
+    delta: int,
+    k: int,
+    sims: int = 400,
+    perms: int = 1000,
+    alpha: float = ALPHA,
+    seed: int = 1,
+) -> float:
+    """Power of a two-sided paired sign-flip permutation test on per-case means of k runs.
+
+    The baseline arm has the given mixture of per-case success probabilities (1, 0, 0.5). The
+    treatment arm turns `delta` cases into stable successes, taken from stable failures first,
+    then from unstable cases: the effect is "delta net cases fixed"."""
+    import numpy as np  # noqa: PLC0415 (only for the simulation)
+
+    stable_true, stable_false, unstable = mixture
+    base = np.array([1.0] * stable_true + [0.0] * stable_false + [0.5] * unstable)
+    treat = base.copy()
+    order = [i for i in range(len(base)) if base[i] == 0.0] + [
+        i for i in range(len(base)) if base[i] == 0.5
+    ]
+    for i in order[:delta]:
+        treat[i] = 1.0
+    rng = np.random.default_rng(seed)
+    hits = 0
+    for _ in range(sims):
+        a = rng.binomial(k, base) / k
+        b = rng.binomial(k, treat) / k
+        diff = b - a
+        observed = diff.sum()
+        signs = rng.choice((-1.0, 1.0), size=(perms, len(diff)))
+        null = (signs * diff).sum(axis=1)
+        if (np.sum(np.abs(null) >= abs(observed)) + 1) / (perms + 1) < alpha:
+            hits += 1
+    return hits / sims
+
+
+def permutation_mde(
+    mixture: tuple[int, int, int], k: int, target: float = TARGET_POWER
+) -> int | None:
+    n = sum(mixture)
+    for delta in range(1, n + 1):
+        if permutation_power(mixture, delta, k) >= target:
+            return delta
+    return None
+
+
 if __name__ == "__main__":
     raise SystemExit(main())

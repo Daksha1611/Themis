@@ -90,9 +90,11 @@ None is significant, as expected for identical runs. But temperature 0 is not de
 - Detection is effectively unprovable: v2 already detects 71/80, so at most 9 cases can improve, below the MDE of 13.
 - **A per-case majority vote does not lower the category or clean-flag MDE:** the measured discordance implies their unstable cases are close to coin flips. Averaging k runs per case (a per-case success rate, compared with a paired permutation test) does reduce the variance.
 
-**Ablation rule (Q63):** a later change counts only if it is McNemar-significant (p < 0.05) against the previous row **and** its disagreement count b + c exceeds the noise floor for that measure: 6 for detection, 19 for category-correct, 12 for clean flags.
+**Aggregated evaluation is the standard ([[ADR-029 Aggregated evaluation]], 2026-10-06).** Each configuration gets k = 3 runs. Per-case outcomes are means over the runs, compared with a two-sided paired permutation test plus a bootstrap 95% CI on the difference, reported as net cases fixed. At k = 3 the minimum detectable effect is 9 (detection), 11 (category-correct) and 9 (clean flags) net cases.
 
-**Run comparisons:** every future ablation compares runs with an **exact McNemar test on paired cases** (`paired_comparison()`, `compare_runs()` in `evals/metrics.py`): detection, strict category-correct recall, and clean flags, each with the discordant counts (b, c) and the two-sided exact p-value. Overlapping confidence intervals are never used to decide.
+*History, superseded by ADR-029:* **Ablation rule (Q63):** a later change counts only if it is McNemar-significant (p < 0.05) against the previous row **and** its disagreement count b + c exceeds the noise floor for that measure: 6 for detection, 19 for category-correct, 12 for clean flags.
+
+**Run comparisons** (*superseded by ADR-029; single-run McNemar is now directional only*): every future ablation compares runs with an **exact McNemar test on paired cases** (`paired_comparison()`, `compare_runs()` in `evals/metrics.py`): detection, strict category-correct recall, and clean flags, each with the discordant counts (b, c) and the two-sided exact p-value. Overlapping confidence intervals are never used to decide.
 
 **M4 ablation:** v2 vs v2 + context, McNemar against the noise floor, reported separately for the 64 cases that reference external definitions and the 57 that do not, with the predicted pattern stated before the run ([[Eval Harness]]).
 

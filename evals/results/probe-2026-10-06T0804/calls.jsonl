@@ -1,0 +1,1 @@
+{"case_id": "3350b7f5558de194", "kind": "clean", "repo": "Textualize/rich", "setting": "A", "params": {}, "repeat": 0, "content_sha": "45725de0a588a1d5", "parse_errors": 0, "outcome": {"flagged": true}, "at": "2026-10-06T08:05:02+00:00", "reasoning_sha": "d192446234917fa0", "completion_tokens": 1121, "prompt_tokens": 1558, "system_fingerprint": "fp_dd854ee2d7"}

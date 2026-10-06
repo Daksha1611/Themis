@@ -2181,3 +2181,46 @@ Groq's backend mix may change, which would change the noise.
 
 ### How this affects other components
 M4 waits for the owner's choice.
+
+---
+
+## ADR-029 aggregated evaluation; reshaped probe; schedule pending
+**Date**: 2026-10-06
+**File(s) affected**:
+- `docs/vault/04 Decisions/ADR-029 Aggregated evaluation.md`
+- `evals/power.py` (k-run permutation power), `evals/probe.py` (settings A and C only; `--resume`), `evals/report.py` (plain-words non-reproducibility caveat), tests
+- Metrics (the single-run McNemar rule superseded, kept as history), Current Status, 00 Index
+
+### What I am changing
+Owner decision: aggregated evaluation becomes the standard.
+- **k = 3 runs per configuration,** per-case means, a two-sided paired permutation test plus a bootstrap 95% CI, reported as net cases fixed. Single-run McNemar becomes directional only.
+- **Power under k = 3,** simulated from the per-case variance observed between v1 and its rerun. Per measure, U = 2 × flipped unstable cases are modelled as coin flips; the rest are stable. MDE (two-sided, α = 0.05, 80% power):
+
+  | Measure | k = 1 | k = 3 | k = 5 |
+  |---|---|---|---|
+  | Detection | 13 | 9 | 8 |
+  | Category-correct | 17 | 11 | 9 |
+  | Clean flags | 16 | 9 | 8 |
+
+  The k = 1 values reproduce the exact-McNemar figures (13 / 18 / 15), which validates the simulation. The subsets need about 9 at k = 3.
+- **Probe reshaped:** the seed setting is dropped. A (medium effort) vs C (low effort), the same 10 flipped cases × 3 calls, cache bypassed, under `systemd-inhibit`. The first attempt stopped at Groq's daily limit with 0 calls, because the morning's v2 sessions still fill the rolling window. It resumes from `evals/results/probe-2026-10-06T0804/`.
+- **Schedule:** not started. It is presented to the owner after the probe chooses the configuration.
+
+### Why I am making this change
+Outputs cannot be reproduced on Groq (a different backend build per call), and single-run comparisons are underpowered.
+
+### Alternatives I considered
+k = 5.
+
+### Reasons I rejected each alternative
+It lowers the category MDE only from 11 to 9, for two more runs per configuration (about 4 more days per row).
+
+### Trade-offs I am accepting
+About a week per ablation row.
+
+### What could go wrong
+The coin-flip model of unstable cases is a simplification. Real per-case probabilities vary, and the MDE could be somewhat different.
+
+### How this affects other components
+- **Metrics, Eval Harness:** the method changes.
+- **Next:** the owner approves the schedule.

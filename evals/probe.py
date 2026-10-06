@@ -4,9 +4,11 @@
 
 Picks dev cases whose outcome flipped between baseline v1 and its identical no-cache rerun
 (stratified across repos, buggy and clean), and calls each one `--repeats` times under:
-  A: the current configuration (temperature 0, max_tokens 2048: what the eval sends today)
-  B: A + a fixed seed
-  C: B + reasoning_effort="low"
+  A: the current configuration (temperature 0, max_tokens 2048, model-default "medium" effort)
+  C: A + reasoning_effort="low"
+The seed setting was dropped (owner, 2026-10-06): every call lands on a different backend build
+(system_fingerprint), so a best-effort seed cannot make the output reproducible.
+`--resume DIR` continues a probe stopped at the daily limit, skipping calls already recorded.
 The **response cache is bypassed** for the probe: every call goes to the provider. Calls go
 straight to LiteLLM with the exact prompt the review path renders (v2: numbered diff, neutral
 title, masking) and are parsed and line-validated the same way, but without the review path's
@@ -42,8 +44,7 @@ RERUN = Path("evals/results/dev-20261004T130632Z-1033b35")
 SEED = 20261006
 SETTINGS: dict[str, dict[str, Any]] = {
     "A": {},
-    "B": {"seed": SEED},
-    "C": {"seed": SEED, "reasoning_effort": "low"},
+    "C": {"reasoning_effort": "low"},
 }
 FIELDS = ("detected", "strict_category", "flagged")
 
@@ -109,7 +110,17 @@ async def call(messages: list[dict[str, str]], extra: dict[str, Any]) -> dict[st
     }
 
 
-async def probe(selected: list[dict[str, Any]], repeats: int, out: Path) -> str:
+def recorded(out: Path) -> set[tuple[str, str, int]]:
+    """(case, setting, repeat) calls already in the probe file, for --resume."""
+    if not out.exists():
+        return set()
+    rows = [json.loads(line) for line in out.read_text().splitlines() if line]
+    return {(r["case_id"], r["setting"], r["repeat"]) for r in rows}
+
+
+async def probe(
+    selected: list[dict[str, Any]], repeats: int, out: Path, done: set[tuple[str, str, int]]
+) -> str:
     labels = load_labels(LABELS)
     window = TokenWindow(limit=TOKENS_PER_MINUTE)
     settings = get_settings()
@@ -119,6 +130,8 @@ async def probe(selected: list[dict[str, Any]], repeats: int, out: Path) -> str:
             estimate = estimate_tokens(messages) + settings.llm_max_tokens
             for name, extra in SETTINGS.items():
                 for repeat in range(repeats):
+                    if (case["case_id"], name, repeat) in done:
+                        continue
                     await window.reserve(estimate)
                     try:
                         result = await call(messages, extra)
@@ -217,28 +230,33 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--cases", type=int, default=10)
     parser.add_argument("--repeats", type=int, default=3)
+    parser.add_argument("--resume", type=Path, help="a probe directory to continue")
     args = parser.parse_args(argv)
     labels = load_labels(LABELS)
     cases = scored_cases("dev", labels)
-    ids = flipped(cases, labels)
-    selected = select(cases, ids, args.cases)
-    out_dir = Path(f"evals/results/probe-{datetime.now(UTC):%Y-%m-%d}")
-    out_dir.mkdir(parents=True, exist_ok=True)
-    (out_dir / "probe.json").write_text(
-        json.dumps(
-            {
-                "flipped_v1_vs_rerun": ids,
-                "selected": [c["case_id"] for c in selected],
-                "settings": SETTINGS,
-                "repeats": args.repeats,
-                "cache": "bypassed: every call goes to the provider",
-                "prompt": "rendered_prompt() at the current commit (v2 review path)",
-            },
-            indent=1,
-        )
-        + "\n"
-    )
-    stop = asyncio.run(probe(selected, args.repeats, out_dir / "calls.jsonl"))
+    by_id = {c["case_id"]: c for c in cases}
+    if args.resume is not None:
+        out_dir = args.resume
+        meta = json.loads((out_dir / "probe.json").read_text())
+        selected = [by_id[i] for i in meta["selected"]]
+        repeats = meta["repeats"]
+    else:
+        ids = flipped(cases, labels)
+        selected = select(cases, ids, args.cases)
+        repeats = args.repeats
+        out_dir = Path(f"evals/results/probe-{datetime.now(UTC):%Y-%m-%dT%H%M}")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        meta = {
+            "flipped_v1_vs_rerun": ids,
+            "selected": [c["case_id"] for c in selected],
+            "settings": SETTINGS,
+            "repeats": repeats,
+            "cache": "bypassed: every call goes to the provider",
+            "prompt": "rendered_prompt() at the current commit (v2 review path)",
+        }
+        (out_dir / "probe.json").write_text(json.dumps(meta, indent=1) + "\n")
+    calls = out_dir / "calls.jsonl"
+    stop = asyncio.run(probe(selected, repeats, calls, recorded(calls)))
     records = [json.loads(x) for x in (out_dir / "calls.jsonl").read_text().splitlines() if x]
     summary = {"stop": stop, **summarize(records)}
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=1) + "\n")

@@ -806,3 +806,14 @@ def test_mcnemar_power_matches_a_hand_computed_case() -> None:
     assert power.power(2, 0.0, 2) == 0.0
     # n = 6, pd = 0, Δ = 6: c = 6 always, exact p = 2 / 64 < 0.05, so power is 1.
     assert power.power(6, 0.0, 6) == pytest.approx(1.0)
+
+
+def test_aggregation_power_falls_with_more_runs_and_mixture_is_consistent() -> None:
+    from evals import power
+
+    assert power.case_mixture(29, 32, 19) == (20, 22, 38)  # v1 vs rerun, category-correct
+    mixture = (20, 22, 38)
+    one = power.permutation_power(mixture, 11, 1, sims=200, perms=400)
+    three = power.permutation_power(mixture, 11, 3, sims=200, perms=400)
+    assert three > one
+    assert power.permutation_power(mixture, 0, 3, sims=200, perms=400) < 0.15  # ~alpha

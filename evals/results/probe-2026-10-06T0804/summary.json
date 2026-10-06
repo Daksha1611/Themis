@@ -1,0 +1,12 @@
+{
+ "stop": "stopped at the daily limit: litellm.RateLimitError: RateLimitError: GroqException - {\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01m3v9dxd0e94803pe2vv8nyw0` service tier `on_demand",
+ "A": {
+  "cases": 0,
+  "calls": 0,
+  "byte_identical_cases": 0,
+  "identical_outcome_cases": 0,
+  "pairwise_disagreement": {},
+  "mean_completion_tokens": 0.0,
+  "system_fingerprints": []
+ }
+}

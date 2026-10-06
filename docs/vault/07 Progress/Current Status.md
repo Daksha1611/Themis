@@ -107,3 +107,10 @@ New sessions start with [[00 Brief]].
 - Then the v2 report: v1 vs the v1 rerun vs v2, the noise floor, McNemar, attribution, the sensitivity line and targets.
 - Structural lookup added ([[ADR-028 Structural lookup plus hybrid search]]): resolution coverage 57.1% / 58.3% / 63.5% at 1K / 2K / 4K; caller coverage 39% / 53% / 73%; 0 leakage. The M4 ablation plan, with the falsification prediction (64 vs 57 cases), is recorded in [[Eval Harness]]. Default context budget 1K (1.89 days of Groq quota per run; 4K exceeds the per-request ceiling).
 - Q47 (TestClient), Q48 (large PRs), Q49 (secrets in traces), Q52b (stable webhook URL).
+
+**Noise investigation and evaluation method (2026-10-06)**
+- Outputs are not reproducible on Groq: every call lands on a different backend build. Power analysis: single-run McNemar needs about 18 net category fixes.
+- [[ADR-029 Aggregated evaluation]] adopted: k = 3 runs per configuration, per-case means, paired permutation test plus bootstrap CI. MDE at k = 3 is 9 / 11 / 9 net cases.
+- Reshaped probe (A: medium effort vs C: low effort; 10 cases × 3 calls each) is waiting for Groq's daily window. It chooses the configuration: low effort if it is at least as stable as medium.
+- **Next:** the owner approves the k = 3 schedule (baseline arm plus context arm at 1K) before the multi-day runs start.
+- **Parallel work (planned, not started):** once the runs are going, M5 groundwork (precision filter) proceeds off the review path, with the fingerprint check after every commit.
