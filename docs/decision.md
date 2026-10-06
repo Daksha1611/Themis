@@ -2129,3 +2129,55 @@ The probe's 10 cases are selected for flipping, so they over-represent unstable 
 
 ### How this affects other components
 None until the owner decides.
+
+---
+
+## Noise investigation: audit, probe, power, recommendation
+**Date**: 2026-10-06
+**File(s) affected**: `evals/probe.py`, `evals/power.py`, tests, `evals/results/probe-2026-10-06/`, Metrics, Eval Harness
+
+### What I am changing
+**1. Audit** (no calls):
+- **Sent today on the pinned path:** `temperature` 0.0 and `max_tokens` 2048 only. `top_p` is unset (Groq's default 1.0), there is no `seed`, and there is no `reasoning_effort` (the model default, `medium`).
+- **LiteLLM 1.103.1** forwards all five for `groq/openai/gpt-oss-120b` (`get_supported_openai_params` includes `seed`, `top_p` and `reasoning_effort`; `get_optional_params` puts them in the request body; `drop_params` is False).
+- **Groq's API reference** (read 2026-10-06): `seed` is "a best effort … Determinism is not guaranteed"; `reasoning_effort` accepts low, medium and high for gpt-oss-120b (default medium).
+
+**2. Probe:**
+- 10 flipped cases selected (stratified: 5 repos, 3 clean, 7 buggy); response cache bypassed.
+- **Stopped at Groq's daily limit after 9 calls:** one case (`3350b7f5`, clean) × 3 settings × 3 repeats.
+- **Byte-identical output:** none, in any setting.
+- **Outcome flips:** A flipped (2 of 3 calls flagged); B and C were stable on this one case, which is anecdotal.
+- **Backends:** **every one of the 9 calls returned a different `system_fingerprint`**, so requests land on different backend builds. A seed cannot make the output reproducible across them.
+- **Output tokens:** low reasoning effort cut them from about 1,420 to about 520 (one case).
+- **Truncation is not the main noise source:** one call hit the 2,048 cap, but across the three full runs only 1–4 of 121 cases did.
+
+**3. Power** (`evals/power.py`, tested against hand-computed cases): MDE at 80% power, all cases:
+- detection 13 of 80 (unreachable: only 9 cases undetected in v2);
+- category-correct 18 of 80;
+- clean flags 15 of 41.
+
+The falsification subsets need 10–15 net fixes each. A majority vote of k = 3 leaves the category and clean MDEs unchanged (near-coin-flip cases); per-case averaging over k runs is the aggregation that reduces noise.
+
+**4. Recommendation** (not implemented; owner decides). Quota at about 1.15 days per plain run and 1.89 days per run with context at 1K:
+- **(a) v3, a more deterministic configuration:** *not supported by the evidence.* The seed is best effort and the backend fingerprint changes on every call. Low reasoning effort cuts output by ~60% but changes the reviewer, and its stability is unmeasured. Cost: v3 + rerun (~2 days at low effort) + M4 on v3 (~1.8 days) ≈ 4 days, for an uncertain payoff.
+- **(b) aggregated design:** k = 3 runs per configuration, compared on per-case mean outcomes with a paired permutation test (not majority vote). Cost: 2 more v2 runs (~2.3 days) + 3 runs of v2 + context at 1K (~5.7 days) ≈ 8 days.
+- **(c) M4 as-is:** ~1.9 days, stated as underpowered and directional (it detects a category gain only if context nets about 18 fixes).
+- **My recommendation:** start with (c) and treat its run as run 1 of 3 for (b). That run is not wasted. If the directional result is strong (net category fixes near 18, concentrated in the 64-case group), it already counts; if it is ambiguous, two more runs per arm complete (b). Before that, finish the probe (81 calls, under a day) to learn whether low reasoning effort is both stable and no worse, which would cut (b)'s cost.
+
+### Why I am making this change
+Owner request: investigate the noise before M4.
+
+### Alternatives I considered
+Majority-vote aggregation.
+
+### Reasons I rejected each alternative
+Shown not to help: the unstable cases are near coin flips.
+
+### Trade-offs I am accepting
+The probe is incomplete (1 of 10 cases), so the stability numbers for settings A, B and C are anecdotal.
+
+### What could go wrong
+Groq's backend mix may change, which would change the noise.
+
+### How this affects other components
+M4 waits for the owner's choice.

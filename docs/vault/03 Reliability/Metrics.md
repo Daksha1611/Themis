@@ -79,6 +79,17 @@ The cases that changed:
 
 None is significant, as expected for identical runs. But temperature 0 is not deterministic here: about a quarter of category-correct outcomes and nearly a third of clean-case flags flip between identical runs.
 
+**Power of the exact McNemar test** (`python -m evals.power`, 2026-10-06; α = 0.05, 80% power, noise discordance from v1 vs its rerun). Minimum detectable effect, as "context would need to fix about X more cases than it breaks":
+
+| Group | Detection | Strict category-correct | Clean flags |
+|---|---|---|---|
+| All (80 buggy / 41 clean) | 13 of 80 (16%) | 18 of 80 (22%) | 15 of 41 (37%) |
+| References external definitions (46 / 18) | 11 of 46 | 15 of 46 | 12 of 18 |
+| No external references (34 / 23) | 10 of 34 | 14 of 34 | 13 of 23 |
+
+- Detection is effectively unprovable: v2 already detects 71/80, so at most 9 cases can improve, below the MDE of 13.
+- **A per-case majority vote does not lower the category or clean-flag MDE:** the measured discordance implies their unstable cases are close to coin flips. Averaging k runs per case (a per-case success rate, compared with a paired permutation test) does reduce the variance.
+
 **Ablation rule (Q63):** a later change counts only if it is McNemar-significant (p < 0.05) against the previous row **and** its disagreement count b + c exceeds the noise floor for that measure: 6 for detection, 19 for category-correct, 12 for clean flags.
 
 **Run comparisons:** every future ablation compares runs with an **exact McNemar test on paired cases** (`paired_comparison()`, `compare_runs()` in `evals/metrics.py`): detection, strict category-correct recall, and clean flags, each with the discordant counts (b, c) and the two-sided exact p-value. Overlapping confidence intervals are never used to decide.

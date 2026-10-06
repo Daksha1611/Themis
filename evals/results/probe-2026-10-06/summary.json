@@ -1,0 +1,48 @@
+{
+ "stop": "stopped at the daily limit: litellm.RateLimitError: RateLimitError: GroqException - {\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01m3v9dxd0e94803pe2vv8nyw0` service tier `on_demand",
+ "A": {
+  "cases": 1,
+  "calls": 3,
+  "byte_identical_cases": 0,
+  "identical_outcome_cases": 0,
+  "pairwise_disagreement": {
+   "flagged": 0.6666666666666666
+  },
+  "mean_completion_tokens": 1637.3333333333333,
+  "system_fingerprints": [
+   "fp_64b2f1c926",
+   "fp_87b3c396db",
+   "fp_90620edd96"
+  ]
+ },
+ "B": {
+  "cases": 1,
+  "calls": 3,
+  "byte_identical_cases": 0,
+  "identical_outcome_cases": 1,
+  "pairwise_disagreement": {
+   "flagged": 0.0
+  },
+  "mean_completion_tokens": 1420.0,
+  "system_fingerprints": [
+   "fp_5082008e34",
+   "fp_8ea50c0161",
+   "fp_dee443f41b"
+  ]
+ },
+ "C": {
+  "cases": 1,
+  "calls": 3,
+  "byte_identical_cases": 0,
+  "identical_outcome_cases": 1,
+  "pairwise_disagreement": {
+   "flagged": 0.0
+  },
+  "mean_completion_tokens": 522.0,
+  "system_fingerprints": [
+   "fp_8ea50c0161",
+   "fp_96d96a151c",
+   "fp_c800245357"
+  ]
+ }
+}

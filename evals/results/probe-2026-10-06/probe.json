@@ -1,0 +1,65 @@
+{
+ "flipped_v1_vs_rerun": [
+  "0696a0d863b0b8fe",
+  "08e903fe777a642c",
+  "1368e5b14e17732e",
+  "16c2d787b571890c",
+  "194526c7337634d7",
+  "1b8df9743a9872e2",
+  "20c38e9f71d460b5",
+  "2109faa46125df3d",
+  "239a866ce1f91049",
+  "245e9b3e56783615",
+  "2568041febc6d104",
+  "26ad079673af9382",
+  "2ecb47b433d60707",
+  "3350b7f5558de194",
+  "39cd6fa4ec358034",
+  "3f489da11486b473",
+  "3fd64fd644e3e89e",
+  "400cff6a304c125b",
+  "42b0172a905fe7e4",
+  "446f5800db554d12",
+  "49f5dbda529ea26b",
+  "4c2f88339677cd86",
+  "4cf91dda2d9a58e3",
+  "5089803ebaf4be59",
+  "54b9a5edb3e0b3e5",
+  "5664ca68e610b908",
+  "6018540745d6183d",
+  "62dc9c3f5126f706",
+  "7313edb9e374be2d",
+  "77494657c8dc1856",
+  "7a28a9adf0d7d761",
+  "8a97c216e28edb90",
+  "8c629dc0a90265b9",
+  "94ad4f8fb317b04e",
+  "9ed7d664a569e506",
+  "a0f3c34e0be57622"
+ ],
+ "selected": [
+  "3350b7f5558de194",
+  "5089803ebaf4be59",
+  "239a866ce1f91049",
+  "26ad079673af9382",
+  "2568041febc6d104",
+  "a0f3c34e0be57622",
+  "446f5800db554d12",
+  "1b8df9743a9872e2",
+  "54b9a5edb3e0b3e5",
+  "7a28a9adf0d7d761"
+ ],
+ "settings": {
+  "A": {},
+  "B": {
+   "seed": 20261006
+  },
+  "C": {
+   "seed": 20261006,
+   "reasoning_effort": "low"
+  }
+ },
+ "repeats": 3,
+ "cache": "bypassed: every call goes to the provider",
+ "prompt": "rendered_prompt() at the current commit (v2 review path)"
+}

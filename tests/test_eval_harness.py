@@ -783,3 +783,26 @@ def test_check_fingerprint_reports_a_match(
     interrupted_run(tmp_path, monkeypatch, fake)
     assert runner.main(["--split", "dev", "--check-fingerprint"]) == 0
     assert "fingerprint matches" in capsys.readouterr().out
+
+
+# --- power of the exact McNemar test (owner request, 2026-10-06) ------------------------------
+
+
+def test_mcnemar_power_behaves() -> None:
+    from evals import power
+
+    null = power.power(80, 0.24, 0)
+    assert null < 0.05  # exact test is conservative under no effect
+    assert power.power(80, 0.24, 10) < power.power(80, 0.24, 20)  # more effect, more power
+    assert power.power(80, 0.05, 10) > power.power(80, 0.30, 10)  # more noise, less power
+    mde = power.minimum_detectable(80, 0.24)
+    assert mde is not None and power.power(80, 0.24, mde) >= 0.8 > power.power(80, 0.24, mde - 1)
+
+
+def test_mcnemar_power_matches_a_hand_computed_case() -> None:
+    from evals import power
+
+    # n = 2, no noise (pd = 0), Δ = 2: both cases always fixed, so b = 0, c = 2, p = 0.5 >= 0.05.
+    assert power.power(2, 0.0, 2) == 0.0
+    # n = 6, pd = 0, Δ = 6: c = 6 always, exact p = 2 / 64 < 0.05, so power is 1.
+    assert power.power(6, 0.0, 6) == pytest.approx(1.0)
