@@ -62,13 +62,15 @@ Per job: arq → `handle_review_job(ctx, job)` in `app/worker/job.py`:
       - Failure (not rate limit) → `_store(ctx, run, "failed")` ↳ re-raised (no token, so no PR comment is possible).
    2. Span `github.fetch_diff` → `fetch_pr_diff(token, repo, pr_number)` (section 3) ↳ `PRDiff`; span output `{diff_chars, truncated}`.
       - Failure (not rate limit) → `_fail()`: posts the error comment, stores a `failed` run ↳ `"failed"`.
-   3. Span `baseline.review` → `run_baseline_review(diff.text, {pr_title, repo_full_name})` (section 4) ↳ `BaselineResult`; span output `{status, provider, model, finding_count, parse_error_count, prompt_tokens, completion_tokens, cost_usd}`, plus `parse_errors` and the raw LLM response when parsing failed. The `llm.complete` span (with one `llm.generate` generation per provider attempt) nests inside this span.
+   3. → `_context(job, token, diff.text)` (section 3): with `CONTEXT_BUDGET` = 0 (the default) ↳ `None` and nothing from `app/context/` is imported. Otherwise span `context.build` → `fetch_base_sha()` when the job has no `base_sha` → `build_context(token, repo, base_sha, diff, budget, CONTEXT_CACHE_DIR)` ↳ `ReviewContext`; span output `{chunks, tokens, sources}`.
+      - Any exception ! `logger.exception`, span level `WARNING` ↳ `None`: the review goes ahead on the diff alone.
+   4. Span `baseline.review` → `run_baseline_review(diff.text, {pr_title, repo_full_name}, context=context)` (section 4) ↳ `BaselineResult`; span output `{status, provider, model, finding_count, parse_error_count, prompt_tokens, completion_tokens, cost_usd}`, plus `parse_errors` and the raw LLM response when parsing failed. The `llm.complete` span (with one `llm.generate` generation per provider attempt) nests inside this span.
       - `status == "failed"` → `_fail()` ↳ `"failed"`.
-   4. Span `github.post_comments`:
+   5. Span `github.post_comments`:
       - findings → `post_findings(token, repo, pr, head_sha, findings, diff.text)` (section 7); span output `{line_comments, summary_findings, rate_limited}`.
       - no findings → `post_review_comment(..., "⚖️ Themis found no logic bugs or security issues in this diff.")`.
       - any other exception → stores a `failed` run ↳ `"failed"` (no retry, so the LLM call is not repeated).
-   5. → `_store(ctx, run, "success" | "partial")` (section 8) ↳ status.
+   6. → `_store(ctx, run, "success" | "partial")` (section 8) ↳ status.
 4. `update(root, output=_Run.result(status))`: the trace output is the full `ReviewResult` (findings, counts, llm_config, token_usage, cost_usd, latency_ms, status, error).
 5. Root level: `failed` → `update(root, level="ERROR", status_message=<error, first 500 chars>)`; `partial` → `level="WARNING"`, `status_message="some findings failed validation"`. Failed reviews can then be filtered by level in Langfuse ↳ status string stored by arq as the job result.
 
@@ -80,13 +82,23 @@ Error paths:
 
 ## 3. Context building
 
-**The review path uses no repo context: diff only.** The Context Builder in `app/context/` is built but `[NOT YET WIRED]`: nothing in the webhook, worker, review graph or LLM client imports it (ADR-027). It is exercised only by tests and by `evals/context_eval.py`.
+**Repo context is wired behind `CONTEXT_BUDGET` (ADR-030); 0 = off is the production default.** With context off, the worker never imports `app/context/` and the prompt is byte-identical to baseline v2's (proved by the prompt hash over all 121 dev cases). With a budget above 0, the worker calls the production builder below and the eval runner uses frozen per-case contexts (section 9).
 
-**Context builder (`app/context/`, M4 groundwork, `[NOT YET WIRED]`):**
+**Production builder** (`app/context/builder.py`; ADR-014 as amended by ADR-030):
+- `build_context(token, repo, base_sha, diff, budget, cache_dir)` → `snapshot()`:
+  - `fetch_tree(token, repo, base_sha)` (`app/github/contents.py`: `GET /repos/{repo}/git/trees/{sha}?recursive=1` ! GitHub API call) ↳ path → blob SHA;
+  - `choose_root(paths, diff)` → `package_roots()` (`pkg/` or `src/pkg/` with an `__init__.py`), picking the one holding most of the diff's files; none ↳ an empty `ReviewContext`;
+  - `package_files(tree, root)`: `.py` files under the root, minus `EXCLUDED` (tests, docs, changelogs, CI); more than `MAX_FILES` (2,000) ↳ an empty `ReviewContext`;
+  - `BlobCache.get_many()` (SQLite `<cache_dir>/blobs.db`, keyed by blob SHA) → `fetch_blobs()` only for the blobs not cached (`GET /repos/{repo}/git/blobs/{sha}`, 8 at a time ! GitHub API calls) → `BlobCache.put_many()`.
+- → `asyncio.to_thread(build_from_sources(files, root, diff, budget, _embedder(cache_dir)))`: `chunk_source()` per file → in-memory `HybridIndex.add()` (embeddings through the `<cache_dir>/embeddings.db` cache; the model loads once per process) → `retrieve(index, diff, budget, structure=PackageIndex(files, root))` ↳ `ReviewContext`.
+- The base commit is used because the retriever reads the diff's old-side line numbers.
+- **Manual re-index:** `python -m app.context.reindex <owner/repo> --installation-id N` → `reindex()`: installation token → default branch → `fetch_tree()` → for every package root, fetches uncached blobs and embeds every chunk, warming both caches.
+
+**Context builder internals (`app/context/`):**
 - **Chunking:** `chunk_source(path, source)` in `chunker.py` → `parse()` (tree-sitter, `Language(tree_sitter_python.language())`). One `Chunk(path, symbol, kind, start_line, end_line, code)` per top-level function, one per class header (up to its first method), and one per method (`Class.method`).
 - **Sparse vectors:** `sparse_vector(text)` in `sparse.py` → `terms()` (identifiers kept whole and split into their snake_case and camelCase parts) → `term_index()` (SHA-256 prefix, 31 bits); the values are term counts.
 - **Embeddings:** `SentenceTransformerEmbedder.encode()` (`all-MiniLM-L6-v2`, CPU, loaded lazily) behind `CachedEmbedder.encode()` → `EmbeddingCache.key()` (SHA-256 of model and text), `get_many()`, `put_many()` (SQLite, float32 blobs). Only cache misses are embedded.
-- **Index:** `HybridIndex` in `index.py` creates a Qdrant collection with a dense `COSINE` vector and a sparse vector with the `IDF` modifier. `add(chunks)` upserts dense and sparse vectors with the chunk as payload. `search(query, limit)` runs `query_points()` with a dense and a sparse `Prefetch` fused by `FusionQuery(RRF)`.
+- **Index:** `HybridIndex` in `index.py` creates a Qdrant collection with a dense `COSINE` vector and a sparse vector with the `IDF` modifier. `add(chunks)` upserts dense and sparse vectors with the chunk as payload, under a point ID derived from the chunk's path and start line (`uuid5`), so identical snapshots give identical rankings. `search(query, limit)` runs `query_points()` with a dense and a sparse `Prefetch` fused by `FusionQuery(RRF)`.
 - **Structural lookup** (ADR-028): `PackageIndex(files, package_root)` in `structure.py`.
   - **Loading:** `_load()` parses every file once, records top-level definitions per module, methods per class and by name, base classes, and the import table (`_imports()`: aliases, relative imports, `from pkg import submodule`).
   - **Resolving:** `resolve(path, line, Reference)` handles `self`/`cls` → `enclosing_class()` → `_method()` (through in-package bases); `module_attr` → `_lookup()` in the imported module; `name` → same module, else `_imported()` (one re-export hop). An `attr` on an unknown object → every method of that name, up to `MAX_CANDIDATES` = 3, marked ambiguous; more is unresolved with a reason.
@@ -98,8 +110,8 @@ Error paths:
   - The budget is filled in the order definitions, callers, semantic. Each `RelatedChunk` carries `source`, `via` and `ambiguous`.
   - Chunks overlapping any hunk's old-side range in the same file are skipped.
   - The rest are ranked by their best score and added greedily until `budget` tokens are used (`count_tokens()`, LiteLLM `token_counter`).
-  - ↳ `RetrievedContext(related_chunks=[RelatedChunk(path, symbol, code, score, reason, start_line, end_line, tokens)], token_budget, token_budget_used)`.
-- **Eval snapshot** (`evals/context_eval.py`, no LLM calls): `snapshot(repo, commit)` reads the package-source tree at the fix commit with `git ls-tree` and `git cat-file --batch`; `EXCLUDED` drops tests, docs, changelog and CI paths. Then `chunk_source()` (cached per blob), an in-memory `HybridIndex`, and `retrieve()` at each budget. `referenced()` collects the identifiers on the changed lines, and `summarize()` pools symbol-definition recall per repo and category, with the leakage check.
+  - ↳ `ReviewContext(related_chunks=[RelatedChunk(path, symbol, code, score, reason, start_line, end_line, tokens, source, via, ambiguous)], token_budget, token_budget_used)` (both models in `app/schemas.py`, so the review path can take a context without importing `app/context/`).
+- **Eval snapshot** (`evals/context_eval.py`, no LLM calls): `snapshot(repo, commit)` reads the package-source tree at the fix commit with `git ls-tree` and `git cat-file --batch`; `EXCLUDED` drops tests, docs, changelog and CI paths. Then `chunk_source()` (cached per blob), an in-memory `HybridIndex`, and `retrieve()` at each budget. `case_contexts(cases, budget)` does the same at one budget and returns each case's `ReviewContext`; the eval runner uses it for context runs. `referenced()` collects the identifiers on the changed lines, and `summarize()` pools symbol-definition recall per repo and category, with the leakage check.
 
 Diff fetch: `fetch_pr_diff(token, repo_full_name, pr_number)` in `app/github/diff.py`:
 1. → `gh.get_client()` → `GET https://api.github.com/repos/{repo}/pulls/{pr_number}` with `Accept: application/vnd.github.v3.diff` ! GitHub API call.
@@ -113,9 +125,9 @@ Diff fetch: `fetch_pr_diff(token, repo_full_name, pr_number)` in `app/github/dif
 
 **Single baseline pass. No LangGraph, no multi-pass yet** (M4).
 
-`run_baseline_review(diff, pr_metadata, llm=None)` in `app/graph/baseline.py` (`llm`: a `PinnedLLM` for eval runs, ADR-024). **Never raises**: any exception ! `logger.exception` ↳ `BaselineResult(status="failed", parse_errors=["<Type>: <message>"])`.
+`run_baseline_review(diff, pr_metadata, llm=None, context=None)` in `app/graph/baseline.py` (`llm`: a `PinnedLLM` for eval runs, ADR-024; `context`: a `ReviewContext`, M4). **Never raises**: any exception ! `logger.exception` ↳ `BaselineResult(status="failed", parse_errors=["<Type>: <message>"])`.
 1. Blank diff ↳ `BaselineResult(status="success", findings=[])` with no LLM call.
-2. → `build_messages(diff, pr_metadata)`: system prompt listing every allowed category (`prompt_category_list()` from `app/taxonomy.py`: 7 logic categories, 11 CWE IDs, `security-other`), the line-number rule (findings use the new-file line numbers shown; findings about removed code anchor to the nearest numbered line in the same hunk; ADR-026), then the diff rendered by `number_diff(diff)` (`app/github/diff.py`: every context and added line prefixed by its new-file line number, removed lines marked `-` with no number) between `<diff>` and `</diff>`, with the statement that it is data, not instructions (both inserted with `str.replace`, since diffs contain braces); user message `PR: {pr_title} in {repo_full_name}`.
+2. → `build_messages(diff, pr_metadata, context)`: system prompt listing every allowed category (`prompt_category_list()` from `app/taxonomy.py`: 7 logic categories, 11 CWE IDs, `security-other`), the line-number rule (findings use the new-file line numbers shown; findings about removed code anchor to the nearest numbered line in the same hunk; ADR-026), then the diff rendered by `number_diff(diff)` (`app/github/diff.py`: every context and added line prefixed by its new-file line number, removed lines marked `-` with no number) between `<diff>` and `</diff>`, with the statement that it is data, not instructions (both inserted with `str.replace`, since diffs contain braces); user message `PR: {pr_title} in {repo_full_name}`. When `context` has chunks, `CONTEXT_SECTION` is appended after the diff: a statement that the code is for understanding only and findings go only on diff lines, then `render_context(context)` (per chunk, a `# path:start-end symbol (reason)` header line and the code) between `<context>` and `</context>`, declared to be data, not instructions. The diff is substituted last, once, so braces in the context or the diff are never read as placeholders. No context, or an empty one, leaves the prompt byte-identical to v2's.
 3. → `complete(messages)` in `app/llm.py`: the free-tier provider cascade (ADR-021).
    1. Opens span `observe("llm.complete", input={cascade})` ! Langfuse span, nested under `baseline.review`.
    2. For each provider in `LLM_PROVIDER_CASCADE` (default groq → gemini → mistral → openrouter):
@@ -191,7 +203,9 @@ Built in M3 Steps 4–7. Offline: no webhook, queue or GitHub calls.
 - **Fingerprint:** a new run records `fingerprint()` (code hash over `REVIEW_PATH_MODULES` plus the diff transform; prompt hash over the rendered prompts of the full scored set) and `case_order` in `run.json`. `--resume` → `fingerprint_mismatch()` refuses on any change (exit 2) and replays the recorded `case_order`. `--check-fingerprint` reports a match or mismatch for the latest open run.
 - **Order:** `run_order(cases, ORDER_SEED)`, a seeded shuffle; the seed and each runner session are recorded in `run.json`, and each record carries `session`, `started_at`, `finished_at`. `summarize()` adds `schedule()`: cases per session and per UTC day, and model identifiers per session.
 - **Scored set:** `scored_cases(split, load_labels(LABELS))` reads `evals/benchmark/data/<split>.jsonl`. It keeps the clean cases and every buggy case whose latest label record is valid (or unlabelled); dropped cases never reach a provider.
-- **Dry run:** `dry_run(cases, max_tokens)` → `build_messages(diff, eval_metadata(case))`, the review path's own prompt builder, with the neutral `EVAL_PR_TITLE` → `estimate_tokens()` (LiteLLM `token_counter`, tiktoken `cl100k_base`). It prints per-case estimates and checks the per-request ceiling and the daily budget. Returns 2 when the run does not fit. No calls.
+- **Context runs (M4, ADR-030):** `--context-budget N` → `build_contexts(cases, N)` → `case_contexts()` (section 3) when a run starts. The contexts are frozen in `contexts.jsonl` (`save_contexts()`); a resumed run reads them back (`load_contexts()`), so it sends exactly the prompts it started with. `run.json` records `context_budget`, and `fingerprint(cases, contexts)` hashes the prompts with their context blocks. Each record carries `context_chunks` and `context_tokens`.
+- **Specific runs and expected prompts:** `--run-dir DIR` resumes that open run. A caller (the schedule) can set `expect_prompt_hash`; a new run whose prompt hash differs is refused before its directory is created, and a resumed run with a different recorded hash is refused (exit 2).
+- **Dry run:** `dry_run(cases, max_tokens, contexts=None)` → `rendered_prompt(case, context)` → `build_messages(diff, eval_metadata(case), context)`, the review path's own prompt builder, with the neutral `EVAL_PR_TITLE` → `estimate_tokens()` (LiteLLM `token_counter`, tiktoken `cl100k_base`). It prints per-case estimates and checks the per-request ceiling and the daily budget. Returns 2 when the run does not fit. No calls.
 - **Run setup:**
   - `ResponseCache(CACHE_PATH, cache_only)`: SQLite `evals/.cache/responses.db`.
   - `PinnedLLM(eval_provider, eval_model, cache)` (ADR-024).
@@ -214,6 +228,11 @@ Built in M3 Steps 4–7. Offline: no webhook, queue or GitHub calls.
   - `operational()` for cost, latency, failures, tokens, cache use and pinned-model share;
   - the ADR-025 headline per reviewer and chance (`youden_j()`, detection, precision, clean flag rate) and `diagnostics()` (`evals/diagnostics.py`);
   - the result is written to `summary.json` (schema version 1, loadable into the M7 eval database).
+- **Plans:** `python -m evals.schedule next [--plan evals/plans/m4.yaml]` → `main()` → `load_plan()` (YAML: split, pinned model, `cache: "off"`, arms with `context_budget`, an optional `reference` run and explicit `runs`, and the run `order`) → `inhibit()` re-executes the command under `systemd-inhibit --what=sleep:idle` unless `THEMIS_INHIBITED=1` → `run_next(plan)`:
+  - refuses (exit 2) if the eval settings pin another model, or the plan does not bypass the cache;
+  - loop: `assigned_runs()` (explicit paths, plus run directories whose `run.json` carries this plan's `plan` label) → `next_slot()` (an open run first, else the first pending slot in `order`) → `reference_hash()` (the arm's `reference` run, else its lowest-numbered started run) → `runner.run(runner_args(...))` with `no_cache`, the arm's budget, the plan label and `expect_prompt_hash`;
+  - exit 0 → the next slot; exit 3 (daily quota) or 2 → stop. Then `status_lines()` prints each slot (pending, open with cases done, complete) and the estimated quota days left.
+  - `python -m evals.schedule status` prints the same without running anything.
 - **Report:** `python -m evals.report <run_dir> [--compare <earlier run>]` → `main()` (recomputes summaries written before ADR-025; `compare_runs()` for McNemar) → `render(summary, comparison)` (with `fmt()`, `mean()`, `noise_floor()`) → writes `docs/vault/08 Results/baseline-<split>-<date>.md` with frontmatter. The Caveats section is always written, and flags a model change between sessions, a non-pinned answer, and failures.
 - **Metric helpers:** `hits()` (same file, ranges overlap after widening the label by ±3 lines), `tier_spans()` (lenient, strict, primary), `case_hit()`, `size_bucket()`, `wilson()`, `rate()`, `p95()`.
 
@@ -236,7 +255,21 @@ Built in M3 Steps 4–7. Offline: no webhook, queue or GitHub calls.
 | arq worker (startup) | startup() | get_settings(), create_async_engine(), init_tracing() | app/worker/queue.py |
 | arq worker (shutdown) | shutdown() | close_client(), shutdown_tracing() | app/worker/queue.py |
 | arq worker | handle_review_job() | trace_attributes(), observe(), _review(), update() | app/worker/job.py |
-| handle_review_job() | _review() | observe(), get_installation_token(), fetch_pr_diff(), run_baseline_review(), post_findings(), post_review_comment(), _fail(), _store(), update() | app/worker/job.py |
+| handle_review_job() | _review() | observe(), get_installation_token(), fetch_pr_diff(), _context(), run_baseline_review(), post_findings(), post_review_comment(), _fail(), _store(), update() | app/worker/job.py |
+| _review() | _context() | get_settings(), observe(), fetch_base_sha(), build_context(), update() | app/worker/job.py |
+| _context() | build_context() | BlobCache(), snapshot(), _embedder(), build_from_sources() | app/context/builder.py |
+| build_context() | snapshot() | fetch_tree(), choose_root(), package_files(), BlobCache.get_many(), fetch_blobs(), BlobCache.put_many() | app/context/builder.py |
+| snapshot() | choose_root() | package_roots() | app/context/builder.py |
+| choose_root(), reindex() | package_roots() | — | app/context/builder.py |
+| snapshot(), reindex() | package_files() | — | app/context/builder.py |
+| snapshot(), reindex() | BlobCache.get_many() / BlobCache.put_many() | sqlite3 SELECT / INSERT | app/context/builder.py |
+| build_context(), reindex() | _embedder() | CachedEmbedder(), SentenceTransformerEmbedder(), EmbeddingCache() | app/context/builder.py |
+| build_context() | build_from_sources() | chunk_source(), HybridIndex.add(), PackageIndex(), retrieve() | app/context/builder.py |
+| snapshot(), reindex() | fetch_tree() | gh.get_client(), gh.github_headers(), gh.raise_if_rate_limited() | app/github/contents.py |
+| snapshot(), reindex() | fetch_blobs() | gh.get_client(), gh.github_headers(), gh.raise_if_rate_limited(), base64.b64decode() | app/github/contents.py |
+| _context() | fetch_base_sha() | gh.get_client(), gh.github_headers(), gh.raise_if_rate_limited() | app/github/contents.py |
+| `python -m app.context.reindex` | main() | reindex() | app/context/reindex.py |
+| main() | reindex() | get_settings(), get_installation_token(), fetch_tree(), BlobCache(), _embedder(), package_roots(), package_files(), fetch_blobs(), chunk_source(), CachedEmbedder.encode(), close_client() | app/context/reindex.py |
 | _review() | _fail() | observe(), post_review_comment(), _store() | app/worker/job.py |
 | _review(), _fail() | _store() | observe(), _Run.row(), create_run(), update() | app/worker/job.py |
 | _store() | _Run.row() | — | app/worker/job.py |
@@ -255,7 +288,8 @@ Built in M3 Steps 4–7. Offline: no webhook, queue or GitHub calls.
 | post_findings() | _post_review() | gh.get_client(), gh.github_headers(), gh.raise_if_rate_limited() | app/github/comments.py |
 | _review(), _fail() | post_review_comment() | gh.get_client(), gh.github_headers(), gh.raise_if_rate_limited() | app/github/comments.py |
 | _review() | run_baseline_review() | build_messages(), complete() (twice on a validation retry), parse_findings(), normalize_paths(), drop_invalid_lines() | app/graph/baseline.py |
-| run_baseline_review() | build_messages() | prompt_category_list(), number_diff() | app/graph/baseline.py |
+| run_baseline_review() | build_messages() | prompt_category_list(), render_context(), number_diff() | app/graph/baseline.py |
+| build_messages() | render_context() | — | app/graph/baseline.py |
 | build_messages() | number_diff() | — | app/github/diff.py |
 | run_baseline_review() | drop_invalid_lines() | commentable_lines() | app/graph/baseline.py |
 | run_baseline_review() | parse_findings() | strip_fences(), json.loads(), Finding.model_validate() | app/graph/baseline.py |
@@ -278,7 +312,7 @@ Built in M3 Steps 4–7. Offline: no webhook, queue or GitHub calls.
 | observe(), init_tracing(), shutdown_tracing() | get_langfuse() | Langfuse() | app/observability/tracing.py |
 | lifespan(), startup() | init_tracing() | get_langfuse() | app/observability/tracing.py |
 | lifespan(), shutdown() | shutdown_tracing() | get_langfuse(), Langfuse.shutdown() | app/observability/tracing.py |
-| evals/context_eval.py (not wired) | chunk_source() | parse() | app/context/chunker.py |
+| build_from_sources(), reindex(), evals/context_eval.py | chunk_source() | parse() | app/context/chunker.py |
 | chunk_source(), evals/context_eval.py | parse() | Parser.parse() | app/context/chunker.py |
 | HybridIndex.add(), HybridIndex.search() | sparse_vector() | terms(), term_index() | app/context/sparse.py |
 | sparse_vector() | terms() | — | app/context/sparse.py |
@@ -289,9 +323,9 @@ Built in M3 Steps 4–7. Offline: no webhook, queue or GitHub calls.
 | CachedEmbedder.encode() | EmbeddingCache.key() | hashlib.sha256() | app/context/embeddings.py |
 | CachedEmbedder.encode() | EmbeddingCache.get_many() | sqlite3 SELECT | app/context/embeddings.py |
 | CachedEmbedder.encode() | EmbeddingCache.put_many() | sqlite3 INSERT | app/context/embeddings.py |
-| evals/context_eval.py (not wired) | HybridIndex.add() | Embedder.encode(), sparse_vector(), QdrantClient.upsert() | app/context/index.py |
+| build_from_sources(), evals/context_eval.py | HybridIndex.add() | Embedder.encode(), sparse_vector(), QdrantClient.upsert() | app/context/index.py |
 | retrieve() | HybridIndex.search() | Embedder.encode(), sparse_vector(), QdrantClient.query_points() | app/context/index.py |
-| evals/context_eval.py (not wired) | retrieve() | hunks(), HybridIndex.search(), count_tokens() | app/context/retriever.py |
+| build_from_sources(), evals/context_eval.py | retrieve() | hunks(), structural(), HybridIndex.search(), count_tokens() | app/context/retriever.py |
 | retrieve(), evals/context_eval.py | hunks() | — | app/context/retriever.py |
 | retrieve(), evals/context_eval.py | structural() | changes(), references(), PackageIndex.resolve(), PackageIndex.call_sites(), PackageIndex.enclosing_chunk() | app/context/retriever.py |
 | structural() | changes() | — | app/context/retriever.py |
@@ -312,10 +346,19 @@ Built in M3 Steps 4–7. Offline: no webhook, queue or GitHub calls.
 | run() | scored_cases() | json.loads() | evals/runner.py |
 | run() | run_order() | random.Random(seed).shuffle() | evals/runner.py |
 | run() | fingerprint() | file_hashes(), code_hash(), prompt_hash() | evals/runner.py |
+| run() | build_contexts() | case_contexts() | evals/runner.py |
+| run() | save_contexts() / load_contexts() | ReviewContext.model_dump() / ReviewContext.model_validate() | evals/runner.py |
+| `python -m evals.schedule` | main() | load_plan(), status_lines(), inhibit(), run_next() | evals/schedule.py |
+| main() | inhibit() | shutil.which(), os.execv() | evals/schedule.py |
+| main() | run_next() | get_settings(), assigned_runs(), next_slot(), reference_hash(), runner_args(), run() | evals/schedule.py |
+| run_next(), status_lines() | assigned_runs() | yaml-loaded plan, run.json glob | evals/schedule.py |
+| run_next() | next_slot() | state() | evals/schedule.py |
+| run_next() | reference_hash() | run_meta() | evals/schedule.py |
+| main() | status_lines() | assigned_runs(), state(), run_meta(), done_count() | evals/schedule.py |
 | fingerprint() | file_hashes() | hashlib.sha256() over REVIEW_PATH_MODULES | evals/runner.py |
 | fingerprint() | code_hash() | hashlib.sha256() | evals/runner.py |
 | fingerprint() | prompt_hash() | rendered_prompt(), hashlib.sha256() | evals/runner.py |
-| prompt_hash() | rendered_prompt() | mask_issue_refs(), eval_metadata(), build_messages() | evals/runner.py |
+| prompt_hash(), dry_run() | rendered_prompt() | mask_issue_refs(), eval_metadata(), build_messages() | evals/runner.py |
 | run() | fingerprint_mismatch() | — | evals/runner.py |
 | summarize() | schedule() | — | evals/metrics.py |
 | evaluate() | youden_j() | math.sqrt() | evals/metrics.py |
@@ -337,7 +380,7 @@ Built in M3 Steps 4–7. Offline: no webhook, queue or GitHub calls.
 | main() | scan() | removed_lines() | evals/benchmark/leak_scan.py |
 | dry_run(), Runner.run_case() | eval_metadata() | — | evals/runner.py |
 | dry_run(), Runner.run_case() | estimate_tokens() | litellm.token_counter() | evals/runner.py |
-| run() | dry_run() | build_messages(), estimate_tokens() | evals/runner.py |
+| run() | dry_run() | rendered_prompt(), estimate_tokens() | evals/runner.py |
 | run() | Runner.run_case() | build_messages(), ResponseCache.key(), ResponseCache.contains(), TokenWindow.reserve(), run_baseline_review(), classify(), backoff_seconds(), ResponseCache.latency(), ResponseCache.set_latency() | evals/runner.py |
 | _complete_pinned(), Runner.run_case() | ResponseCache.key() | hashlib.sha256() | evals/cache.py |
 | _complete_pinned() | ResponseCache.get() | sqlite3 SELECT | evals/cache.py |

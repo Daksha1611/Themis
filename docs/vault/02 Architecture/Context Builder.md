@@ -42,8 +42,16 @@ related:
 
 The `ReviewContext` is sanitized by [[Guardrails]] before it reaches the [[Review Graph]].
 
-**In progress (M4 groundwork, 2026-10-04):** standalone in `app/context/`, **not wired into the review path**. Eval-time snapshots: [[ADR-027 Eval-time repo context]]. Retrieval measurements: pure hybrid [[context-retrieval-dev-2026-10-04]] (symbol-definition recall 21–25%); with structural lookup [[context-retrieval-dev-2026-10-05]] (resolution coverage 57–64%, caller coverage 39–73%, no leakage).
+**Index lifecycle as built** ([[ADR-030 v1 finish plan and scope cuts]], amending ADR-014): the context is built per review from the base commit's package source. Blob sources and embeddings are cached by content hash (`CONTEXT_CACHE_DIR`), so a PR fetches and embeds only blobs not seen before. The first review of a repository fills the cache, and `python -m app.context.reindex <owner/repo> --installation-id N` warms it for the default branch. Each review uses an in-memory Qdrant collection; there is no Qdrant service. A package of more than 2,000 files gets no context.
 
-**Code location:** `app/context/`.
+**Wired behind `CONTEXT_BUDGET`** (ADR-030, 2026-10-29):
+- **0 = off,** the production default until the M4 result. With context off, the worker never imports `app/context/`, and the prompt is byte-identical to baseline v2's.
+- **Above 0:** the worker builds a `ReviewContext` (`related_chunks`, `token_budget`, `token_budget_used`). The prompt gains a `<context>` block after the diff, declared to be data, not instructions; findings go only on diff lines.
+- **Failures:** a context build failure is logged and the review proceeds on the diff alone.
+- **Not yet populated:** `pr_metadata` and `changed_files` of the spec's `ReviewContext` (the diff already carries both).
+
+**Eval:** per-case snapshots at the fix commit ([[ADR-027 Eval-time repo context]]), frozen per run. Retrieval measurements: pure hybrid [[context-retrieval-dev-2026-10-04]] (symbol-definition recall 21–25%); with structural lookup [[context-retrieval-dev-2026-10-05]] (resolution coverage 57–64%, caller coverage 39–73%, no leakage).
+
+**Code location:** `app/context/` (`builder.py` and `reindex.py` for production), `app/github/contents.py`.
 
 **Dependencies:** [[tree-sitter]] with [[tree-sitter-python]], [[Qdrant]] via [[qdrant-client]], [[sentence-transformers]] on [[torch]] (CPU), [[GitHub Integration]]. Decisions: [[ADR-004 Qdrant hybrid search]], [[ADR-014 Incremental repo indexing]], [[ADR-015 Local embeddings and Qdrant native hybrid search]], [[ADR-001 Python-only v1]].

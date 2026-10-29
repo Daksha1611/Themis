@@ -196,7 +196,9 @@ def run_case_with(results: list[BaselineResult]) -> tuple[runner.Runner, list[fl
     queue = list(results)
     slept: list[float] = []
 
-    async def review(_diff: str, _meta: dict[str, Any], _llm: PinnedLLM) -> BaselineResult:
+    async def review(
+        _diff: str, _meta: dict[str, Any], _llm: PinnedLLM | None, _ctx: Any
+    ) -> BaselineResult:
         return queue.pop(0)
 
     async def sleep(seconds: float) -> None:

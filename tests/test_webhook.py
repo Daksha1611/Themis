@@ -14,7 +14,12 @@ def pr_payload(action: str = "opened") -> dict[str, Any]:
     return {
         "action": action,
         "number": 7,
-        "pull_request": {"number": 7, "title": "Fix parser", "head": {"sha": "abc123"}},
+        "pull_request": {
+            "number": 7,
+            "title": "Fix parser",
+            "head": {"sha": "abc123"},
+            "base": {"sha": "base99"},
+        },
         "repository": {"full_name": "octo/widgets"},
         "installation": {"id": 99},
     }
@@ -82,6 +87,7 @@ def test_opened_pr_enqueues_job(client: TestClient, queue: AsyncMock) -> None:
             "pr_number": 7,
             "head_sha": "abc123",
             "pr_title": "Fix parser",
+            "base_sha": "base99",
         },
     )
 

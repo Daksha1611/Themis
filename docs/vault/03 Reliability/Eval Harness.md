@@ -83,8 +83,25 @@ related:
   **Default: 1K.** Its definition coverage is within 6.4 points of 4K's, and 4K is not runnable on the pinned model (per-request limit). The trade-off is caller coverage, which grows with budget (39% → 73%). If v2 + context at 1K shows no gain, 2K is the next row to test, before concluding that context does not help.
 - **Run order:** after baseline v2 completes; context is wired into the review path only for this row.
 
+## M4 runs as executed (ADR-029, ADR-030; from 2026-10-29)
+The plan above stands, with two changes. **Comparisons are k = 3 per arm**, using the paired permutation test and bootstrap CI ([[ADR-029 Aggregated evaluation]]); single-run McNemar is directional only. **The cache is off**, because a cached repeat would replay an earlier run.
+- **Plan:** `evals/plans/m4.yaml`.
+  - Baseline arm: v2 plus 2 runs, context off.
+  - Context arm: 3 runs at 1K.
+  - Order, interleaved so that provider drift hits both arms alike: context 1, baseline 2, context 2, baseline 3, context 3.
+- **Runner:** `python -m evals.schedule next`. It resumes the open run or starts the next one, stops at the daily quota and prints what is left; `status` shows the same without running anything. It re-executes itself under `systemd-inhibit --what=sleep:idle`.
+- **Pooling rule:** within an arm, every run must render the same prompts as the arm's reference (prompt hash), otherwise it is refused before it starts.
+  - **Baseline arm:** the reference is v2. With `CONTEXT_BUDGET=0` the prompts of all 121 dev cases hash to v2's `a46ccafd…`, so the new baseline runs pool with v2 even though the code hash changed (the review path gained the context code).
+  - **Context arm:** the reference is context run 1.
+- **Contexts are frozen per run** (`contexts.jsonl`) and deterministic: two independent builds of all 121 contexts were byte-identical (prompt hash `c3b088cd…`; 967 chunks, 117,924 chunk tokens, no case empty; about a minute per build).
+- **Dry run, 2026-10-29 (1K):**
+  - prompts 301,947 tokens (local estimate); largest request 5,648 of 8,000;
+  - calibrated by v2's actual-to-estimate ratio of 1.112 and v2's 98.6K completion tokens: **≈ 434K tokens ≈ 2.2 days of quota per context run**;
+  - a baseline run is ≈ 1.3 days (v2 measured);
+  - **remaining: 2 × 1.3 + 3 × 2.2 ≈ 9.1 days.**
+
 **Not built yet:** threshold sweeps and injection pairs (later milestones).
 
-**Code location:** `evals/runner.py`, `evals/cache.py`, `evals/metrics.py`, `evals/report.py`.
+**Code location:** `evals/runner.py`, `evals/schedule.py` (plans in `evals/plans/`), `evals/cache.py`, `evals/metrics.py`, `evals/report.py`.
 
 Risks: [[Benchmark Leakage]], [[Eval Cost]].

@@ -82,6 +82,7 @@ Outside the vault: `README.md` (repo overview), `docs/flow.md` (what the code do
 - [[ADR-027 Eval-time repo context]]
 - [[ADR-028 Structural lookup plus hybrid search]]
 - [[ADR-029 Aggregated evaluation]]
+- [[ADR-030 v1 finish plan and scope cuts]]
 
 ## 05 Stack
 - [[Python]]
@@ -95,7 +96,9 @@ Outside the vault: `README.md` (repo overview), `docs/flow.md` (what the code do
 - [[tree-sitter]]
 - [[PostgreSQL]]
 - [[Langfuse]]
-- [[HuggingFace Transformers]]
+- [[transformers]]
+- [[scikit-learn]]
+- [[pyyaml]]
 - [[Pydantic]]
 - [[Docker]]
 - [[GitHub Actions]]
@@ -130,6 +133,7 @@ Outside the vault: `README.md` (repo overview), `docs/flow.md` (what the code do
 
 ## 07 Progress
 - [[Current Status]]
+- [[Roadmap]]
 - [[Session Log]]
 - [[Open Questions]]
 

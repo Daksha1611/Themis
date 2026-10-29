@@ -23,6 +23,7 @@ class _PullRequest(BaseModel):
     number: int
     title: str
     head: _Head
+    base: _Head | None = None
 
 
 class WebhookPayload(BaseModel):
@@ -42,6 +43,9 @@ class ReviewJob(BaseModel):
     pr_number: int
     head_sha: str
     pr_title: str
+    # The base commit: the old side of the diff, where the repo context is taken from (M4).
+    # Empty for jobs queued before it existed; the context builder then asks GitHub.
+    base_sha: str = ""
 
     @classmethod
     def from_payload(cls, payload: WebhookPayload) -> Self:
@@ -51,6 +55,7 @@ class ReviewJob(BaseModel):
             pr_number=payload.pull_request.number,
             head_sha=payload.pull_request.head.sha,
             pr_title=payload.pull_request.title,
+            base_sha=payload.pull_request.base.sha if payload.pull_request.base else "",
         )
 
 
@@ -84,6 +89,30 @@ class Finding(BaseModel):
         if self.category == SECURITY_OTHER and not self.subcategory:
             raise ValueError("category 'security-other' requires a subcategory")
         return self
+
+
+class RelatedChunk(BaseModel):
+    """Code from elsewhere in the repository, retrieved for a diff ([[Context Builder]])."""
+
+    path: str
+    symbol: str
+    code: str
+    score: float
+    reason: str
+    start_line: int
+    end_line: int
+    tokens: int
+    source: Literal["definition", "caller", "semantic"] = "semantic"
+    via: str | None = None  # the referenced or changed name behind a structural chunk
+    ambiguous: bool = False
+
+
+class ReviewContext(BaseModel):
+    """What the context builder adds to a review (M4, ADR-027, ADR-028). Empty when off."""
+
+    related_chunks: list[RelatedChunk] = Field(default_factory=list)
+    token_budget: int = 0
+    token_budget_used: int = 0
 
 
 class PRRef(BaseModel):

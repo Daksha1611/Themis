@@ -6,7 +6,7 @@ status: accepted
 tags: [decision]
 related:
   - "[[Precision Filter]]"
-  - "[[HuggingFace Transformers]]"
+  - "[[transformers]]"
   - "[[Metrics]]"
   - "[[Ablation Table]]"
 ---
@@ -17,7 +17,7 @@ related:
 Comment precision is the headline metric; noisy findings erode trust.
 
 ## Decision
-A small fine-tuned encoder classifier ([[HuggingFace Transformers]]) scores each finding and drops likely noise before posting ([[Precision Filter]]).
+A small fine-tuned encoder classifier ([[transformers]]) scores each finding and drops likely noise before posting ([[Precision Filter]]).
 
 ## Alternatives considered
 - None stated in the spec.

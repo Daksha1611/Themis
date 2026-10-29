@@ -20,11 +20,11 @@ Each question is one bullet starting `**Q<n>.**`, and every number appears once 
 
 ## Still open
 - **Q47. TestClient migration.** Migrate from Starlette's `TestClient` (deprecated with httpx) to the newer async test approach before the test count grows further. `fastapi` and `starlette` are pinned until then.
-- **Q48. Large-PR handling.** Diffs are truncated at 100,000 characters: a stopgap. Chunking or file-level splitting is needed.
+- **Q48. Large-PR handling.** Diffs are truncated at 100,000 characters: a stopgap. Chunking or file-level splitting is needed. **Decided 2026-10-28 ([[ADR-030 v1 finish plan and scope cuts]]): not built in v1; documented as a limitation in the README.**
 - **Q49. Secret masking for private-repo support.** Build masking of secrets in diffs (and in the prompts, traces and thinking that contain them) before Themis reviews any private repository. **Private-repo support is out of scope for v1**: Themis is for public repositories only (README, Limitations). Decided 2026-10-02: sending *public* open-source diffs, including the M3 benchmark repos, to the free-tier providers and Langfuse cloud is acceptable without masking. Some providers' free-tier terms permit using submitted data to improve their products (Google's Gemini API free tier states this), which makes the public/private distinction load-bearing. Not blocking M3.
 - **Q52b. Stable webhook URL.** Quick-tunnel URLs change on every cloudflared restart, so the App's webhook URL must be updated each time. A named tunnel, or the VPS (ADR-018), removes this.
 
-- **Q58. Security benchmark track.** Mine vulnerability-fix commits from the PyPA advisory database / OSV for Python packages, as a separate security case set, because the M3 benchmark has too few security cases to measure security recall ([[Benchmark]], [[Metrics]]; the M6 security work: [[Review Graph]] security pass, [[ADR-022 CWE Top 25 security taxonomy]]). **Target: M6.**
+- **Q58. Security benchmark track.** Mine vulnerability-fix commits from the PyPA advisory database / OSV for Python packages, as a separate security case set, because the M3 benchmark has too few security cases to measure security recall ([[Benchmark]], [[Metrics]]; the M6 security work: [[Review Graph]] security pass, [[ADR-022 CWE Top 25 security taxonomy]]). ~~Target: M6.~~ **Deferred to post-v1 ([[ADR-030 v1 finish plan and scope cuts]], 2026-10-28).**
 - **Q59. Regression-test validation.** Use each fix commit's regression test to confirm a case is genuine (the test fails on the reverted source and passes on the fix). Costly: requires each repo's environment at each commit. Candidate for a validated subset ([[Benchmark]], [[Label Noise]]). Not for M3.
 
 

@@ -152,3 +152,44 @@ async def test_auth_failure_records_run_and_propagates(mocks: Mock) -> None:
     with pytest.raises(RuntimeError, match="bad key"):
         await handle_review_job(CTX, JOB)
     assert mocks.create_run.await_args.args[1]["status"] == "failed"
+
+
+# --- repo context (ADR-030) ---------------------------------------------------------------------
+
+
+def with_budget(monkeypatch: pytest.MonkeyPatch, budget: int) -> None:
+    settings = job_module.get_settings().model_copy(update={"context_budget": budget})
+    monkeypatch.setattr(job_module, "get_settings", lambda: settings)
+
+
+async def test_context_off_builds_nothing(mocks: Mock, monkeypatch: pytest.MonkeyPatch) -> None:
+    with_budget(monkeypatch, 0)
+    build = AsyncMock()
+    monkeypatch.setattr("app.context.builder.build_context", build)
+    assert await handle_review_job(CTX, JOB) == "success"
+    build.assert_not_awaited()
+    assert "<context>" not in mocks.complete.await_args.args[0][0]["content"]
+
+
+async def test_context_on_adds_the_block_to_the_prompt(
+    mocks: Mock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tests.test_context import chunk_context
+
+    with_budget(monkeypatch, 1000)
+    build = AsyncMock(return_value=chunk_context())
+    monkeypatch.setattr("app.context.builder.build_context", build)
+    assert await handle_review_job(CTX, {**JOB, "base_sha": "base1"}) == "success"
+    assert build.await_args.args[:3] == ("tok-123", "octo/widgets", "base1")
+    assert "<context>" in mocks.complete.await_args.args[0][0]["content"]
+
+
+async def test_context_failure_reviews_the_diff_alone(
+    mocks: Mock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    with_budget(monkeypatch, 1000)
+    monkeypatch.setattr(
+        "app.context.builder.build_context", AsyncMock(side_effect=RuntimeError("no tree"))
+    )
+    assert await handle_review_job(CTX, {**JOB, "base_sha": "base1"}) == "success"
+    assert "<context>" not in mocks.complete.await_args.args[0][0]["content"]

@@ -45,6 +45,12 @@ class Settings(BaseSettings):
     # primary, so the baseline measures what production actually runs.
     eval_provider: str = "groq"
     eval_model: str = "openai/gpt-oss-120b"
+    # Repo context (M4, ADR-030): token budget for related code in the review prompt. 0 turns
+    # context off (the default until the M4 result says otherwise); the prompt is then
+    # identical to baseline v2's.
+    context_budget: int = Field(default=0, ge=0)
+    # Content-addressed caches for production context: blob sources, chunks, embeddings.
+    context_cache_dir: str = ".cache/context"
 
     @field_validator("github_private_key", mode="before")
     @classmethod

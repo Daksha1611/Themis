@@ -12,6 +12,8 @@ related:
 
 # ADR-014 Incremental repo indexing
 
+> **Amended by [[ADR-030 v1 finish plan and scope cuts]] (2026-10-28):** in v1 the index is built per review from content-addressed caches (blob sources, chunks, embeddings). Only blobs not seen before are fetched and embedded; the first review of a repository builds the cache; `python -m app.context.reindex` warms it. There is no persistent Qdrant service.
+
 ## Context
 The [[Context Builder]] needs a current repo index. Full indexing on every PR is far too slow for a webhook flow.
 

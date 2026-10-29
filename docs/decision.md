@@ -2224,3 +2224,49 @@ The coin-flip model of unstable cases is a simplification. Real per-case probabi
 ### How this affects other components
 - **Metrics, Eval Harness:** the method changes.
 - **Next:** the owner approves the schedule.
+
+---
+
+## Finish plan week 1 (ADR-030): M4 wired behind a flag, the M4 run schedule, M5 from cached findings: pre-work
+**Date**: 2026-10-28
+**File(s) affected**:
+- `docs/vault/04 Decisions/ADR-030 v1 finish plan and scope cuts.md` (new), `docs/vault/07 Progress/Roadmap.md` (new), 00 Brief, Current Status, Open Questions (Q48, Q58), ADR-014 (amendment banner), ADR-008 / Precision Filter (training labels as built)
+- `README.md` (status, dev baseline, Methodology, Limitations)
+- `app/config.py` (`context_budget`), `app/schemas.py` (`ReviewContext`, `RelatedChunk`), `app/graph/baseline.py` (context block in the prompt), `app/worker/job.py` (production context when the budget is above 0), `app/context/` (production builder over GitHub contents; deterministic point IDs), `app/github/contents.py` (new: tree and blob fetch)
+- `evals/runner.py` (context runs: frozen per-run contexts, `--context-budget` for real runs, `--run-dir`, plan labels), `evals/schedule.py` (new), `evals/plans/m4.yaml` (new)
+- `training/build_training_set.py`, `training/train_filter.py` (new), `evals/filter_eval.py` (new), `docs/vault/08 Results/precision-filter-dev-2026-10-28.md` (new)
+- tests, `docs/flow.md`, Context Builder, Precision Filter, Eval Harness notes
+- `pyproject.toml`: a `filter` extra pinning `scikit-learn` and `transformers`, and `pyyaml`, which are installed today only as transitive dependencies
+
+### What I am changing
+Owner brief "finish plan, week 1":
+- **ADR-030** records the three-week finish plan and the scope cuts: the reshaped probe is cancelled (eval and production stay on medium reasoning effort; v2 is baseline-arm run 1); the security benchmark track (Q58) is deferred to post-v1; Q48 (large PRs) is a documented README limitation, not built; the M7 gate makes no LLM calls in CI.
+- **README** brought up to date (it still says M3 in progress).
+- **M4 wired behind `CONTEXT_BUDGET`** (0 = off, the production default). With context on, `run_baseline_review` takes a `ReviewContext` and the prompt gains a context block, delimited and declared to be data like the diff. With the budget at 0 the rendered prompts must be byte-identical to v2's: checked by recomputing the prompt hash over all 121 dev cases against v2's recorded hash.
+- **`python -m evals.schedule next`** runs the M4 plan (`evals/plans/m4.yaml`): baseline arm = v2 + 2 runs, context arm = 3 runs at 1K, cache off, inside `systemd-inhibit`, stopping at the daily quota.
+- **M5 from cached findings, no LLM calls:** location-based auto-labels, 5-fold cross-validation grouped by case, a feature-based reference model and a CodeBERT model, a threshold sweep, filtered metrics with the ADR-029 tests. Dev only, enforced in code.
+
+### Why I am making this change
+Owner decision: finish v1 in three weeks. The M4 runs take about 9 days of Groq quota, so they start now and everything else proceeds alongside them.
+
+### Alternatives I considered
+- Reuse the response cache for the new runs.
+- For production context, a persistent Qdrant index updated by an install webhook (ADR-014 as written).
+- Fine-tuning CodeBERT end to end as the only encoder variant.
+
+### Reasons I rejected each alternative
+- **Cache:** a repeat run would replay v2's (or the previous context run's) cached responses, which would make it a copy, not a new sample. Every k-run bypasses the cache.
+- **Persistent index:** it needs a running Qdrant service and install-event handling, while production context stays off until the M4 result. The incremental behaviour ADR-014 wants (only changed files re-processed per PR) comes from content-addressed caches instead: blob sources, chunks and embeddings are cached by hash, and only blobs not seen before are fetched and embedded. Recorded as an amendment to ADR-014 in ADR-030.
+- **Encoder:** with a few hundred findings, end-to-end fine-tuning on CPU is slow and prone to overfitting. Frozen CodeBERT embeddings plus a linear head are tried first; fine-tuning is tried as well if it fits in memory and time.
+
+### Trade-offs I am accepting
+- The code hash of the new baseline-arm runs differs from v2's (the review path gained the context code). They are pooled with v2 on the strength of identical rendered prompts.
+- Auto-labels are location-based: a correct finding on an issue nobody labelled counts as noise.
+
+### What could go wrong
+- Retrieval could be nondeterministic between context runs (random Qdrant point IDs break RRF ties differently). Point IDs become deterministic, and the schedule requires every run in an arm to have the same prompt hash.
+- Groq's backend mix may drift over the ~9 days; arms are interleaved so drift hits both alike.
+
+### How this affects other components
+- Review path: unchanged with the budget at 0 (proved by the prompt hash).
+- Precision filter: not wired into posting yet; it only sets `confidence` in the eval.

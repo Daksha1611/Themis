@@ -1,12 +1,17 @@
 """Eval runner (M3 Step 5): replay a benchmark split through the real review path.
 
-    python -m evals.runner --split dev [--limit N] [--resume] [--no-cache] [--cache-only]
-                           [--dry-run] [--i-know-this-is-holdout]
+    python -m evals.runner --split dev [--limit N] [--resume | --run-dir DIR] [--no-cache]
+                           [--cache-only] [--context-budget N] [--dry-run]
+                           [--i-know-this-is-holdout]
 
 Calls the same `run_baseline_review` the worker calls, with one pinned provider and model and the
 cascade disabled (ADR-024). Scored cases: kept buggy cases (dropped ones are skipped, no LLM calls)
 and all clean cases. Results are written per case to evals/results/<run_id>/results.jsonl as they
 complete, so an interrupted run resumes with --resume; summary.json is written at the end.
+
+With --context-budget N (M4, ADR-030) every case is reviewed with related code from its
+fix-commit snapshot (ADR-027). The contexts are computed once when the run starts and frozen in
+contexts.jsonl, so a resumed run sends exactly the prompts it started with.
 
 Exit codes: 0 done, 2 refused (holdout guard, or the dry run says the run does not fit),
 3 stopped early (rate-limit budget exhausted; resume later), 4 cache-only miss.
@@ -31,6 +36,7 @@ from typing import Any
 from app.config import get_settings
 from app.graph.baseline import BaselineResult, build_messages, run_baseline_review
 from app.llm import PinnedLLM
+from app.schemas import ReviewContext
 from evals.benchmark.label import DATA, LABELS, load_labels
 from evals.cache import DEFAULT_PATH, ResponseCache
 
@@ -108,29 +114,57 @@ def code_hash(files: dict[str, str], transform: str = "") -> str:
     ).hexdigest()
 
 
-def rendered_prompt(case: dict[str, Any]) -> list[dict[str, str]]:
+Contexts = dict[str, ReviewContext]
+
+
+def rendered_prompt(
+    case: dict[str, Any], context: ReviewContext | None = None
+) -> list[dict[str, str]]:
     """The prompt a case is reviewed with: the same path as --dry-run and run_case."""
-    return build_messages(mask_issue_refs(case["diff"]), eval_metadata(case))
+    return build_messages(mask_issue_refs(case["diff"]), eval_metadata(case), context)
 
 
-def prompt_hash(cases: list[dict[str, Any]]) -> str:
+def prompt_hash(cases: list[dict[str, Any]], contexts: Contexts | None = None) -> str:
     digest = hashlib.sha256()
     for case in sorted(cases, key=lambda c: c["case_id"]):
-        rendered = json.dumps(rendered_prompt(case), sort_keys=True, ensure_ascii=False)
+        context = (contexts or {}).get(case["case_id"])
+        rendered = json.dumps(rendered_prompt(case, context), sort_keys=True, ensure_ascii=False)
         digest.update(
             f"{case['case_id']} {hashlib.sha256(rendered.encode()).hexdigest()}\n".encode()
         )
     return digest.hexdigest()
 
 
-def fingerprint(cases: list[dict[str, Any]]) -> dict[str, Any]:
+def fingerprint(cases: list[dict[str, Any]], contexts: Contexts | None = None) -> dict[str, Any]:
+    """With contexts (a context run), the prompt hash covers the prompts with their context
+    blocks, so two runs with equal prompt hashes sent identical prompts."""
     files = file_hashes()
     return {
         "code_hash": code_hash(files),
         "code_files": files,
-        "prompt_hash": prompt_hash(cases),
+        "prompt_hash": prompt_hash(cases, contexts),
         "diff_transform": DIFF_TRANSFORM,
     }
+
+
+def save_contexts(path: Path, contexts: Contexts) -> None:
+    path.write_text(
+        "".join(
+            json.dumps({"case_id": cid, "context": ctx.model_dump()}) + "\n"
+            for cid, ctx in sorted(contexts.items())
+        )
+    )
+
+
+def load_contexts(path: Path) -> Contexts:
+    rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    return {r["case_id"]: ReviewContext.model_validate(r["context"]) for r in rows}
+
+
+def build_contexts(cases: list[dict[str, Any]], budget: int) -> Contexts:
+    from evals.context_eval import case_contexts  # noqa: PLC0415 (heavy: torch, qdrant)
+
+    return case_contexts(cases, budget)
 
 
 def fingerprint_mismatch(recorded: dict[str, Any], current: dict[str, Any]) -> list[str]:
@@ -190,22 +224,21 @@ def estimate_tokens(messages: list[dict[str, str]]) -> int:
     return int(litellm.token_counter(model="gpt-4o", messages=messages))
 
 
-COMPLETION_TOKENS_PER_CASE = 718  # mean measured in dev baseline v1 (2026-10-03)
+COMPLETION_TOKENS_PER_CASE = 815  # mean measured in dev baseline v2 (98,592 / 121, 2026-10-06)
 
 
 def dry_run(
     cases: list[dict[str, Any]],
     max_tokens: int,
     out: Callable[[str], None] = print,
-    extra: dict[str, int] | None = None,
+    contexts: Contexts | None = None,
 ) -> bool:
     """Build every prompt and report token estimates without calling anything. True if every
     request fits the per-request ceiling and the whole run fits one day's token budget even if
     every response used its full max_tokens."""
     rows = []
     for case in cases:
-        prompt = estimate_tokens(build_messages(mask_issue_refs(case["diff"]), eval_metadata(case)))
-        prompt += (extra or {}).get(case["case_id"], 0)
+        prompt = estimate_tokens(rendered_prompt(case, (contexts or {}).get(case["case_id"])))
         rows.append((case["case_id"], case["kind"], prompt, prompt + max_tokens))
     out(f"Token estimates per case ({TOKENIZER_NOTE}); request = prompt + max_tokens {max_tokens}")
     out("case_id           kind   prompt  request")
@@ -228,7 +261,7 @@ def dry_run(
     )
     expected = prompt_total + COMPLETION_TOKENS_PER_CASE * len(rows)
     out(
-        f"expected total with v1's mean {COMPLETION_TOKENS_PER_CASE} completion tokens per case: "
+        f"expected total with v2's mean {COMPLETION_TOKENS_PER_CASE} completion tokens per case: "
         f"{expected} = {expected / TOKENS_PER_DAY:.2f} days of Groq quota"
     )
     fits_request = not over
@@ -291,7 +324,9 @@ def backoff_seconds(detail: str, attempt: int) -> float:
     return float(2 ** (attempt + 1))
 
 
-Review = Callable[[str, dict[str, Any], PinnedLLM], Awaitable[BaselineResult]]
+Review = Callable[
+    [str, dict[str, Any], PinnedLLM | None, ReviewContext | None], Awaitable[BaselineResult]
+]
 
 
 @dataclass
@@ -304,10 +339,12 @@ class Runner:
     review: Review = run_baseline_review
     sleep: Callable[[float], Awaitable[None]] = asyncio.sleep
     provider_calls: int = 0
+    contexts: Contexts | None = None
 
     async def run_case(self, case: dict[str, Any]) -> dict[str, Any]:
         diff = mask_issue_refs(case["diff"])
-        messages = build_messages(diff, eval_metadata(case))
+        context = (self.contexts or {}).get(case["case_id"])
+        messages = build_messages(diff, eval_metadata(case), context)
         estimate = estimate_tokens(messages)
         key = (
             self.cache.key(
@@ -326,7 +363,7 @@ class Runner:
                 attempts += 1
                 self.provider_calls += 1
             started = time.monotonic()
-            result = await self.review(diff, eval_metadata(case), self.pinned)
+            result = await self.review(diff, eval_metadata(case), self.pinned, context)
             elapsed_ms = round((time.monotonic() - started) * 1000)
             outcome = classify(result)
             if outcome == "stop:cache-miss":
@@ -380,6 +417,8 @@ class Runner:
             "latency_ms": latency_ms if response else None,
             "cached": cached,
             "diff_masked": diff != case["diff"],
+            "context_chunks": len(context.related_chunks) if context else 0,
+            "context_tokens": context.token_budget_used if context else 0,
             "provider_attempts": attempts,
         }
 
@@ -426,6 +465,7 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--split", choices=("dev", "holdout"), required=True)
     parser.add_argument("--limit", type=int, help="only the first N scored cases (smoke runs)")
     parser.add_argument("--resume", action="store_true", help="continue the latest open run")
+    parser.add_argument("--run-dir", type=Path, help="continue this open run (implies --resume)")
     cache_mode = parser.add_mutually_exclusive_group()
     cache_mode.add_argument("--no-cache", action="store_true", help="neither read nor write")
     cache_mode.add_argument("--cache-only", action="store_true", help="fail on any cache miss")
@@ -433,7 +473,8 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument(
         "--context-budget",
         type=int,
-        help="with --dry-run: add each case's retrieved-context block at this token budget",
+        default=0,
+        help="review with retrieved repo context at this token budget (0 = off; M4)",
     )
     parser.add_argument("--i-know-this-is-holdout", action="store_true")
     parser.add_argument(
@@ -454,29 +495,39 @@ async def run(args: argparse.Namespace) -> int:
     labels = load_labels(LABELS)
     cases = run_order(scored_cases(args.split, labels), ORDER_SEED)[: args.limit]
     if args.dry_run:
-        extra = None
-        if args.context_budget:
-            from evals.context_eval import context_block_tokens  # noqa: PLC0415 (heavy)
-
-            extra = context_block_tokens(cases, args.context_budget)
-            print(f"context blocks at {args.context_budget} tokens: total {sum(extra.values())}")
-        return 0 if dry_run(cases, settings.llm_max_tokens, extra=extra) else 2
+        contexts = build_contexts(cases, args.context_budget) if args.context_budget else None
+        if contexts is not None:
+            used = sum(c.token_budget_used for c in contexts.values())
+            print(f"context at {args.context_budget} tokens: chunk tokens total {used}")
+        return 0 if dry_run(cases, settings.llm_max_tokens, contexts=contexts) else 2
     if args.check_fingerprint:
         open_run = latest_open_run(args.split)
         if open_run is None:
             print("no open run")
             return 0
-        recorded = json.loads((open_run / "run.json").read_text()).get("fingerprint")
+        open_meta = json.loads((open_run / "run.json").read_text())
+        recorded = open_meta.get("fingerprint")
         if recorded is None:
             print(f"{open_run.name}: no recorded fingerprint")
             return 2
-        problems = fingerprint_mismatch(recorded, fingerprint(scored_cases(args.split, labels)))
+        frozen = (
+            load_contexts(open_run / "contexts.jsonl") if open_meta.get("context_budget") else None
+        )
+        problems = fingerprint_mismatch(
+            recorded, fingerprint(scored_cases(args.split, labels), frozen)
+        )
         print(f"{open_run.name}: " + ("; ".join(problems) if problems else "fingerprint matches"))
         return 2 if problems else 0
 
     cache = None if args.no_cache else ResponseCache(CACHE_PATH, cache_only=args.cache_only)
     pinned = PinnedLLM(settings.eval_provider, settings.eval_model, cache)
-    run_dir = latest_open_run(args.split) if args.resume else None
+    if args.run_dir is not None:
+        if not (args.run_dir / "run.json").exists() or (args.run_dir / "summary.json").exists():
+            print(f"Refusing: {args.run_dir} is not an open run.")
+            return 2
+        run_dir: Path | None = args.run_dir
+    else:
+        run_dir = latest_open_run(args.split) if args.resume else None
     if run_dir is None:
         sha, dirty = git_state()
         started = datetime.now(UTC)
@@ -485,8 +536,22 @@ async def run(args: argparse.Namespace) -> int:
         while (RESULTS / run_id).exists():  # two runs started in the same second
             n += 1
             run_id = f"{base_id}-{n}"
+        contexts = None
+        if args.context_budget:
+            print(f"building contexts at {args.context_budget} tokens for {len(cases)} cases")
+            contexts = build_contexts(scored_cases(args.split, labels), args.context_budget)
+        new_fingerprint = fingerprint(scored_cases(args.split, labels), contexts)
+        expected = getattr(args, "expect_prompt_hash", None)
+        if expected and new_fingerprint["prompt_hash"] != expected:
+            print(
+                f"Refusing to start: prompt hash {new_fingerprint['prompt_hash'][:12]} differs "
+                f"from the expected {expected[:12]} (the prompts would not match the arm's)."
+            )
+            return 2
         run_dir = RESULTS / run_id
         run_dir.mkdir(parents=True)
+        if contexts is not None:
+            save_contexts(run_dir / "contexts.jsonl", contexts)
         meta = {
             "run_id": run_id,
             "split": args.split,
@@ -503,7 +568,9 @@ async def run(args: argparse.Namespace) -> int:
             "scored_cases": len(cases),
             "order_seed": ORDER_SEED,
             "diff_transform": DIFF_TRANSFORM,
-            "fingerprint": fingerprint(scored_cases(args.split, labels)),
+            "context_budget": args.context_budget,
+            "plan": getattr(args, "plan", None),
+            "fingerprint": new_fingerprint,
             "case_order": [c["case_id"] for c in cases],
             "sessions": [],
         }
@@ -516,8 +583,17 @@ async def run(args: argparse.Namespace) -> int:
     if "fingerprint" not in meta or "case_order" not in meta:
         print(f"Refusing to resume {run_dir}: it has no recorded fingerprint or case order.")
         return 2
-    if problems := fingerprint_mismatch(meta["fingerprint"], fingerprint(scored)):
+    budget = meta.get("context_budget", 0)
+    contexts = load_contexts(run_dir / "contexts.jsonl") if budget else None
+    if budget != args.context_budget and args.run_dir is None:
+        print(f"Refusing to resume {run_dir}: it runs at context budget {budget}.")
+        return 2
+    if problems := fingerprint_mismatch(meta["fingerprint"], fingerprint(scored, contexts)):
         print(f"Refusing to resume {run_dir}: " + "; ".join(problems) + ".")
+        return 2
+    expected = getattr(args, "expect_prompt_hash", None)
+    if expected and meta["fingerprint"]["prompt_hash"] != expected:
+        print(f"Refusing to resume {run_dir}: its prompt hash differs from the expected one.")
         return 2
     by_id = {c["case_id"]: c for c in scored}
     cases = [by_id[cid] for cid in meta["case_order"]]  # the recorded order, never recomputed
@@ -533,6 +609,7 @@ async def run(args: argparse.Namespace) -> int:
         settings.llm_max_tokens,
         settings.llm_temperature,
         window=TokenWindow(limit=TOKENS_PER_MINUTE),
+        contexts=contexts,
     )
     print(f"run {meta['run_id']}: {len(done)} of {len(cases)} cases already done")
     code = 0

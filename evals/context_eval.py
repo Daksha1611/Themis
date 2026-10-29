@@ -26,11 +26,13 @@ from typing import Any
 
 from qdrant_client import QdrantClient
 
+from app.context.builder import EXCLUDED
 from app.context.chunker import Chunk, chunk_source, parse
 from app.context.embeddings import CachedEmbedder, EmbeddingCache, SentenceTransformerEmbedder
 from app.context.index import HybridIndex
-from app.context.retriever import count_tokens, hunks, retrieve, structural
+from app.context.retriever import hunks, retrieve, structural
 from app.context.structure import PackageIndex
+from app.schemas import ReviewContext
 from evals.benchmark.label import LABELS, load_labels
 from evals.benchmark.verify_repos import SELECTED
 from evals.metrics import rate
@@ -41,13 +43,6 @@ EMBEDDING_CACHE = Path("evals/.cache/embeddings.db")
 RESULTS = Path("evals/results")
 VAULT_RESULTS = Path("docs/vault/08 Results")
 BUDGETS = (1000, 2000, 4000)
-# Never indexed (ADR-027): tests, docs, changelogs, CI. Applied on top of the package root.
-EXCLUDED = re.compile(
-    r"(^|/)(tests?|testing|docs?|\.github|\.circleci)/"
-    r"|(^|/)(test_[^/]*|[^/]*_test|conftest)\.py$"
-    r"|(^|/)(CHANGE|HISTORY|NEWS)",
-    re.IGNORECASE,
-)
 HUNK_NEW = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@")
 HUNK_OLD = re.compile(r"^@@ -(\d+)(?:,\d+)? \+\d+(?:,\d+)? @@")
 
@@ -231,29 +226,19 @@ def evaluate_case(
     }
 
 
-def context_block_tokens(cases: list[dict[str, Any]], budget: int) -> dict[str, int]:
-    """Tokens a retrieved-context block would add to each case's prompt at `budget`: the chunks
-    plus one header line per chunk (`# path:start-end symbol (reason)`). The final rendering is
-    decided when context is wired in; this is the estimate the dry run uses."""
+def case_contexts(cases: list[dict[str, Any]], budget: int) -> dict[str, ReviewContext]:
+    """The review context of every case at `budget`: retrieval over its fix-commit snapshot
+    (ADR-027) with structural lookup first (ADR-028). Deterministic: point IDs are derived from
+    the chunks and embeddings come from the content-hash cache."""
     embedder = CachedEmbedder(SentenceTransformerEmbedder(), EmbeddingCache(EMBEDDING_CACHE))
-    out: dict[str, int] = {}
-    chunk_cache: dict[str, list[Chunk]] = {}
+    out: dict[str, ReviewContext] = {}
     for case in cases:
         files, _ = snapshot(case["repo"], case["commit"])
-        chunks = [
-            c
-            for path, (blob, source) in files.items()
-            for c in chunk_cache.setdefault(blob, chunk_source(path, source))
-        ]
+        chunks = [c for path, (_, source) in files.items() for c in chunk_source(path, source)]
         index = HybridIndex(QdrantClient(":memory:"), "snapshot", embedder)
         index.add(chunks)
         structure = PackageIndex({p: src for p, (_, src) in files.items()}, SELECTED[case["repo"]])
-        context = retrieve(index, case["diff"], budget, structure=structure)
-        headers = sum(
-            count_tokens(f"# {c.path}:{c.start_line}-{c.end_line} {c.symbol} ({c.reason})")
-            for c in context.related_chunks
-        )
-        out[case["case_id"]] = context.token_budget_used + headers
+        out[case["case_id"]] = retrieve(index, case["diff"], budget, structure=structure)
     return out
 
 

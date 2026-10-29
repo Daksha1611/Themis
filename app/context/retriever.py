@@ -1,4 +1,4 @@
-"""Retrieve related code for a diff (M4, not yet wired into the review path).
+"""Retrieve related code for a diff (M4; used by the review path when CONTEXT_BUDGET > 0).
 
 The token budget is filled in priority order (ADR-028):
 1. definitions of names referenced in the changed lines (structural lookup, `PackageIndex`);
@@ -15,36 +15,13 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Literal
 
-from pydantic import BaseModel
-
 from app.context.chunker import Chunk, parse
 from app.context.index import HybridIndex
 from app.context.structure import PackageIndex, Reference, Resolution, references
+from app.schemas import RelatedChunk, ReviewContext
 
 Source = Literal["definition", "caller", "semantic"]
 HUNK = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+\d+(?:,\d+)? @@(.*)$")
-
-
-class RelatedChunk(BaseModel):
-    """One `ReviewContext.related_chunks` entry ([[Finding Schema]])."""
-
-    path: str
-    symbol: str
-    code: str
-    score: float
-    reason: str
-    start_line: int
-    end_line: int
-    tokens: int
-    source: Source = "semantic"
-    via: str | None = None  # the referenced or changed name behind a structural chunk
-    ambiguous: bool = False
-
-
-class RetrievedContext(BaseModel):
-    related_chunks: list[RelatedChunk]
-    token_budget: int
-    token_budget_used: int
 
 
 def count_tokens(text: str) -> int:
@@ -179,7 +156,7 @@ def retrieve(
     per_hunk: int = 20,
     count: Callable[[str], int] = count_tokens,
     structure: PackageIndex | None = None,
-) -> RetrievedContext:
+) -> ReviewContext:
     regions = hunks(diff)
 
     def in_diff(chunk: Chunk) -> bool:
@@ -233,4 +210,4 @@ def retrieve(
                 ambiguous=is_ambiguous,
             )
         )
-    return RetrievedContext(related_chunks=selected, token_budget=budget, token_budget_used=used)
+    return ReviewContext(related_chunks=selected, token_budget=budget, token_budget_used=used)

@@ -34,7 +34,9 @@ class HybridIndex:
             indices, values = sparse_vector(chunk.code)
             points.append(
                 models.PointStruct(
-                    id=str(uuid.uuid4()),
+                    # Deterministic IDs, so that tie order in the fused ranking cannot differ
+                    # between otherwise identical runs.
+                    id=str(uuid.uuid5(uuid.NAMESPACE_URL, f"{chunk.path}:{chunk.start_line}")),
                     vector={
                         "dense": vector,
                         "sparse": models.SparseVector(indices=indices, values=values),

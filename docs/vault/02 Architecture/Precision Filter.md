@@ -11,7 +11,7 @@ related:
   - "[[GitHub Integration]]"
   - "[[Storage]]"
   - "[[Eval Harness]]"
-  - "[[HuggingFace Transformers]]"
+  - "[[transformers]]"
   - "[[ADR-008 Encoder classifier as precision filter]]"
   - "[[ADR-011 Finding outcomes as precision-filter labels]]"
   - "[[ADR-016 Confidence comes from the precision filter, not the LLM]]"
@@ -44,4 +44,4 @@ related:
 
 **Planned code location:** `app/filter/` (inference); `training/label_findings.py`, `training/build_training_set.py`, `training/train_filter.py` (training).
 
-**Dependencies:** [[HuggingFace Transformers]], [[Finding Schema]], [[Storage]] (outcome signals). Decision: [[ADR-008 Encoder classifier as precision filter]].
+**Dependencies:** [[transformers]], [[Finding Schema]], [[Storage]] (outcome signals). Decision: [[ADR-008 Encoder classifier as precision filter]].

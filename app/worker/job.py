@@ -1,4 +1,5 @@
-"""The arq review job: auth → diff → baseline review → post → store."""
+"""The arq review job: auth → diff → repo context (when CONTEXT_BUDGET > 0) → baseline review →
+post → store."""
 
 import logging
 import time
@@ -15,7 +16,7 @@ from app.github.comments import post_findings, post_review_comment
 from app.github.diff import fetch_pr_diff
 from app.graph.baseline import BaselineResult, run_baseline_review
 from app.observability.tracing import observe, trace_attributes, update
-from app.schemas import LLMConfig, PRRef, ReviewJob, ReviewResult, TokenUsage
+from app.schemas import LLMConfig, PRRef, ReviewContext, ReviewJob, ReviewResult, TokenUsage
 from app.storage.repository import create_run
 
 logger = logging.getLogger(__name__)
@@ -162,11 +163,15 @@ async def _review(ctx: dict[str, Any], run: _Run) -> Status:
         return await _fail(ctx, run, token, f"diff fetch failed: {exc!r}")
     run.diff_chars, run.diff_truncated = diff.original_chars, diff.truncated
 
+    context = await _context(job, token, diff.text)
+
     with observe(
         "baseline.review", input={"diff_chars": len(diff.text), "truncated": diff.truncated}
     ) as span:
         baseline = await run_baseline_review(
-            diff.text, {"pr_title": job.pr_title, "repo_full_name": job.repo_full_name}
+            diff.text,
+            {"pr_title": job.pr_title, "repo_full_name": job.repo_full_name},
+            context=context,
         )
         llm = baseline.llm_response
         output: dict[str, Any] = {
@@ -225,6 +230,37 @@ async def _review(ctx: dict[str, Any], run: _Run) -> Status:
     status: Status = "partial" if baseline.status == "partial" else "success"
     await _store(ctx, run, status)
     return status
+
+
+async def _context(job: ReviewJob, token: str, diff: str) -> ReviewContext | None:
+    """Related repo code for the review (M4), or None when context is off or fails. Context is
+    optional: a failure here is logged and the review goes ahead on the diff alone."""
+    budget = get_settings().context_budget
+    if budget <= 0:
+        return None
+    with observe("context.build", input={"budget": budget}) as span:
+        try:
+            # Imported only when context is on: it loads torch, tree-sitter and qdrant-client.
+            from app.context.builder import build_context  # noqa: PLC0415
+            from app.github.contents import fetch_base_sha  # noqa: PLC0415
+
+            base = job.base_sha or await fetch_base_sha(token, job.repo_full_name, job.pr_number)
+            context = await build_context(
+                token, job.repo_full_name, base, diff, budget, get_settings().context_cache_dir
+            )
+        except Exception as exc:
+            logger.exception("Context build failed for %s#%s", job.repo_full_name, job.pr_number)
+            update(span, level="WARNING", status_message=f"context skipped: {exc!r}"[:500])
+            return None
+        update(
+            span,
+            output={
+                "chunks": len(context.related_chunks),
+                "tokens": context.token_budget_used,
+                "sources": [c.source for c in context.related_chunks],
+            },
+        )
+        return context
 
 
 async def _fail(ctx: dict[str, Any], run: _Run, token: str, error: str) -> Status:

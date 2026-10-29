@@ -10,7 +10,7 @@ jobs:
           python-version: "3.12"
       # CPU-only torch first, from the PyTorch CPU index, so the context extra does not pull CUDA
       - run: pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cpu
-      - run: pip install -e ".[dev,context]"
+      - run: pip install -e ".[dev,context,filter]"
       - run: ruff check .
       - run: ruff format --check .
       - run: mypy app/
