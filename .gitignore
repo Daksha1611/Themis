@@ -11,3 +11,6 @@ __pycache__/
 .env
 evals/.repos/
 evals/.cache/
+evals/logs/
+.cache/
+training/.cache/

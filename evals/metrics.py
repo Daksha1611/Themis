@@ -492,3 +492,71 @@ def write_summary(
     summary = summarize(run_dir, cases, labels)
     (run_dir / "summary.json").write_text(json.dumps(summary, indent=1) + "\n")
     return summary
+
+
+# --- ADR-029: aggregated comparisons over k runs ----------------------------------------------
+
+
+def per_case_means(runs: list[dict[str, dict[str, bool]]], field: str) -> dict[str, float]:
+    """Per case: the mean of a binary outcome over the runs that scored it."""
+    values: dict[str, list[float]] = defaultdict(list)
+    for outcomes in runs:
+        for cid, outcome in outcomes.items():
+            if field in outcome:
+                values[cid].append(float(outcome[field]))
+    return {cid: statistics.fmean(v) for cid, v in values.items()}
+
+
+def permutation_test(diffs: list[float], perms: int = 10_000, seed: int = 20261029) -> float:
+    """Two-sided paired sign-flip permutation test on per-case differences (ADR-029): the
+    p-value of the observed sum under random sign flips. Cases with no difference contribute
+    nothing; with no nonzero difference the p-value is 1."""
+    import numpy as np  # noqa: PLC0415 (numpy only for the eval statistics)
+
+    d = np.array([x for x in diffs if x != 0.0])
+    if d.size == 0:
+        return 1.0
+    rng = np.random.default_rng(seed)
+    observed = abs(d.sum())
+    signs = rng.choice((-1.0, 1.0), size=(perms, d.size))
+    extreme = int(np.sum(np.abs((signs * d).sum(axis=1)) >= observed - 1e-12))
+    return (extreme + 1) / (perms + 1)
+
+
+def bootstrap_ci(
+    diffs: list[float], reps: int = 10_000, seed: int = 20261029, level: float = 0.95
+) -> tuple[float, float]:
+    """Percentile bootstrap CI for the sum of per-case differences (net cases), resampling
+    cases with replacement (ADR-029)."""
+    import numpy as np  # noqa: PLC0415
+
+    d = np.array(diffs, dtype=float)
+    if d.size == 0:
+        return 0.0, 0.0
+    rng = np.random.default_rng(seed)
+    sums = d[rng.integers(0, d.size, size=(reps, d.size))].sum(axis=1)
+    tail = (1 - level) / 2
+    return float(np.quantile(sums, tail)), float(np.quantile(sums, 1 - tail))
+
+
+def aggregated_comparison(
+    first: list[dict[str, dict[str, bool]]], second: list[dict[str, dict[str, bool]]]
+) -> dict[str, Any]:
+    """ADR-029 comparison of two configurations, each a list of per-run case outcomes: per
+    measure, the net cases (sum over cases of second-mean minus first-mean), the permutation
+    p-value and the bootstrap 95% CI."""
+    out: dict[str, Any] = {}
+    for field in ("detected", "strict_category", "flagged"):
+        a, b = per_case_means(first, field), per_case_means(second, field)
+        shared = sorted(set(a) & set(b))
+        diffs = [b[c] - a[c] for c in shared]
+        low, high = bootstrap_ci(diffs)
+        out[field] = {
+            "cases": len(shared),
+            "first_mean_total": sum(a[c] for c in shared),
+            "second_mean_total": sum(b[c] for c in shared),
+            "net_cases": sum(diffs),
+            "p_value": permutation_test(diffs),
+            "ci95": [low, high],
+        }
+    return out

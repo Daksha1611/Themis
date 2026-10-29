@@ -147,7 +147,22 @@ Diff fetch: `fetch_pr_diff(token, repo_full_name, pr_number)` in `app/github/dif
 7. ↳ `BaselineResult(status, findings, llm_response, parse_errors, retries, invalid_line)`: `success` (no errors), `partial` (some elements invalid), `failed` (unparseable).
 
 ## 5. Precision filter
-`[NOT YET BUILT]`
+**Not in the review path** (`[NOT YET WIRED]`): built and evaluated offline from cached dev findings (M5, ADR-030). No LLM calls.
+
+- **Training set:** `python -m training.build_training_set` → `main()` → `build(RUNS)`:
+  - for each cached run (v1, v1 rerun, v2), `require_dev_only()` against `holdout_ids()` raises `HoldoutLeak` on any holdout case ID (ADR-017), before and after building;
+  - per finding: `diff_index()` (new-file line → `+` or context, hunk, changed lines in the hunk) of the masked diff; `features()`; `snippet()` (the finding's diff lines ±2); `is_real()` (1 if the case is buggy and the finding is within ±3 of a strict bug-holding range, via `hits()` and `tier_spans()`; else 0);
+  - ↳ `training/data/training_set.jsonl`.
+- **Cross-validation:** `python -m training.train_filter` → `run()`:
+  - `load_rows()` (`require_dev_only()` again) → `assign_folds()` (all scored dev cases → 5 folds, seeded, buggy and clean separately);
+  - `feature_matrix()` and, unless `--no-encoder`, `encoder_matrix()` (frozen `microsoft/codebert-base`, mean-pooled, cached in `training/.cache/`);
+  - per model, `cross_validate()`: for each outer fold, inner out-of-fold scores on the training folds (`fit()`: standardised logistic regression, C by grouped inner CV) → `choose_threshold()` (highest pooled precision with detection within `MAX_DETECTION_DROP` of unfiltered, via `detection()`) → `fit()` on all training folds → scores for the test fold;
+  - `ranking_quality()` (ROC AUC, average precision) ↳ `evals/results/filter-dev/cv.json`.
+  - `fine_tune_scores()` (optional, not called by `main()`): CodeBERT with a classification head fine-tuned per outer fold; ranking only.
+- **Evaluation:** `python -m evals.filter_eval` → `main()` → `choose_model()` (higher out-of-fold average precision) → `evaluate_filter()`:
+  - `filtered_runs()`: a finding is kept if its out-of-fold score reaches its case's fold threshold; kept findings get `confidence` = the score (ADR-016: never the LLM's number);
+  - `evaluate()` per run, filtered and unfiltered (`headline()`); `case_outcomes()` per run → `aggregated_comparison()` (`per_case_means()`, `permutation_test()`, `bootstrap_ci()`);
+  - `sweep()` gives the global precision-recall table; `render()` ↳ `docs/vault/08 Results/precision-filter-dev-<date>.md`.
 
 ## 6. Guardrails check
 `[NOT YET BUILT]`
@@ -361,6 +376,24 @@ Built in M3 Steps 4–7. Offline: no webhook, queue or GitHub calls.
 | prompt_hash(), dry_run() | rendered_prompt() | mask_issue_refs(), eval_metadata(), build_messages() | evals/runner.py |
 | run() | fingerprint_mismatch() | — | evals/runner.py |
 | summarize() | schedule() | — | evals/metrics.py |
+| evaluate_filter() | aggregated_comparison() | per_case_means(), bootstrap_ci(), permutation_test() | evals/metrics.py |
+| aggregated_comparison() | per_case_means() / permutation_test() / bootstrap_ci() | statistics.fmean() / numpy | evals/metrics.py |
+| `python -m training.build_training_set` | main() | build() | training/build_training_set.py |
+| main() | build() | load_labels(), scored_cases(), holdout_ids(), require_dev_only(), mask_issue_refs(), diff_index(), features(), snippet(), is_real() | training/build_training_set.py |
+| build(), load_rows() | require_dev_only() | — | training/build_training_set.py |
+| build(), load_rows() | holdout_ids() | — | training/build_training_set.py |
+| build() | diff_index() / features() / snippet() | — | training/build_training_set.py |
+| build() | is_real() | hits(), tier_spans() | training/build_training_set.py |
+| `python -m training.train_filter` | main() | run() | training/train_filter.py |
+| main() | run() | load_labels(), scored_cases(), load_rows(), assign_folds(), feature_matrix(), encoder_matrix(), cross_validate(), ranking_quality() | training/train_filter.py |
+| run() | cross_validate() | fit(), choose_threshold() | training/train_filter.py |
+| cross_validate() | choose_threshold() | detection() | training/train_filter.py |
+| cross_validate() | fit() | GroupKFold, LogisticRegression, StandardScaler, average_precision_score | training/train_filter.py |
+| run() | encoder_matrix() | finding_text(), AutoTokenizer, AutoModel | training/train_filter.py |
+| — (offline experiment) | fine_tune_scores() | finding_text(), AutoModelForSequenceClassification, AdamW | training/train_filter.py |
+| `python -m evals.filter_eval` | main() | choose_model(), load_rows(), evaluate_filter(), render() | evals/filter_eval.py |
+| main() | evaluate_filter() | load_labels(), scored_cases(), filtered_runs(), evaluate(), headline(), case_outcomes(), aggregated_comparison() | evals/filter_eval.py |
+| main() | render() | sweep(), mean_rate(), pct() | evals/filter_eval.py |
 | evaluate() | youden_j() | math.sqrt() | evals/metrics.py |
 | compare_runs() | case_outcomes() | case_hit(), tier_spans() | evals/metrics.py |
 | compare_runs() | paired_comparison() | mcnemar() | evals/metrics.py |

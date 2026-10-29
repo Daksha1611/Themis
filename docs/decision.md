@@ -2270,3 +2270,48 @@ Owner decision: finish v1 in three weeks. The M4 runs take about 9 days of Groq 
 ### How this affects other components
 - Review path: unchanged with the budget at 0 (proved by the prompt hash).
 - Precision filter: not wired into posting yet; it only sets `confidence` in the eval.
+
+---
+
+## Finish plan week 1: completion
+**Date**: 2026-10-29
+**File(s) affected**: as listed in the pre-work entry, plus `evals/metrics.py` (`per_case_means`, `permutation_test`, `bootstrap_ci`, `aggregated_comparison`), `.gitignore` (`evals/logs/`, `.cache/`, `training/.cache/`), the `05 Stack` notes (`transformers` renamed from `HuggingFace Transformers`; `scikit-learn`, `pyyaml` new), tests (`test_schedule.py`, `test_precision_filter.py`, additions to `test_context.py` and `test_worker.py`).
+
+### What I am changing
+The completion of the pre-work entry above. Results:
+- **Equivalence:** with `CONTEXT_BUDGET=0` the prompt hash over the 121 dev cases is `a46ccafd…`, equal to v2's recorded hash. **Reasoning:** the prompt hash covers every byte sent to the model for every case, so equal hashes mean identical requests. The code-hash change is only code that is never reached with context off. New baseline-arm runs are therefore samples of the same configuration as v2, and pool with it. The schedule enforces this on every baseline-arm run (`expect_prompt_hash`).
+- **Context-arm dry run (1K):**
+  - prompts: 301,947 tokens (estimate);
+  - largest request: 5,648;
+  - per run: ≈ 434K tokens, ≈ 2.2 quota days, after calibrating by v2's actual-to-estimate ratio (1.112) plus v2's completions;
+  - remaining plan: ≈ 9.1 days.
+- **Context run 1** started at 04:54 UTC on 2026-10-29 (`dev-20261029T045452Z-66c78ea`). Its `git_dirty` comes from an untracked log directory only; the code hash equals commit `66c78ea`'s.
+- **M5:** the feature model is kept. Out-of-fold ROC AUC is 0.664, against 0.626 for CodeBERT frozen and 0.601 fine-tuned.
+  - **Filtering, k-averaged:** precision 66.2% → 72.0%, but J 0.383 → 0.333.
+  - **Detection:** −4.67 net cases (95% CI −8 to −2, p = 0.001).
+  - **Clean flags:** −0.33 (p = 1.0).
+  - **Why clean flags don't move:** clean-case findings score as high as buggy-case ones (mean 0.671 vs 0.650).
+  - **Decision:** not wired.
+
+### Why I am making this change
+The owner's week-1 brief.
+
+### Alternatives I considered
+- Choosing the filter threshold once, on all the out-of-fold scores.
+- Fine-tuning CodeBERT as the only encoder variant.
+
+### Reasons I rejected each alternative
+- **Global threshold:** a threshold picked on the same scores it is evaluated on is optimistic. Thresholds are chosen per outer fold, on inner out-of-fold scores.
+- **Fine-tuning only:** frozen embeddings are cheaper and the usual first test. Both were run; neither beat the reference.
+
+### Trade-offs I am accepting
+- The evaluation reuses the three runs the filter learned from, out of fold but with shared prompts.
+- Fine-tuning is compared on ranking only.
+
+### What could go wrong
+- The M4 runs refuse to resume if any review-path module changes before they finish. This is recorded in the Brief.
+- Memory: CodeBERT fine-tuning needs about 4 GB.
+
+### How this affects other components
+- **M4:** proceeds daily with `python -m evals.schedule next`.
+- **M5:** the filter is not wired; the next step is the owner's call.

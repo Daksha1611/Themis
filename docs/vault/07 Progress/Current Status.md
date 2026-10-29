@@ -12,8 +12,12 @@ related:
 
 # Current Status
 
-**Phase:** M3 in progress. Steps 2–3 built (238 cases; SZZ clean rule; frozen splits). The dev split is labelled (Step 3b; [[label-report-dev-2026-10-03]]). The owner verified a stratified 25-case sample: 25/25 agreement on every field. Steps 4–7 are done: cache, runner, metrics, and the dev baseline run ([[baseline-dev-2026-10-03]]). Metrics redesigned ([[ADR-025 Detection-first metrics]]); the current baseline is [[baseline-dev-2026-10-04]]: J 0.435 (chance 0). **Waiting for the owner:** Q65 (line-coordinate convention) and Q25 (targets). M4 not started.
-**Last updated:** 2026-10-03 (dev-split labels)
+**Phase:** finishing v1 on the three-week plan ([[ADR-030 v1 finish plan and scope cuts]], [[Roadmap]]). M1–M3 are done.
+- **M4:** wired behind `CONTEXT_BUDGET` (off by default). Its k = 3 runs are in progress: `python -m evals.schedule next`, plan `evals/plans/m4.yaml`.
+- **M5:** cross-validated on cached dev findings ([[precision-filter-dev-2026-10-29]]).
+- **Next:** M6, M7 and deployment in week 2.
+
+**Last updated:** 2026-10-29
 
 New sessions start with [[00 Brief]].
 
@@ -114,3 +118,23 @@ New sessions start with [[00 Brief]].
 - Reshaped probe (A: medium effort vs C: low effort; 10 cases × 3 calls each) is waiting for Groq's daily window. It chooses the configuration: low effort if it is at least as stable as medium.
 - **Next:** the owner approves the k = 3 schedule (baseline arm plus context arm at 1K) before the multi-day runs start.
 - **Parallel work (planned, not started):** once the runs are going, M5 groundwork (precision filter) proceeds off the review path, with the fingerprint check after every commit.
+
+**Finish plan, week 1 (2026-10-28 to 2026-10-29)**
+- **ADR-030 recorded.**
+  - The reshaped probe is cancelled: medium effort stays, and v2 is baseline-arm run 1.
+  - Q58 is deferred to post-v1.
+  - Q48 becomes a README limitation.
+  - The M7 gate will make no LLM calls in CI.
+- **README updated:** status per milestone, the dev baseline with caveats, the Methodology section, and the Limitations.
+- **M4 wired behind `CONTEXT_BUDGET`** (0 = off, the default).
+  - **Equivalence:** with it off, all 121 dev prompts hash to v2's `a46ccafd…` (a test checks this), so the new baseline runs pool with v2.
+  - **Production context** comes from the base commit via content-addressed caches (ADR-014 as amended).
+  - **Eval contexts** are frozen per run and deterministic (two builds byte-identical).
+- **`python -m evals.schedule next`** runs `evals/plans/m4.yaml`:
+  - order: context 1, baseline 2, context 2, baseline 3, context 3;
+  - cache off, under `systemd-inhibit`;
+  - every run in an arm must match the arm's prompt hash.
+  - **Dry run:** a context run is ≈ 2.2 quota days and a baseline run ≈ 1.3, so ≈ 9.1 days remain.
+  - **Context run 1 started 2026-10-29 04:54 UTC** (`dev-20261029T045452Z-66c78ea`). Its `git_dirty` flag comes from an untracked log file only; the code hash equals the commit's.
+- **M5 from cached findings** (349 findings, location-based labels, folds grouped by case, nested thresholds): [[precision-filter-dev-2026-10-29]].
+- **Next:** run `python -m evals.schedule next` once a day until the plan completes, then the M4 report (k = 3, permutation test, falsification split). Week 2: M6, M7, deployment.

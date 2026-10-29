@@ -18,9 +18,19 @@ related:
 ## Project
 Themis is a GitHub App that reviews Python pull requests for logic bugs and security issues. A reliability layer (benchmark, eval harness, CI gate) measures review quality, so every design decision is backed by real numbers.
 
-## Current milestone: M3, benchmark and eval harness
-**Delivers:** 150–300 labeled cases (reverted bug fixes plus ~30% clean PRs) split 60/40 dev/holdout; a response cache; an eval runner over the real review path; metrics; the first baseline dev report in `08 Results/`.
-**State:** Steps 2–3 built: 238 cases (168 buggy, 70 clean; dev 143 / holdout 95), SZZ clean rule. The dev split is labelled from upstream evidence: 80 of 102 buggy cases kept (Q61 amended; [[label-report-dev-2026-10-03]]). The owner verified a stratified 25-case sample of the labels: 25/25 agreement on validity, category and primary range ([[Benchmark]]). Q62 is decided: three recall tiers ([[Metrics]]). Steps 4–7 are done: cache, runner, metrics, and the dev baseline on the pinned model ([[ADR-024 Eval runs pin a single provider and model]], [[baseline-dev-2026-10-03]]). The metrics are redesigned ([[ADR-025 Detection-first metrics]]); the current baseline is [[baseline-dev-2026-10-04]] (J 0.435 vs chance 0). **Next gate:** the owner's decisions on Q65 (line coordinates) and Q25 (targets). M4 waits. Details: [[Current Status]], [[Benchmark]].
+## Current phase: finishing v1 (three-week plan from 2026-10-28)
+**Plan:** [[ADR-030 v1 finish plan and scope cuts]], [[Roadmap]].
+- **Week 1:** M4 wired behind `CONTEXT_BUDGET`; M4 runs in the background; M5 from cached findings.
+- **Week 2:** the M4 result, M6, M7 and deployment.
+- **Week 3:** holdout labelling, final holdout runs, results page and demo.
+
+**State:** M1–M3 are done.
+- **Dev baseline:** v2, J 0.327 (v1 0.435; the difference is within run-to-run noise): [[baseline-dev-2026-10-06-v2]].
+- **Evaluation method:** k = 3 runs per configuration, compared with a paired permutation test and bootstrap CI ([[ADR-029 Aggregated evaluation]]).
+- **M4:** context is off by default; with it off, prompts are byte-identical to v2's. The M4 plan runs with `python -m evals.schedule next` (about 9 days of quota).
+- **M5:** the precision filter is cross-validated on cached dev findings: [[precision-filter-dev-2026-10-29]].
+
+Details: [[Current Status]].
 
 ## Hard constraints
 - Python repositories only ([[ADR-001 Python-only v1]]).
@@ -40,8 +50,9 @@ Themis is a GitHub App that reviews Python pull requests for logic bugs and secu
 - Outside-world facts (model IDs, free-tier limits, versions) expire: check [[09 External Facts]] and re-verify anything older than 30 days.
 
 ## Open questions blocking work
-- None blocking. Q25 (numeric targets) stays open until the redesigned baseline exists.
-- Not M3: **Q58** security benchmark track (M6), **Q59** regression-test validation
+- None blocking.
+- **Do not edit the review-path modules** (`REVIEW_PATH_MODULES` in `evals/runner.py`) or anything that changes the rendered prompts while the M4 runs are in progress: an open run refuses to resume after any change.
+- Deferred: **Q58** security benchmark track (post-v1, ADR-030), **Q59** regression-test validation
 
 All questions: [[Open Questions]].
 

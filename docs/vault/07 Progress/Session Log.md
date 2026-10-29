@@ -195,3 +195,32 @@ related:
 
 **Next:** the M4 ablation (v2 + context at 1K) as the next row.
 **Blockers / questions:** none.
+
+## 2026-10-28 to 2026-10-29: finish plan, week 1
+**Done:**
+- [[ADR-030 v1 finish plan and scope cuts]] and [[Roadmap]].
+  - The reshaped probe is cancelled; its 6 calls are kept as partial data.
+  - Q58 is deferred to post-v1, Q48 is a README limitation, and the M7 gate makes no LLM calls.
+  - ADR-014 is amended: production context comes from content-addressed caches.
+- **README:** status per milestone, the dev baseline (v1, rerun and v2, with caveats), Methodology, and Limitations (Q48, the package layout, security recall).
+- **M4 wired behind `CONTEXT_BUDGET`** (off by default).
+  - **Equivalence:** with it off, all 121 dev prompts hash to v2's `a46ccafd…`; a test checks this.
+  - **Production builder:** `app/context/builder.py` and `app/github/contents.py`; tree and blob API shapes were verified live, read-only.
+  - **Retrieval is deterministic:** point IDs are derived from the chunk, and two context builds were byte-identical.
+- **`evals/schedule.py` with `evals/plans/m4.yaml`:**
+  - interleaved arms, cache off, `systemd-inhibit`, a prompt-hash rule per arm;
+  - dry run: a context run ≈ 2.2 quota days, ≈ 9.1 days in all;
+  - **context run 1 started at 04:54 UTC on 2026-10-29.**
+- **M5 from cached findings:** [[precision-filter-dev-2026-10-29]].
+  - The feature model out-ranks CodeBERT, frozen and fine-tuned.
+  - Filtering raises precision but lowers J and does not reduce clean flags, so it is not wired.
+- **New stack notes:** [[scikit-learn]] and [[pyyaml]]; the HuggingFace note is renamed [[transformers]].
+- **During the session:** memory ran critically low while CodeBERT fine-tuned (about 4 GB) beside a browser. A helper wait loop was stopped by the system; the M4 run was unaffected.
+
+**Next:**
+- `python -m evals.schedule next` once a day until the plan completes (`status` shows progress).
+- Then the M4 report: k = 3, permutation test, falsification split.
+- Week 2: M6, M7 and deployment.
+- M5: the owner decides how it proceeds, given the negative result.
+
+**Blockers / questions:** do not change the review-path modules or the rendered prompts until the M4 runs finish.
