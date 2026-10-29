@@ -83,6 +83,7 @@ Outside the vault: `README.md` (repo overview), `docs/flow.md` (what the code do
 - [[ADR-028 Structural lookup plus hybrid search]]
 - [[ADR-029 Aggregated evaluation]]
 - [[ADR-030 v1 finish plan and scope cuts]]
+- [[ADR-031 Consistency-based precision filter]]
 
 ## 05 Stack
 - [[Python]]

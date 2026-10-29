@@ -22,3 +22,9 @@ order:
   - [context, 2]
   - [baseline, 3]
   - [context, 3]
+# After the baseline arm completes (v2 + runs 2 and 3: three runs of one identical
+# configuration), recompute the cross-run agreement analysis on those three runs:
+#   edit RUNS / ANALYSES in evals/agreement.py to the baseline-arm run directories, then
+#   python -m evals.agreement
+# That is the definitive version of ADR-031 Step 1 (the 2026-10-29 analysis mixes v1-format
+# and v2-format prompts in k = 3, or has only k = 2 identical runs).

@@ -2315,3 +2315,72 @@ The owner's week-1 brief.
 ### How this affects other components
 - **M4:** proceeds daily with `python -m evals.schedule next`.
 - **M5:** the filter is not wired; the next step is the owner's call.
+
+---
+
+## M5 pivot: consistency-based precision filter (ADR-031): pre-work
+**Date**: 2026-10-29
+**File(s) affected**:
+- `docs/vault/04 Decisions/ADR-031 Consistency-based precision filter.md` (new); ADR-008 (superseded banner); Precision Filter, Finding Schema, Roadmap, Current Status, Session Log
+- `evals/agreement.py` (new: cross-run matching, agreement counts, voting rules, bootstrap CIs), `evals/plans/m4.yaml` (a note), tests
+- Step 2 only if Step 1 shows separation: `app/filter/consistency.py`, a confidence model, a `REVIEW_SAMPLES` setting outside the review-path modules, `docs/flow.md`
+
+### What I am changing
+- **The owner's pivot:** finding-level classifiers could not separate real findings from noise (clean-case findings scored 0.671, buggy-case 0.650), so CodeBERT work stops.
+- **The candidate signal is agreement across independent samples:** a finding the model repeats across runs may be more likely real than a one-off.
+- **Step 1** measures this from the cached dev runs (v1, v1 rerun, v2) with no LLM calls:
+  - findings are matched across runs (same file, ±3 lines, same category; also location only), and each gets an agreement count;
+  - "flag if ≥ m of k runs agree" is scored for m = 1..k with bootstrap CIs, on all three runs and on the identical-configuration pair (v1 + rerun).
+- **Step 2** (building the filter) happens only if voting cuts clean flags materially with detection within 5 points.
+
+### Why I am making this change
+Owner brief, after the M5 result.
+
+### Alternatives I considered
+Matching findings by message similarity.
+
+### Reasons I rejected each alternative
+Messages are paraphrased differently on every call; file, lines and category are the structured fields the review produces, and they are what is posted.
+
+### Trade-offs I am accepting
+- v2 renders the diff with line numbers, unlike v1, so its coordinates can differ slightly; the ±3 tolerance absorbs most of that, and the k = 2 identical-configuration pair is reported separately.
+- The definitive analysis waits for the three identical-configuration baseline-arm runs.
+
+### What could go wrong
+Matching clusters can chain: A matches B, and B matches C, while A and C do not match each other. Clusters are formed as connected components, and support is the number of distinct runs in a component.
+
+### How this affects other components
+None in the review path. The M4 runs are untouched.
+
+---
+
+## M5 pivot, Step 1: result (no filter built)
+**Date**: 2026-10-29
+**File(s) affected**: `evals/agreement.py`, `tests/test_agreement.py`, `evals/plans/m4.yaml` (a comment), `docs/vault/08 Results/agreement-dev-2026-10-29.md`, `evals/results/agreement-dev/agreement.json`, ADR-031, ADR-008 (superseded), Precision Filter, Finding Schema, Roadmap, Brief, Current Status, Session Log, the Results README, `docs/flow.md`.
+
+### What I am changing
+The Step 1 analysis, recorded:
+- **Separation exists.**
+  - **Strict, three runs:** a real finding is repeated by at least one other run 80% of the time, a noise finding 54%.
+  - **Location matching:** all three runs agree on 84% of real findings vs 41% of noise.
+- **The build gate is not met** in either analysis (a material clean-flag cut, i.e. a paired 95% CI below 0, with detection within 5 points).
+  - **Closest:** strict ≥ 2 of 3: clean flags −4.33 net cases (CI −8.3 to −0.3, p = 0.058), detection −5.33 net cases (−6.7 points).
+- **Step 2 is not built.** Per the brief, this stops and is reported.
+
+### Why I am making this change
+The owner's pivot brief.
+
+### Alternatives I considered
+Building Step 2 anyway, because the calibrated model could trade off more finely than a vote.
+
+### Reasons I rejected each alternative
+The brief makes the build conditional on Step 1. The calibrated model is an option to put to the owner.
+
+### Trade-offs I am accepting
+The definitive evidence waits for the baseline arm's three identical runs.
+
+### What could go wrong
+Nothing in the review path changes. The open M4 run's fingerprint is checked before the commit.
+
+### How this affects other components
+M5 waits for the owner's decision.

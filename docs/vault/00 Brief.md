@@ -28,7 +28,7 @@ Themis is a GitHub App that reviews Python pull requests for logic bugs and secu
 - **Dev baseline:** v2, J 0.327 (v1 0.435; the difference is within run-to-run noise): [[baseline-dev-2026-10-06-v2]].
 - **Evaluation method:** k = 3 runs per configuration, compared with a paired permutation test and bootstrap CI ([[ADR-029 Aggregated evaluation]]).
 - **M4:** context is off by default; with it off, prompts are byte-identical to v2's. The M4 plan runs with `python -m evals.schedule next` (about 9 days of quota).
-- **M5:** the precision filter is cross-validated on cached dev findings: [[precision-filter-dev-2026-10-29]].
+- **M5:** finding-level classifiers failed ([[precision-filter-dev-2026-10-29]]). The pivot is to consistency ([[ADR-031 Consistency-based precision filter]]); the Step 1 gate is not met ([[agreement-dev-2026-10-29]]).
 
 Details: [[Current Status]].
 

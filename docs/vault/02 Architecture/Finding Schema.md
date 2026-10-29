@@ -33,7 +33,7 @@ Defined in `app/schemas.py` (M2).
 | severity | `critical` \| `high` \| `medium` \| `low` |
 | message | what is wrong, one sentence |
 | suggestion | how to fix it, one sentence |
-| confidence | float 0.0–1.0, **set by the [[Precision Filter]], never by the LLM** ([[ADR-016 Confidence comes from the precision filter, not the LLM]]). 0.0 until the filter exists (M5) |
+| confidence | float 0.0–1.0, **set by the [[Precision Filter]], never by the LLM** ([[ADR-016 Confidence comes from the precision filter, not the LLM]]). 0.0 until the filter is wired. Its source will be agreement across independent review samples, via a calibrated model ([[ADR-031 Consistency-based precision filter]]); the gate for building it is not yet met |
 | raw_llm_confidence | float 0.0–1.0: what the LLM reported about itself. **Stored and traced, never used for filtering, never shown on the PR** |
 
 ### `confidence` vs `raw_llm_confidence`

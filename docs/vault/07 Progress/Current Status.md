@@ -14,8 +14,8 @@ related:
 
 **Phase:** finishing v1 on the three-week plan ([[ADR-030 v1 finish plan and scope cuts]], [[Roadmap]]). M1–M3 are done.
 - **M4:** wired behind `CONTEXT_BUDGET` (off by default). Its k = 3 runs are in progress: `python -m evals.schedule next`, plan `evals/plans/m4.yaml`.
-- **M5:** cross-validated on cached dev findings ([[precision-filter-dev-2026-10-29]]).
-- **Next:** M6, M7 and deployment in week 2.
+- **M5:** finding-level classifiers failed ([[precision-filter-dev-2026-10-29]]). The pivot is to consistency ([[ADR-031 Consistency-based precision filter]]). Step 1 found separation, but no voting rule passes the build gate ([[agreement-dev-2026-10-29]]); **waiting for the owner.**
+- **Next:** M6 (on a separate branch while the M4 runs are open), M7 and deployment in week 2.
 
 **Last updated:** 2026-10-29
 
@@ -138,3 +138,16 @@ New sessions start with [[00 Brief]].
   - **Context run 1 started 2026-10-29 04:54 UTC** (`dev-20261029T045452Z-66c78ea`). Its `git_dirty` flag comes from an untracked log file only; the code hash equals the commit's.
 - **M5 from cached findings** (349 findings, location-based labels, folds grouped by case, nested thresholds): [[precision-filter-dev-2026-10-29]].
 - **Next:** run `python -m evals.schedule next` once a day until the plan completes, then the M4 report (k = 3, permutation test, falsification split). Week 2: M6, M7, deployment.
+
+**M5 pivot: consistency (2026-10-29)**
+- [[ADR-031 Consistency-based precision filter]] supersedes ADR-008's encoder approach; ADR-016 stands.
+- **Step 1, from cache:** agreement separates real findings from noise.
+  - **Repeated by another run (strict, three runs):** 80% of real findings vs 54% of noise.
+  - **Gate not met:** no voting rule cut clean flags (CI below zero) with detection within 5 points.
+  - **Closest:** strict ≥ 2 of 3 (clean flags −4.3 net cases, p = 0.058; detection −6.7 points).
+  - **Best J:** location ≥ 3 of 3, J 0.481, but detection −15 points.
+- **Context run 1** stopped at the daily quota at 63/121; it resumes with `python -m evals.schedule next`.
+- **Next:** the owner's decision.
+  - Wait for the definitive analysis on the three baseline-arm runs, noted in `evals/plans/m4.yaml`.
+  - Or relax the gate.
+  - Or go to the verifier pass.

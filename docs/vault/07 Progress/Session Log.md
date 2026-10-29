@@ -224,3 +224,17 @@ related:
 - M5: the owner decides how it proceeds, given the negative result.
 
 **Blockers / questions:** do not change the review-path modules or the rendered prompts until the M4 runs finish.
+
+## 2026-10-29: M5 pivot to consistency (ADR-031), Step 1
+**Done:**
+- [[ADR-031 Consistency-based precision filter]] written; ADR-008 marked superseded.
+- `evals/agreement.py` (no LLM calls) produced [[agreement-dev-2026-10-29]]:
+  - cross-run matching (strict and location-only), connected-component clusters and agreement counts;
+  - voting rules m of k, scored with stratified bootstrap CIs and a paired permutation comparison against the single-run reference;
+  - two analyses, (a) k = 3 and (b) the k = 2 identical-configuration pair.
+- **Result:** agreement separates real findings from noise, but no rule passes the build gate. Step 2 was not built.
+- The plan `evals/plans/m4.yaml` notes the definitive recomputation on the three baseline-arm runs.
+- Roadmap: M6 and the filter wiring are built on separate branches while the M4 runs are open.
+
+**Next:** the owner decides between waiting for the baseline-arm analysis, relaxing the gate, or the verifier pass. Resume the M4 plan daily.
+**Blockers / questions:** the decision above.

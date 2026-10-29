@@ -159,6 +159,12 @@ Diff fetch: `fetch_pr_diff(token, repo_full_name, pr_number)` in `app/github/dif
   - per model, `cross_validate()`: for each outer fold, inner out-of-fold scores on the training folds (`fit()`: standardised logistic regression, C by grouped inner CV) → `choose_threshold()` (highest pooled precision with detection within `MAX_DETECTION_DROP` of unfiltered, via `detection()`) → `fit()` on all training folds → scores for the test fold;
   - `ranking_quality()` (ROC AUC, average precision) ↳ `evals/results/filter-dev/cv.json`.
   - `fine_tune_scores()` (optional, not called by `main()`): CodeBERT with a classification head fine-tuned per outer fold; ranking only.
+- **Agreement across runs (ADR-031 Step 1):** `python -m evals.agreement` → `main()` → `analyse()` for each of `ANALYSES` (k = 3: v1, rerun, v2; k = 2: v1, rerun):
+  - `load_run()` per run → `case_stats()` per run → `mean_stats()` (the single-run reference);
+  - for strict and location-only matching, and m = 1..k: `voted()` → per case, `clusters()` (union-find over `matches()` between findings of different runs: same file, ±3 lines, same category if strict) → keeps clusters with `support()` ≥ m → `representative()` (median start line; majority category in location mode) → `case_stats()`;
+  - the chance baseline via `chance_findings()`;
+  - `distribution()` (agreement count of every finding, real vs noise via `is_real()`); `headline()` and `bootstrap()` (stratified, buggy and clean separately); `paired()` against the reference (`bootstrap_ci()`, `permutation_test()`);
+  - `render()` + `gate_section()` (`gate()`: `separation()`, plus a clean-flag CI below 0) ↳ `docs/vault/08 Results/agreement-dev-<date>.md` and `evals/results/agreement-dev/agreement.json`.
 - **Evaluation:** `python -m evals.filter_eval` → `main()` → `choose_model()` (higher out-of-fold average precision) → `evaluate_filter()`:
   - `filtered_runs()`: a finding is kept if its out-of-fold score reaches its case's fold threshold; kept findings get `confidence` = the score (ADR-016: never the LLM's number);
   - `evaluate()` per run, filtered and unfiltered (`headline()`); `case_outcomes()` per run → `aggregated_comparison()` (`per_case_means()`, `permutation_test()`, `bootstrap_ci()`);
@@ -391,6 +397,13 @@ Built in M3 Steps 4–7. Offline: no webhook, queue or GitHub calls.
 | cross_validate() | fit() | GroupKFold, LogisticRegression, StandardScaler, average_precision_score | training/train_filter.py |
 | run() | encoder_matrix() | finding_text(), AutoTokenizer, AutoModel | training/train_filter.py |
 | — (offline experiment) | fine_tune_scores() | finding_text(), AutoModelForSequenceClassification, AdamW | training/train_filter.py |
+| `python -m evals.agreement` | main() | analyse(), render(), gate_section() | evals/agreement.py |
+| main() | analyse() | load_run(), case_stats(), mean_stats(), voted(), chance_findings(), distribution(), headline(), bootstrap(), paired() | evals/agreement.py |
+| analyse() | voted() | clusters(), support(), representative() | evals/agreement.py |
+| voted(), distribution() | clusters() | matches() | evals/agreement.py |
+| analyse() | case_stats() | case_hit(), tier_spans(), is_real() | evals/agreement.py |
+| analyse() | paired() | bootstrap_ci(), permutation_test() | evals/agreement.py |
+| main() | gate_section() | gate(), separation() | evals/agreement.py |
 | `python -m evals.filter_eval` | main() | choose_model(), load_rows(), evaluate_filter(), render() | evals/filter_eval.py |
 | main() | evaluate_filter() | load_labels(), scored_cases(), filtered_runs(), evaluate(), headline(), case_outcomes(), aggregated_comparison() | evals/filter_eval.py |
 | main() | render() | sweep(), mean_rate(), pct() | evals/filter_eval.py |
